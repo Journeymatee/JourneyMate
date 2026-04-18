@@ -5,7 +5,11 @@ const env = require('./env')
 const logger = require('../lib/logger')
 
 const pool = env.PG.connectionString
-  ? new Pool({ connectionString: env.PG.connectionString, max: env.PG.max })
+  ? new Pool({
+      connectionString: env.PG.connectionString,
+      max: env.PG.max,
+      ssl: { rejectUnauthorized: false },
+    })
   : new Pool({
       host: env.PG.host,
       port: env.PG.port,
