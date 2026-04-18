@@ -1,0 +1,70 @@
+# docker-compose.yml — JourneyMate full stack (Node + Postgres + Nginx/React)
+# Usage:
+#   docker compose up --build
+#   docker compose down -v   # wipe DB volume if you want a clean slate
+# Access:
+#   Frontend:  http://localhost:8080  (Nginx reverse-proxies /api to backend)
+#   Backend:   http://localhost:4000/api/health
+#   Postgres:  localhost:5433 (host port) → 5432 inside the network
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: journeymate-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: journeymate
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "1234"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d journeymate"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: journeymate-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: journeymate
+      PGUSER: postgres
+      PGPASSWORD: "1234"
+      AUTH_SECRET: ${AUTH_SECRET:-journeymate-prod-secret-change-me}
+      CORS_ORIGIN: "*"
+      SEED_ON_BOOT: "true"
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: journeymate-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

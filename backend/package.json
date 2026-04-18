@@ -1,0 +1,26 @@
+{
+  "name": "journeymate-api",
+  "version": "2.0.0",
+  "description": "JourneyMate travel comparison API — modular Node/Express with Postgres",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "seed": "node src/scripts/seed.js",
+    "migrate": "node src/scripts/migrate.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "compression": "^1.7.5",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "express-validator": "^7.2.0",
+    "google-auth-library": "^10.6.2",
+    "helmet": "^8.0.0",
+    "morgan": "^1.10.0",
+    "pg": "^8.13.1"
+  }
+}

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="needle" x1="24" y1="8" x2="24" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="white" stop-opacity="1"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0.3"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded square -->
+  <rect width="48" height="48" rx="11" fill="url(#bg)"/>
+  <!-- Outer ring -->
+  <circle cx="24" cy="24" r="15" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
+  <!-- Compass needle north (bright) -->
+  <path d="M24 9 L19.5 24 L24 21.5 L28.5 24 Z" fill="white" opacity="0.95"/>
+  <!-- Compass needle south (dimmed) -->
+  <path d="M24 39 L19.5 24 L24 26.5 L28.5 24 Z" fill="white" opacity="0.38"/>
+  <!-- Center dot -->
+  <circle cx="24" cy="24" r="2.8" fill="white"/>
+  <!-- Cardinal direction dots -->
+  <circle cx="24" cy="9.5" r="1.6" fill="rgba(255,255,255,0.8)"/>
+  <circle cx="38.5" cy="24" r="1.6" fill="rgba(255,255,255,0.45)"/>
+  <circle cx="24" cy="38.5" r="1.6" fill="rgba(255,255,255,0.45)"/>
+  <circle cx="9.5" cy="24" r="1.6" fill="rgba(255,255,255,0.45)"/>
+</svg>
