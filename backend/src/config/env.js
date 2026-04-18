@@ -14,7 +14,7 @@ const env = {
   AUTH_SECRET: process.env.AUTH_SECRET || 'journeymate-dev-secret-change-me',
   TOKEN_TTL_MS: Number(process.env.TOKEN_TTL_MS || 7 * 24 * 60 * 60 * 1000),
 
-  CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080',
+  CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
 
   PG: {
     connectionString: process.env.DATABASE_URL || null,
