@@ -4,6 +4,25 @@ const ApiError = require('../lib/ApiError')
 const logger = require('../lib/logger')
 const env = require('../config/env')
 
+const NODE_NETWORK_CODES = new Set([
+  'ECONNREFUSED',
+  'ETIMEDOUT',
+  'ENOTFOUND',
+  'ENETUNREACH',
+  'EAI_AGAIN',
+  'ECONNRESET',
+  'EPIPE',
+])
+
+function mapConnectivityError(raw) {
+  if (!raw) return null
+  const code = raw.code
+  if (typeof code === 'string' && NODE_NETWORK_CODES.has(code)) {
+    return ApiError.unavailable('Database unreachable')
+  }
+  return null
+}
+
 /**
  * Global exception handler.
  *  - ApiError  → exact status, code, message, details
@@ -13,6 +32,19 @@ const env = require('../config/env')
 function errorHandler(err, req, res, _next) {
   let e = err
 
+  if (e?.name === 'AggregateError' && Array.isArray(e.errors)) {
+    for (const sub of e.errors) {
+      const mapped = mapConnectivityError(sub)
+      if (mapped) {
+        e = mapped
+        break
+      }
+    }
+  } else {
+    const mapped = mapConnectivityError(e)
+    if (mapped) e = mapped
+  }
+
   // Map common Postgres errors to user-friendly ApiErrors
   if (e && e.code && typeof e.code === 'string' && /^[0-9A-Z]{5}$/.test(e.code)) {
     switch (e.code) {
@@ -21,7 +53,9 @@ function errorHandler(err, req, res, _next) {
       case '23502': e = ApiError.badRequest('Missing required field', { column: e.column });         break
       case '22P02': e = ApiError.badRequest('Invalid input syntax');                                 break
       case '42P01': e = ApiError.unavailable('Database schema not ready');                           break
-      case 'ECONNREFUSED':
+      case '3D000': e = ApiError.unavailable('Database does not exist. Check PGDATABASE or DATABASE_URL.'); break
+      case '28P01': e = ApiError.unavailable('Database rejected the API credentials. Fix PGUSER/PGPASSWORD or DATABASE_URL in .env.'); break
+      case '53300': e = ApiError.unavailable('Database is at capacity. Try again in a moment.');   break
       case '08006':
       case '08001': e = ApiError.unavailable('Database unreachable');                                break
     }

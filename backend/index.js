@@ -20,6 +20,8 @@ async function main() {
   } catch (e) {
     logger.error({ msg: 'startup: migrate/seed failed', err: e.message })
     hintPostgresMacOS(e.message)
+    hintPostgresPassword(e.message)
+    hintMissingDatabase(e.message)
     process.exit(1)
   }
 
@@ -57,9 +59,34 @@ PostgreSQL on macOS threw an auth-dialog error.
 Fix (pick one):
   1) Postgres.app → Settings → turn OFF "Ask for permission when apps connect without password", restart servers.
   2) Use Homebrew: brew services restart postgresql@15
-  3) Or just use Docker:   docker compose up db   (recommended)
 `)
   }
+}
+
+function hintPostgresPassword(msg) {
+  if (!msg || !msg.includes('password authentication failed')) return
+  const { user, host, port, database } = env.PG
+  // eslint-disable-next-line no-console
+  console.error(`
+PostgreSQL rejected the password for user "${user}" (${host}:${port}, db "${database}").
+
+Fix: In pgAdmin (or psql as superuser): Login/Group Roles → ${user} → Definition → set Password,
+then put the same value as PGPASSWORD in backend/.env (and ensure PGHOST/PGPORT/PGDATABASE match your server).
+`)
+}
+
+function hintMissingDatabase(msg) {
+  if (!msg || !msg.includes('does not exist')) return
+  const { user, host, port, database } = env.PG
+  // eslint-disable-next-line no-console
+  console.error(`
+Database "${database}" is missing on ${host}:${port}.
+
+Create it (use your real password), then restart the API:
+  PGPASSWORD='your-postgres-password' psql -h ${host} -p ${port} -U ${user} -d postgres -c "CREATE DATABASE ${database};"
+
+Or in pgAdmin: Databases → Create → Database… → name: ${database}
+`)
 }
 
 main()

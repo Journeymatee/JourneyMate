@@ -7,6 +7,9 @@ const bool = (v, d = false) => {
   return ['1', 'true', 'yes', 'on'].includes(String(v).toLowerCase())
 }
 
+const defaultPgPoolMax =
+  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME ? 1 : 10
+
 const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: Number(process.env.PORT || 8080),
@@ -23,7 +26,8 @@ const env = {
     database: process.env.PGDATABASE || 'journeymate',
     user: process.env.PGUSER || 'postgres',
     password: process.env.PGPASSWORD || '1234',
-    max: Number(process.env.PGPOOL_MAX || 10),
+    // Serverless (e.g. Vercel): one connection per invocation avoids exhausting DB limits.
+    max: Number(process.env.PGPOOL_MAX || defaultPgPoolMax),
   },
 
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',

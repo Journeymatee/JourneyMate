@@ -1,216 +1,87 @@
-# 🧳 JourneyMate — Silver vs Gold Travel Comparison
+# JourneyMate — Silver vs Gold travel comparison
 
-A full-stack travel comparison platform that shows Budget (Silver) vs Luxury (Gold) travel plans side-by-side, built with **React 18 + Vite** on the frontend and **Java 21 Spring Boot** on the backend.
+Full-stack app: **React 18 + Vite** frontend, **Node.js + Express** API, **PostgreSQL** data.
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature | Details |
-|---|---|
-| ⚡ Instant Compare | Silver vs Gold plans side-by-side in <3 seconds |
-| 🎛️ Smart Toggle | Optimize for Savings / Both / Comfort |
-| 📅 Day-by-Day Itinerary | Full plans for both tiers |
-| 💰 Savings Banner | Floating CTA showing exact savings amount |
-| 🌐 Virtual Threads | Java 21 Project Loom — 10,000+ concurrent users |
-| 🗄️ JSONB Storage | Flexible itinerary data in PostgreSQL |
-| 📱 Fully Responsive | Mobile-first dark theme design |
+|--------|---------|
+| Compare | Silver vs Gold plans side-by-side |
+| Toggle | Optimize for savings / balance / comfort |
+| Itinerary | Day-by-day plans where applicable |
+| Responsive | Mobile-first layout |
 
 ---
 
-## 🚀 Quick Start
+## Quick start (local)
 
-### Option 1: Docker (Recommended — One Command)
+### Prerequisites
+
+- **Node.js** 20+
+- **PostgreSQL** 14+ (local install, cloud, or Postgres.app)
+
+### 1. Database
+
+Create a database (name can match `PGDATABASE` in `.env`, default `journeymate`):
 
 ```bash
-docker-compose up --build
+psql -U postgres -c "CREATE DATABASE journeymate;"
 ```
 
-- Frontend: http://localhost:80
-- API: http://localhost:8080/api/v1
-- DB: localhost:5432/travel_db
+### 2. Backend
 
----
-
-### Option 2: Local Development
-
-#### Prerequisites
-- Node.js 20+
-- Java 21+
-- Maven 3.9+
-- PostgreSQL 16
-
-#### 1. Start Database
-```bash
-psql -U postgres -c "CREATE DATABASE travel_db;"
-```
-
-#### 2. Start Backend
 ```bash
 cd backend
-mvn spring-boot:run
-# API runs on http://localhost:8080
+# Add .env with PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE (or DATABASE_URL)
+npm install
+npm run dev
 ```
 
-#### 3. Start Frontend
+API: `http://localhost:8080` (or `PORT` from `.env`) — e.g. `http://localhost:8080/api/health`.
+
+### 3. Frontend
+
 ```bash
 cd frontend
 npm install
 npm run dev
-# App runs on http://localhost:5173
+```
+
+App: `http://localhost:5173` (Vite proxies `/api` to the backend in dev when configured).
+
+---
+
+## Architecture (overview)
+
+```
+travel-app/
+├── frontend/          # React + Vite + Tailwind
+├── backend/           # Express API, migrations under src/schema
+└── README.md
 ```
 
 ---
 
-## 🏗️ Architecture
+## Cloud deployment
 
-```
-journeymate/
-├── frontend/                    # React 18 + Vite + Tailwind CSS
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Navbar.jsx       # Fixed navigation
-│   │   │   ├── HeroSearch.jsx   # Landing search UI
-│   │   │   ├── ComparisonPage.jsx  # Main split-view
-│   │   │   ├── FeaturesSection.jsx
-│   │   │   ├── LoadingSpinner.jsx
-│   │   │   └── Footer.jsx
-│   │   ├── services/
-│   │   │   └── travelService.js  # API calls / mock data
-│   │   └── App.jsx
-│   ├── Dockerfile
-│   └── nginx.conf
-│
-├── backend/                     # Java 21 Spring Boot 3.4
-│   └── src/main/java/com/travel/
-│       ├── TravelApplication.java
-│       ├── controller/
-│       │   └── TravelController.java    # GET /api/v1/compare
-│       ├── service/
-│       │   └── TravelComparisonService.java
-│       ├── entity/
-│       │   └── TravelPackage.java       # JSONB column
-│       ├── repository/
-│       │   └── TravelPackageRepository.java
-│       ├── dto/
-│       │   └── ComparisonResponse.java
-│       └── config/
-│           ├── WebConfig.java    # CORS
-│           └── DataSeeder.java   # Sample data on startup
-│
-└── docker-compose.yml
-```
+| Layer | Notes |
+|-------|--------|
+| Frontend | e.g. Vercel — build `frontend`, set `VITE_API_URL` to your API base URL |
+| Backend | e.g. Railway, Render, Vercel serverless — set `DATABASE_URL`, `AUTH_SECRET`, etc. |
+| Database | Neon, Supabase, RDS — connection string in `DATABASE_URL` or `PG*` vars |
 
 ---
 
-## 🔌 API Reference
+## Tech stack
 
-### `GET /api/v1/compare`
-
-**Parameters:**
-| Param | Type | Example |
-|---|---|---|
-| `from` | string | `Hyderabad` |
-| `to` | string | `Varanasi` |
-
-**Response:**
-```json
-{
-  "origin": "Hyderabad",
-  "destination": "Varanasi",
-  "duration": "5 Days / 4 Nights",
-  "silver": {
-    "price": 14500,
-    "transport": "Train (Sleeper)",
-    "accommodation": "Budget Hostel",
-    "dining": "Local Street Food",
-    "perks": ["Free WiFi", "City Map"],
-    "itinerary": [
-      { "day": 1, "title": "Arrival & Ghats", "activities": ["..."] }
-    ]
-  },
-  "gold": { "...same structure..." },
-  "savings": {
-    "amount": 12500,
-    "percentage": 46,
-    "message": "Silver saves you ₹12,500 (46% less than Gold)"
-  }
-}
-```
+**Frontend:** React 18 · Vite · Tailwind CSS  
+**Backend:** Node.js · Express · `pg`  
+**Database:** PostgreSQL  
 
 ---
 
-## ☁️ Cloud Deployment
+## Demo login (after seed)
 
-| Layer | Provider | Command |
-|---|---|---|
-| Frontend | **Vercel** | `vercel deploy` in `/frontend` |
-| Backend | **Railway** | Push Docker image |
-| Database | **Supabase / Neon** | Update `application.properties` with connection URL |
-
-### Environment Variables (Production)
-```
-SPRING_DATASOURCE_URL=jdbc:postgresql://<host>:5432/travel_db
-SPRING_DATASOURCE_USERNAME=<user>
-SPRING_DATASOURCE_PASSWORD=<password>
-```
-
----
-
-## 🗄️ Database Schema
-
-```sql
-CREATE TABLE travel_packages (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    origin VARCHAR(50) NOT NULL,
-    destination VARCHAR(50) NOT NULL,
-    duration VARCHAR(50),
-    silver_price DECIMAL(10,2),
-    silver_transport VARCHAR(100),
-    silver_accommodation VARCHAR(100),
-    silver_dining VARCHAR(200),
-    silver_transport_detail VARCHAR(200),
-    silver_accommodation_detail VARCHAR(200),
-    silver_dining_detail VARCHAR(200),
-    gold_price DECIMAL(10,2),
-    gold_transport VARCHAR(100),
-    gold_accommodation VARCHAR(100),
-    gold_dining VARCHAR(200),
-    gold_transport_detail VARCHAR(200),
-    gold_accommodation_detail VARCHAR(200),
-    gold_dining_detail VARCHAR(200),
-    itinerary JSONB,          -- Day-by-day plans + perks (flexible)
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
----
-
-## 🧵 Java 21 Virtual Threads
-
-Enabled in `application.properties`:
-```properties
-spring.threads.virtual.enabled=true
-```
-
-This single line makes every HTTP request run on a **Virtual Thread** (Project Loom), allowing your Spring Boot app to handle **10,000+ concurrent users** with a single small server — no reactive programming complexity needed.
-
----
-
-## 📦 Pre-loaded Routes
-
-| Route | Silver | Gold | Savings |
-|---|---|---|---|
-| Hyderabad → Varanasi | ₹14,500 | ₹27,000 | ₹12,500 |
-| Hyderabad → Goa | ₹9,800 | ₹22,500 | ₹12,700 |
-| Hyderabad → Manali | ₹18,200 | ₹38,500 | ₹20,300 |
-
----
-
-## 🛠️ Tech Stack
-
-**Frontend:** React 18 · Vite · Tailwind CSS · Lucide React  
-**Backend:** Java 21 · Spring Boot 3.4 · Spring Data JPA · Virtual Threads  
-**Database:** PostgreSQL 16 · JSONB  
-**DevOps:** Docker · Docker Compose · Nginx  
-**Deploy:** Vercel (FE) · Railway/Render (BE) · Supabase/Neon (DB)
+If `SEED_ON_BOOT` seeds users: `demo@journeymate.app` / `demo123` (see `backend/src/scripts/seed.js`).
