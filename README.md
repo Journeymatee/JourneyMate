@@ -58,14 +58,34 @@ travel-app/
 ### Prerequisites
 
 - Node.js 20+
-- PostgreSQL 14+
+- Docker Desktop (recommended for clean local PostgreSQL)
 
-### 1) Database
+### 1) Database (Docker PostgreSQL)
 
-Create database (or use any existing DB and set env accordingly):
+Start PostgreSQL container:
 
 ```bash
-psql -U postgres -c "CREATE DATABASE journeymate;"
+docker compose up -d postgres
+```
+
+Check health/logs:
+
+```bash
+docker compose ps
+docker compose logs -f postgres
+```
+
+Stop container:
+
+```bash
+docker compose down
+```
+
+Reset DB data (fresh clean DB):
+
+```bash
+docker compose down -v
+docker compose up -d postgres
 ```
 
 ### 2) Backend
@@ -75,6 +95,14 @@ cd backend
 npm install
 npm run dev
 ```
+
+The backend `.env` is already configured for Docker DB:
+
+- `PGHOST=localhost`
+- `PGPORT=5433`
+- `PGDATABASE=journeymate`
+- `PGUSER=postgres`
+- `PGPASSWORD=journeymate123`
 
 Backend health check:
 
