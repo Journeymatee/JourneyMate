@@ -99,7 +99,7 @@ export default function Pricing() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-[100dvh] mesh-bg pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6">
+    <div className="min-h-[100dvh] page-bg-amber pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto">
 
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-white transition-colors mb-8 group">
@@ -109,13 +109,13 @@ export default function Pricing() {
 
         {/* Header */}
         <div className="text-center mb-14">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/10 mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-amber-500/30 mb-6">
             <Crown size={14} className="text-amber-400" />
-            <span className="text-sm text-slate-400 font-medium">Simple, transparent pricing</span>
+            <span className="text-sm text-slate-300 font-medium">Simple, transparent pricing</span>
           </div>
           <h1 className="font-display font-bold text-4xl sm:text-5xl lg:text-6xl text-white mb-4 leading-tight">
             Plans for every<br />
-            <span className="shimmer-gold">kind of traveler</span>
+            <span className="shimmer-amber">kind of traveler</span>
           </h1>
           <p className="text-slate-400 text-base sm:text-lg max-w-xl mx-auto">
             Start free and upgrade when you're ready. No surprise fees, no hidden charges.
@@ -199,7 +199,7 @@ export default function Pricing() {
             {FAQ.map((item, i) => (
               <div
                 key={i}
-                className="glass rounded-2xl border border-white/8 overflow-hidden"
+                className="glass rounded-2xl border border-amber-500/15 overflow-hidden"
               >
                 <button
                   type="button"
@@ -209,7 +209,7 @@ export default function Pricing() {
                   <span>{item.q}</span>
                   <ArrowRight
                     size={16}
-                    className={`shrink-0 text-slate-500 transition-transform duration-200 ${faqOpen === i ? 'rotate-90' : ''}`}
+                    className={`shrink-0 text-amber-500/60 transition-transform duration-200 ${faqOpen === i ? 'rotate-90' : ''}`}
                   />
                 </button>
                 <div className={`overflow-hidden transition-all duration-300 ${faqOpen === i ? 'max-h-40' : 'max-h-0'}`}>

@@ -37,6 +37,17 @@ const authRepo = {
     return rows[0]
   },
 
+  async updatePasswordByEmail(email, passwordHash) {
+    const { rows } = await pool.query(
+      `UPDATE users
+       SET password_hash = $2, updated_at = NOW()
+       WHERE LOWER(email) = LOWER($1)
+       RETURNING id, email, password_hash, full_name, avatar_url, provider`,
+      [email, passwordHash]
+    )
+    return rows[0] || null
+  },
+
   /** Find or create a user from a verified Google profile. */
   async findOrCreateByGoogle({ googleId, email, name, avatarUrl }) {
     // First try matching by google_id

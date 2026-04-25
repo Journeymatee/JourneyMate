@@ -19,6 +19,13 @@ const authController = {
     res.status(201).json(result)
   }),
 
+  forgotPassword: asyncHandler(async (req, res) => {
+    const email = String(req.body?.email || '').trim().toLowerCase()
+    const password = String(req.body?.password || '')
+    const result = await service.forgotPassword(email, password)
+    res.json(result)
+  }),
+
   me: asyncHandler(async (req, res) => {
     const result = await service.me(req.user.id)
     res.json(result)

@@ -7,6 +7,7 @@ const NAV_LINKS = [
   { to: '/how-it-works', label: 'How it Works' },
   { to: '/popular-routes', label: 'Popular Routes' },
   { to: '/blog', label: 'Blog' },
+  { to: '/about', label: 'About' },
 ]
 
 export default function Navbar() {

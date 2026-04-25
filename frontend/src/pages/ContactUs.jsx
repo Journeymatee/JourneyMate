@@ -30,7 +30,7 @@ export default function ContactUs() {
   }
 
   return (
-    <div className="min-h-[100dvh] mesh-bg pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6">
+    <div className="min-h-[100dvh] page-bg-emerald pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6">
       <div className="max-w-5xl mx-auto">
 
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-white transition-colors mb-8 group">
@@ -40,11 +40,13 @@ export default function ContactUs() {
 
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/10 mb-6">
-            <MessageCircle size={14} className="text-green-400" />
-            <span className="text-sm text-slate-400 font-medium">We'd love to hear from you</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-emerald-500/30 mb-6">
+            <MessageCircle size={14} className="text-emerald-400" />
+            <span className="text-sm text-slate-300 font-medium">We'd love to hear from you</span>
           </div>
-          <h1 className="font-display font-bold text-4xl sm:text-5xl text-white mb-4">Contact Us</h1>
+          <h1 className="font-display font-bold text-4xl sm:text-5xl text-white mb-4">
+            <span className="shimmer-emerald">Contact</span> Us
+          </h1>
           <p className="text-slate-400 text-base sm:text-lg max-w-xl mx-auto">
             Have a question, found a bug, or want to collaborate? We typically respond within 24 hours.
           </p>
@@ -139,7 +141,7 @@ export default function ContactUs() {
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="glass rounded-3xl p-6 sm:p-8 border border-white/8 space-y-5">
+              <form onSubmit={handleSubmit} className="glass rounded-3xl p-6 sm:p-8 border border-emerald-500/15 space-y-5">
                 {/* Name + Email row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="block">

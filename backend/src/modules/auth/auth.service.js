@@ -50,6 +50,20 @@ const authService = {
     return { token: issueToken(row), user: toPublicUser(row) }
   },
 
+  async forgotPassword(email, password) {
+    const row = await repo.findByEmail(email)
+    if (!row) {
+      // Do not reveal whether an account exists.
+      return { message: 'If this email is registered, the password has been updated.' }
+    }
+    if (!row.password_hash) {
+      throw ApiError.badRequest('This account uses Google Sign-In. Please use "Continue with Google".')
+    }
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
+    await repo.updatePasswordByEmail(email, passwordHash)
+    return { message: 'Password updated successfully. You can sign in now.' }
+  },
+
   async me(userId) {
     const row = await repo.findById(userId)
     if (!row) throw ApiError.unauthorized()

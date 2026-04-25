@@ -4,14 +4,14 @@ import { Link } from 'react-router-dom'
 
 const Section = ({ title, children }) => (
   <div className="mb-10">
-    <h2 className="font-display font-bold text-xl sm:text-2xl text-white mb-4 pb-2 border-b border-white/8">{title}</h2>
+    <h2 className="font-display font-bold text-xl sm:text-2xl text-white mb-4 pb-2 border-b border-teal-500/20">{title}</h2>
     <div className="text-slate-400 text-sm sm:text-base leading-relaxed space-y-3">{children}</div>
   </div>
 )
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-[100dvh] mesh-bg pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6">
+    <div className="min-h-[100dvh] page-bg-teal pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6">
       <div className="max-w-3xl mx-auto">
 
         {/* Back */}
@@ -22,16 +22,16 @@ export default function PrivacyPolicy() {
 
         {/* Header */}
         <div className="flex items-start gap-4 mb-10">
-          <div className="w-12 h-12 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center shrink-0 mt-1">
-            <Shield size={22} className="text-green-400" />
+          <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0 mt-1">
+            <Shield size={22} className="text-teal-400" />
           </div>
           <div>
-            <h1 className="font-display font-bold text-3xl sm:text-4xl text-white mb-2">Privacy Policy</h1>
+            <h1 className="font-display font-bold text-3xl sm:text-4xl text-white mb-2"><span className="shimmer-teal">Privacy</span> Policy</h1>
             <p className="text-slate-500 text-sm">Last updated: April 18, 2026</p>
           </div>
         </div>
 
-        <div className="glass rounded-3xl p-6 sm:p-10 border border-white/8">
+        <div className="glass rounded-3xl p-6 sm:p-10 border border-teal-500/15">
 
           <Section title="1. Information We Collect">
             <p>When you create an account on JourneyMate, we collect:</p>
@@ -77,11 +77,11 @@ export default function PrivacyPolicy() {
               <li>Opt out of marketing emails at any time</li>
               <li>Correct inaccurate personal information</li>
             </ul>
-            <p>To exercise any of these rights, email us at <a href="mailto:harshvardhan1412002@gmail.com" className="text-green-400 hover:underline">harshvardhan1412002@gmail.com</a>.</p>
+            <p>To exercise any of these rights, email us at <a href="mailto:harshvardhan1412002@gmail.com" className="text-teal-400 hover:underline">harshvardhan1412002@gmail.com</a>.</p>
           </Section>
 
           <Section title="6. Third-Party Services">
-            <p>We use OpenStreetMap (Nominatim) for city search and map rendering. Please refer to <a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer" className="text-green-400 hover:underline">OpenStreetMap's Privacy Policy</a> for details on their data practices.</p>
+            <p>We use OpenStreetMap (Nominatim) for city search and map rendering. Please refer to <a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">OpenStreetMap's Privacy Policy</a> for details on their data practices.</p>
           </Section>
 
           <Section title="7. Changes to This Policy">
@@ -89,7 +89,7 @@ export default function PrivacyPolicy() {
           </Section>
 
           <Section title="8. Contact">
-            <p>Questions about this policy? Contact us at <a href="mailto:harshvardhan1412002@gmail.com" className="text-green-400 hover:underline">harshvardhan1412002@gmail.com</a>.</p>
+            <p>Questions about this policy? Contact us at <a href="mailto:harshvardhan1412002@gmail.com" className="text-teal-400 hover:underline">harshvardhan1412002@gmail.com</a>.</p>
           </Section>
         </div>
       </div>

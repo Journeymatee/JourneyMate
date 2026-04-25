@@ -28,6 +28,15 @@ router.post(
   controller.register
 )
 
+router.post(
+  '/forgot-password',
+  authLimiter,
+  body('email').isEmail().withMessage('Valid email required').normalizeEmail(),
+  body('password').isString().isLength({ min: 6 }).withMessage('Password must be 6+ characters'),
+  validate,
+  controller.forgotPassword
+)
+
 /** Verify a Google Identity Services credential and return a JourneyMate JWT */
 router.post(
   '/google',

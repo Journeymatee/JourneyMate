@@ -714,8 +714,8 @@ export default function ComparisonPage({ tripData, onBack }) {
 
       {/* Floating savings banner — compact on mobile */}
       {showCta && (
-        <div className="floating-cta fixed bottom-0 left-0 right-0 z-40 safe-bottom">
-          <div className="max-w-3xl mx-auto glass border border-white/10 rounded-t-2xl sm:rounded-2xl sm:m-3 sm:mb-4 p-3 sm:p-4 flex items-center justify-between gap-2 sm:gap-4 shadow-2xl">
+        <div className="floating-cta fixed bottom-4 left-0 right-0 z-40 flex justify-center px-4 safe-bottom">
+          <div className="w-full max-w-3xl glass border border-white/15 rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-2 sm:gap-4 shadow-2xl shadow-black/40">
             {/* Left: savings info */}
             <div className="flex items-center gap-2 sm:gap-4 min-w-0">
               <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-green-500/20 border border-green-500/30 flex items-center justify-center text-base sm:text-xl shrink-0">💰</div>

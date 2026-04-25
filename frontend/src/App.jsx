@@ -14,6 +14,8 @@ import PrivacyPolicy from './pages/PrivacyPolicy'
 import Terms from './pages/Terms'
 import Pricing from './pages/Pricing'
 import ContactUs from './pages/ContactUs'
+import AboutOwner from './pages/AboutOwner'
+import ChatbotWidget from './components/ChatbotWidget'
 import { useAuth } from './context/AuthContext'
 import { searchTrip } from './services/travelService'
 
@@ -107,7 +109,9 @@ function AppShell() {
         <Route path="/terms" element={<Terms />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/contact" element={<ContactUs />} />
+        <Route path="/about" element={<AboutOwner />} />
       </Routes>
+      <ChatbotWidget />
     </div>
   )
 }

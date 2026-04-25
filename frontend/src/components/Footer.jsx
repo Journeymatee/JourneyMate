@@ -1,11 +1,12 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Twitter, Instagram, Github, Mail, MapPin } from 'lucide-react'
+import { Twitter, Instagram, Linkedin, Mail, MapPin } from 'lucide-react'
 
 const COMPANY_LINKS = [
   { label: 'How it Works', to: '/how-it-works' },
   { label: 'Popular Routes', to: '/popular-routes' },
   { label: 'Blog', to: '/blog' },
+  { label: 'About the Creator', to: '/about' },
 ]
 
 const SUPPORT_LINKS = [
@@ -16,9 +17,9 @@ const SUPPORT_LINKS = [
 ]
 
 const SOCIAL = [
-  { Icon: Twitter, href: 'https://twitter.com', label: 'Twitter' },
-  { Icon: Instagram, href: 'https://instagram.com', label: 'Instagram' },
-  { Icon: Github, href: 'https://github.com', label: 'GitHub' },
+  { Icon: Twitter, href: 'https://x.com/Harsh____06', label: 'Twitter' },
+  { Icon: Instagram, href: 'https://www.instagram.com/harshify__14?igsh=MWNhc25vOThtYm9kZg==', label: 'Instagram' },
+  { Icon: Linkedin, href: 'https://www.linkedin.com/in/harsh-vardhan-8b406a250?utm_source=share_via&utm_content=profile&utm_medium=member_android', label: 'LinkedIn' },
 ]
 
 export default function Footer() {
@@ -131,7 +132,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="border-t border-white/6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-slate-600 text-center sm:text-left">
-            © 2026 JourneyMate. Built with ❤️ for Indian travelers.
+            © 2026 JourneyMate. All rights reserved by Harsh.
           </p>
           <p className="text-xs text-slate-700 text-center sm:text-right">
             Prices are indicative and subject to availability.

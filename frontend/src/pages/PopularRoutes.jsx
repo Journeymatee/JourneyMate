@@ -64,18 +64,18 @@ export default function PopularRoutes() {
   }
 
   return (
-    <div className="min-h-[100dvh] mesh-bg pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6">
+    <div className="min-h-[100dvh] page-bg-cyan pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
 
         {/* Header */}
         <div className="text-center mb-10 sm:mb-14">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/10 mb-6">
-            <TrendingUp size={14} className="text-green-400" />
-            <span className="text-sm text-slate-400 font-medium">Live from our route database</span>
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-cyan-500/30 mb-6">
+            <TrendingUp size={14} className="text-cyan-400" />
+            <span className="text-sm text-slate-300 font-medium">Live from our route database</span>
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
           </div>
           <h1 className="hero-title font-display font-bold text-white mb-4 leading-tight">
-            Popular <span className="shimmer-gold">Routes</span>
+            Popular <span className="shimmer-cyan">Routes</span>
           </h1>
           <p className="text-slate-400 text-sm xs:text-base sm:text-lg max-w-2xl mx-auto">
             Hand-researched routes across India — real prices, real transport options, real itineraries.
@@ -117,7 +117,7 @@ export default function PopularRoutes() {
                   onClick={() => setActiveTag(cat)}
                   className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 border ${
                     activeTag === cat
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white border-transparent shadow-lg shadow-green-500/20'
+                      ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white border-transparent shadow-lg shadow-cyan-500/20'
                       : 'glass border-white/10 text-slate-400 hover:text-white hover:border-white/20'
                   }`}
                 >
@@ -207,14 +207,14 @@ export default function PopularRoutes() {
                       </div>
 
                       <div className="text-center text-xs text-slate-500 mb-5">
-                        Silver saves you <span className="text-green-400 font-bold">₹{savings.toLocaleString('en-IN')}</span>
+                        Silver saves you <span className="text-cyan-400 font-bold">₹{savings.toLocaleString('en-IN')}</span>
                       </div>
 
                       <div className="mt-auto">
                         <button
                           type="button"
                           onClick={() => handleCompare(route)}
-                          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-bold text-sm transition-all duration-200 shadow-lg shadow-green-500/20 hover:-translate-y-0.5"
+                          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white font-bold text-sm transition-all duration-200 shadow-lg shadow-cyan-500/20 hover:-translate-y-0.5"
                         >
                           <Zap size={15} />
                           Compare Plans
@@ -232,7 +232,7 @@ export default function PopularRoutes() {
                 <button
                   type="button"
                   onClick={() => setActiveTag('All')}
-                  className="mt-4 text-green-400 text-sm font-semibold hover:underline"
+                  className="mt-4 text-cyan-400 text-sm font-semibold hover:underline"
                 >
                   Show all routes
                 </button>

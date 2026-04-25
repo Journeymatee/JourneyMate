@@ -112,6 +112,16 @@ export default function FeaturesSection() {
             )
           })}
         </div>
+
+        {/* Platform owner plain text link */}
+        <p className="text-center text-xs text-slate-600 mt-10">
+          Built by{' '}
+          <Link to="/about" className="text-slate-400 hover:text-green-400 transition-colors font-medium underline underline-offset-2">
+            Harsh Vardhan Kumar
+          </Link>
+          {' '}· Platform Owner
+        </p>
+
       </div>
     </section>
   )

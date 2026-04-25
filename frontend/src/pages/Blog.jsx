@@ -97,17 +97,17 @@ export default function Blog() {
   const featured = POSTS.filter((p) => p.featured)
 
   return (
-    <div className="min-h-[100dvh] mesh-bg pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6">
+    <div className="min-h-[100dvh] page-bg-purple pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
 
         {/* Header */}
         <div className="text-center mb-10 sm:mb-14">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/10 mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-purple-500/30 mb-6">
             <BookOpen size={14} className="text-purple-400" />
-            <span className="text-sm text-slate-400 font-medium">Stories, guides & travel wisdom</span>
+            <span className="text-sm text-slate-300 font-medium">Stories, guides & travel wisdom</span>
           </div>
           <h1 className="font-display font-bold text-4xl sm:text-5xl lg:text-6xl text-white mb-4 leading-tight">
-            Travel <span className="shimmer-silver">Stories</span>
+            Travel <span className="shimmer-purple">Stories</span>
           </h1>
           <p className="text-slate-400 text-lg max-w-2xl mx-auto">
             Real insights, honest comparisons, and practical tips from India's travel community.
@@ -137,7 +137,7 @@ export default function Blog() {
                       <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${post.categoryColor} inline-block mb-2`}>
                         {post.category}
                       </span>
-                      <h3 className="font-display font-bold text-lg sm:text-xl text-white leading-snug group-hover:text-green-300 transition-colors">
+                      <h3 className="font-display font-bold text-lg sm:text-xl text-white leading-snug group-hover:text-purple-300 transition-colors">
                         {post.title}
                       </h3>
                     </div>
@@ -151,7 +151,7 @@ export default function Blog() {
                         <Clock size={12} />
                         <span>{post.readTime}</span>
                       </div>
-                      <div className={`flex items-center gap-1.5 text-xs font-semibold text-green-400 transition-transform ${hoveredId === post.id ? 'translate-x-1' : ''}`}>
+                      <div className={`flex items-center gap-1.5 text-xs font-semibold text-purple-400 transition-transform ${hoveredId === post.id ? 'translate-x-1' : ''}`}>
                         Read <ArrowRight size={14} />
                       </div>
                     </div>
@@ -171,7 +171,7 @@ export default function Blog() {
               onClick={() => setActiveCategory(cat)}
               className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 border ${
                 activeCategory === cat
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white border-transparent shadow-lg shadow-green-500/20'
+                  ? 'bg-gradient-to-r from-purple-500 to-violet-600 text-white border-transparent shadow-lg shadow-purple-500/20'
                   : 'glass border-white/10 text-slate-400 hover:text-white hover:border-white/20'
               }`}
             >
@@ -196,7 +196,7 @@ export default function Blog() {
                 </span>
               </div>
               <div className="p-5 sm:p-6 flex flex-col flex-1">
-                <h3 className="font-display font-bold text-base sm:text-lg text-white mb-3 leading-snug group-hover:text-green-300 transition-colors">
+                <h3 className="font-display font-bold text-base sm:text-lg text-white mb-3 leading-snug group-hover:text-purple-300 transition-colors">
                   {post.title}
                 </h3>
                 <p className="text-slate-400 text-xs sm:text-sm leading-relaxed mb-4 flex-1">

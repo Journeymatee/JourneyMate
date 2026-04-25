@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_users_email_lower  ON users (LOWER(email));
-CREATE INDEX IF NOT EXISTS idx_users_google_id    ON users (google_id);
 
 -- Upgrade existing installs: safely add new columns if missing
 DO $$ BEGIN
@@ -31,6 +30,9 @@ EXCEPTION WHEN others THEN NULL; END $$;
 DO $$ BEGIN
   ALTER TABLE users ADD COLUMN provider VARCHAR(16) NOT NULL DEFAULT 'local';
 EXCEPTION WHEN others THEN NULL; END $$;
+
+-- Create index only after upgrades ensured google_id exists.
+CREATE INDEX IF NOT EXISTS idx_users_google_id    ON users (google_id);
 
 CREATE TABLE IF NOT EXISTS cities (
   id              SERIAL PRIMARY KEY,
@@ -77,3 +79,12 @@ CREATE TABLE IF NOT EXISTS bookings (
   created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings (user_id);
+
+CREATE TABLE IF NOT EXISTS ai_chat_messages (
+  id              BIGSERIAL PRIMARY KEY,
+  user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role            VARCHAR(16) NOT NULL CHECK (role IN ('user', 'assistant')),
+  content         TEXT NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_chat_messages_user_time ON ai_chat_messages (user_id, id DESC);

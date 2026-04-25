@@ -44,6 +44,11 @@ export function AuthProvider({ children }) {
     return data.user
   }, [])
 
+  const forgotPassword = useCallback(async (email, password) => {
+    const { data } = await api.post('/auth/forgot-password', { email, password })
+    return data
+  }, [])
+
   const logout = useCallback(() => {
     localStorage.removeItem('jm_token')
     setUser(null)
@@ -54,8 +59,8 @@ export function AuthProvider({ children }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, loading, login, register, loginWithGoogle, logout }),
-    [user, loading, login, register, loginWithGoogle, logout]
+    () => ({ user, loading, login, register, loginWithGoogle, forgotPassword, logout }),
+    [user, loading, login, register, loginWithGoogle, forgotPassword, logout]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

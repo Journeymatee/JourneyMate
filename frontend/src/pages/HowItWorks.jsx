@@ -54,18 +54,18 @@ const FAQS = [
 
 export default function HowItWorks() {
   return (
-    <div className="min-h-[100dvh] mesh-bg pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6">
+    <div className="min-h-[100dvh] page-bg-blue pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6">
       <div className="max-w-5xl mx-auto">
 
         {/* Hero */}
         <div className="text-center mb-16 sm:mb-24">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/10 mb-6">
-            <Sparkles size={14} className="text-amber-400" />
-            <span className="text-sm text-slate-400 font-medium">Simple. Fast. Transparent.</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-indigo-500/30 mb-6">
+            <Sparkles size={14} className="text-indigo-400" />
+            <span className="text-sm text-slate-300 font-medium">Simple. Fast. Transparent.</span>
           </div>
           <h1 className="font-display font-bold text-4xl sm:text-5xl lg:text-6xl text-white mb-6 leading-tight">
             How JourneyMate<br />
-            <span className="shimmer-silver">Works</span>
+            <span className="shimmer-blue">Works</span>
           </h1>
           <p className="text-slate-400 text-lg max-w-2xl mx-auto">
             From a search to a full itinerary comparison in under 3 seconds. Here is how we do it.
@@ -75,7 +75,7 @@ export default function HowItWorks() {
         {/* Steps */}
         <div className="relative mb-20 sm:mb-28">
           {/* Vertical line */}
-          <div className="absolute left-6 sm:left-1/2 top-8 bottom-8 w-px bg-gradient-to-b from-green-500/40 via-purple-500/20 to-amber-500/40 hidden sm:block -translate-x-1/2" />
+          <div className="absolute left-6 sm:left-1/2 top-8 bottom-8 w-px bg-gradient-to-b from-indigo-500/40 via-blue-500/20 to-indigo-500/40 hidden sm:block -translate-x-1/2" />
 
           <div className="space-y-10 sm:space-y-16">
             {STEPS.map((s, i) => {
@@ -184,11 +184,11 @@ export default function HowItWorks() {
             {FAQS.map((faq) => (
               <details
                 key={faq.q}
-                className="glass rounded-2xl border border-white/8 group"
+                className="glass rounded-2xl border border-indigo-500/15 group"
               >
                 <summary className="flex items-center justify-between gap-4 px-6 py-5 cursor-pointer text-white font-semibold text-sm sm:text-base select-none list-none">
                   {faq.q}
-                  <ArrowRight size={16} className="shrink-0 text-slate-500 group-open:rotate-90 transition-transform" />
+                  <ArrowRight size={16} className="shrink-0 text-indigo-400 group-open:rotate-90 transition-transform" />
                 </summary>
                 <div className="px-6 pb-5 text-slate-400 text-sm leading-relaxed border-t border-white/6 pt-4">
                   {faq.a}

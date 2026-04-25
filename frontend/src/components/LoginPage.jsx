@@ -19,7 +19,7 @@ function loadGIS() {
 }
 
 export default function LoginPage() {
-  const { login, register, loginWithGoogle } = useAuth()
+  const { login, register, loginWithGoogle, forgotPassword } = useAuth()
   const [mode, setMode]           = useState('login')
   const [email, setEmail]         = useState('')
   const [password, setPassword]   = useState('')
@@ -27,6 +27,13 @@ export default function LoginPage() {
   const [error, setError]         = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [googleReady, setGoogleReady] = useState(false)
+  const [showForgot, setShowForgot] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetPassword, setResetPassword] = useState('')
+  const [resetConfirm, setResetConfirm] = useState('')
+  const [resetError, setResetError] = useState('')
+  const [resetMsg, setResetMsg] = useState('')
+  const [resetting, setResetting] = useState(false)
 
   /* Initialise Google GIS button */
   useEffect(() => {
@@ -103,12 +110,66 @@ export default function LoginPage() {
     }
   }
 
+  const openForgot = () => {
+    setShowForgot(true)
+    setResetEmail(email)
+    setResetPassword('')
+    setResetConfirm('')
+    setResetError('')
+    setResetMsg('')
+  }
+
+  const closeForgot = () => {
+    setShowForgot(false)
+    setResetError('')
+    setResetMsg('')
+  }
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault()
+    setResetError('')
+    setResetMsg('')
+
+    const cleanEmail = resetEmail.trim().toLowerCase()
+    if (!cleanEmail) return setResetError('Please enter your email.')
+    if (resetPassword.length < 6) return setResetError('Password must be at least 6 characters.')
+    if (resetPassword !== resetConfirm) return setResetError('Passwords do not match.')
+
+    setResetting(true)
+    try {
+      const data = await forgotPassword(cleanEmail, resetPassword)
+      setEmail(cleanEmail)
+      setPassword('')
+      setResetMsg(data?.message || 'Password updated. You can sign in now.')
+      setMode('login')
+    } catch (err) {
+      const api = err.response?.data?.error
+      setResetError(
+        (api && typeof api === 'object' && api.message) ||
+        (typeof api === 'string' && api) ||
+        err.message ||
+        'Could not reset password. Please try again.'
+      )
+    } finally {
+      setResetting(false)
+    }
+  }
+
   return (
-    <div className="min-h-[100dvh] mesh-bg flex flex-col items-center justify-center px-4 py-16">
+    <div
+      className="relative min-h-[100dvh] bg-cover bg-center bg-no-repeat flex flex-col items-center justify-center px-4 py-16 safe-pad"
+      style={{ backgroundImage: "url('/login-bg.jpg')" }}
+    >
+      <div className="absolute inset-0 bg-slate-950/72" aria-hidden />
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/25 via-slate-950/40 to-amber-900/20" aria-hidden />
       <div className="w-full max-w-md relative z-10">
 
         {/* Logo + heading */}
         <div className="flex flex-col items-center text-center mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass border border-white/10 mb-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+            <span className="text-[11px] text-slate-300 font-medium tracking-wide">Secure access to JourneyMate</span>
+          </div>
           <div className="mb-4 relative">
             <img
               src="/logo.svg"
@@ -120,15 +181,15 @@ export default function LoginPage() {
           <h1 className="font-display font-bold text-3xl sm:text-4xl text-white tracking-tight">
             JourneyMate
           </h1>
-          <p className="text-slate-400 text-sm sm:text-base mt-2 max-w-xs mx-auto">
+          <p className="text-slate-300/95 text-sm sm:text-base mt-2 max-w-xs mx-auto leading-relaxed">
             {mode === 'login' ? 'Welcome back! Sign in to continue.' : 'Create your free account and start exploring.'}
           </p>
         </div>
 
-        <div className="glass rounded-3xl p-5 sm:p-8 border border-white/10 shadow-2xl">
+        <div className="glass rounded-3xl p-5 sm:p-8 border border-white/15 shadow-2xl shadow-black/40">
 
           {/* Tab switcher */}
-          <div className="flex rounded-2xl bg-white/5 p-1 mb-6">
+          <div className="flex rounded-2xl bg-slate-900/50 border border-white/10 p-1 mb-6">
             {[['login', 'Sign in'], ['register', 'Create account']].map(([m, label]) => (
               <button
                 key={m}
@@ -136,8 +197,8 @@ export default function LoginPage() {
                 onClick={() => { setMode(m); setError('') }}
                 className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   mode === m
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/20'
+                    : 'text-slate-300 hover:text-white'
                 }`}
               >
                 {label}
@@ -155,7 +216,7 @@ export default function LoginPage() {
                 style={{ minHeight: 44 }}
               />
               {!googleReady && (
-                <div className="h-11 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center gap-2 text-slate-400 text-sm">
+                <div className="h-11 rounded-xl bg-slate-900/55 border border-white/12 flex items-center justify-center gap-2 text-slate-300 text-sm">
                   <Loader2 size={16} className="animate-spin" />
                   Loading Google…
                 </div>
@@ -168,7 +229,7 @@ export default function LoginPage() {
                 type="button"
                 disabled
                 title="Set VITE_GOOGLE_CLIENT_ID in frontend/.env.local to enable"
-                className="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-white/6 border border-white/10 text-slate-500 font-semibold text-sm cursor-not-allowed select-none"
+                className="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-slate-900/55 border border-white/12 text-slate-400 font-semibold text-sm cursor-not-allowed select-none"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -179,8 +240,8 @@ export default function LoginPage() {
                 Continue with Google
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/8 text-slate-600 ml-1">Not configured</span>
               </button>
-              <p className="text-[10px] text-slate-600 text-center mt-1.5">
-                Add <code className="text-slate-500">VITE_GOOGLE_CLIENT_ID</code> to enable
+              <p className="text-[10px] text-slate-500 text-center mt-1.5">
+                Add <code className="text-slate-300">VITE_GOOGLE_CLIENT_ID</code> to enable
               </p>
             </div>
           )}
@@ -188,19 +249,80 @@ export default function LoginPage() {
           {/* Divider */}
           <div className="flex items-center gap-3 mb-5">
             <div className="flex-1 h-px bg-white/8" />
-            <span className="text-xs text-slate-600 font-medium">or continue with email</span>
+            <span className="text-xs text-slate-400 font-medium">or continue with email</span>
             <div className="flex-1 h-px bg-white/8" />
           </div>
+
+          {showForgot && (
+            <div className="mb-5 rounded-2xl border border-white/12 bg-slate-900/60 p-4">
+              <p className="text-sm font-semibold text-white mb-3">Reset password</p>
+              <form onSubmit={handleForgotSubmit} className="space-y-3">
+                <input
+                  className="w-full rounded-xl bg-slate-900/70 border border-white/12 px-3 py-2.5 text-sm text-white outline-none focus:border-green-500/45 focus:ring-2 focus:ring-green-500/20 placeholder:text-slate-400"
+                  type="email"
+                  placeholder="Your account email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  autoComplete="email"
+                  required
+                />
+                <input
+                  className="w-full rounded-xl bg-slate-900/70 border border-white/12 px-3 py-2.5 text-sm text-white outline-none focus:border-green-500/45 focus:ring-2 focus:ring-green-500/20 placeholder:text-slate-400"
+                  type="password"
+                  placeholder="New password (min 6 chars)"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                  autoComplete="new-password"
+                  required
+                  minLength={6}
+                />
+                <input
+                  className="w-full rounded-xl bg-slate-900/70 border border-white/12 px-3 py-2.5 text-sm text-white outline-none focus:border-green-500/45 focus:ring-2 focus:ring-green-500/20 placeholder:text-slate-400"
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={resetConfirm}
+                  onChange={(e) => setResetConfirm(e.target.value)}
+                  autoComplete="new-password"
+                  required
+                  minLength={6}
+                />
+
+                {resetError && (
+                  <p className="text-xs text-red-300">{resetError}</p>
+                )}
+                {resetMsg && (
+                  <p className="text-xs text-emerald-300">{resetMsg}</p>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={resetting}
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                  >
+                    {resetting ? 'Updating...' : 'Update password'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeForgot}
+                    className="px-4 py-2.5 rounded-xl border border-white/12 text-slate-300 hover:text-white hover:border-white/20 text-sm transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
 
           {/* Email / password form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
               <label className="block">
-                <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider">Name</span>
-                <div className="mt-1.5 flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 px-4 py-3 focus-within:border-green-500/40 transition-colors">
-                  <User size={16} className="text-slate-500 shrink-0" />
+                <span className="text-[10px] sm:text-xs font-medium text-slate-300 uppercase tracking-wider">Name</span>
+                <div className="mt-1.5 flex items-center gap-3 rounded-2xl bg-slate-900/55 hover:bg-white/[0.07] border border-white/12 px-4 py-3 focus-within:border-green-500/45 focus-within:ring-2 focus-within:ring-green-500/20 transition-all">
+                  <User size={16} className="text-slate-400 shrink-0" />
                   <input
-                    className="w-full bg-transparent text-white text-sm outline-none placeholder:text-slate-500"
+                    className="w-full bg-transparent text-white text-sm outline-none placeholder:text-slate-400"
                     placeholder="Your name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -211,11 +333,11 @@ export default function LoginPage() {
             )}
 
             <label className="block">
-              <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider">Email</span>
-              <div className="mt-1.5 flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 px-4 py-3 focus-within:border-green-500/40 transition-colors">
-                <Mail size={16} className="text-slate-500 shrink-0" />
+              <span className="text-[10px] sm:text-xs font-medium text-slate-300 uppercase tracking-wider">Email</span>
+              <div className="mt-1.5 flex items-center gap-3 rounded-2xl bg-slate-900/55 hover:bg-white/[0.07] border border-white/12 px-4 py-3 focus-within:border-green-500/45 focus-within:ring-2 focus-within:ring-green-500/20 transition-all">
+                <Mail size={16} className="text-slate-400 shrink-0" />
                 <input
-                  className="w-full bg-transparent text-white text-sm outline-none placeholder:text-slate-500"
+                  className="w-full bg-transparent text-white text-sm outline-none placeholder:text-slate-400"
                   type="email"
                   required
                   placeholder="you@example.com"
@@ -227,11 +349,11 @@ export default function LoginPage() {
             </label>
 
             <label className="block">
-              <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider">Password</span>
-              <div className="mt-1.5 flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 px-4 py-3 focus-within:border-green-500/40 transition-colors">
-                <Lock size={16} className="text-slate-500 shrink-0" />
+              <span className="text-[10px] sm:text-xs font-medium text-slate-300 uppercase tracking-wider">Password</span>
+              <div className="mt-1.5 flex items-center gap-3 rounded-2xl bg-slate-900/55 hover:bg-white/[0.07] border border-white/12 px-4 py-3 focus-within:border-green-500/45 focus-within:ring-2 focus-within:ring-green-500/20 transition-all">
+                <Lock size={16} className="text-slate-400 shrink-0" />
                 <input
-                  className="w-full bg-transparent text-white text-sm outline-none placeholder:text-slate-500"
+                  className="w-full bg-transparent text-white text-sm outline-none placeholder:text-slate-400"
                   type="password"
                   required
                   minLength={mode === 'register' ? 6 : 1}
@@ -240,6 +362,15 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 />
+              </div>
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={openForgot}
+                  className="text-xs text-slate-300 hover:text-green-300 transition-colors"
+                >
+                  Forgot password?
+                </button>
               </div>
             </label>
 
@@ -261,10 +392,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-xs text-slate-500 mt-5 leading-relaxed">
-            Demo: <span className="text-slate-400">demo@journeymate.app</span> /{' '}
-            <span className="text-slate-400">demo123</span>
-          </p>
         </div>
       </div>
     </div>
