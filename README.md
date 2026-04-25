@@ -1,47 +1,88 @@
-# JourneyMate — Silver vs Gold travel comparison
+# JourneyMate - AI Travel Planning Platform
 
-Full-stack app: **React 18 + Vite** frontend, **Node.js + Express** API, **PostgreSQL** data.
+JourneyMate is a full-stack travel platform for Indian travelers. It compares budget vs luxury trips, generates travel guidance, and now includes an advanced AI assistant with streaming chat, voice input/output, and persistent memory.
 
----
+## Core Features
 
-## Features
+- Smart trip comparison: budget (Silver) vs premium (Gold) travel plans.
+- Route-based planning across major Indian destinations with practical itinerary guidance.
+- Professional, responsive UI for desktop, tablet, and mobile.
+- Authentication system:
+  - email/password login and registration
+  - Google login
+  - forgot-password reset flow
+- Platform branding pages:
+  - About/Platform Owner page
+  - policy, terms, pricing, blog, contact, and routes pages
+- Dynamic page theming and custom visual design for content sections.
+- AI chatbot assistant:
+  - LLM-powered responses with NLP intent/entity extraction
+  - token streaming responses (live typing effect)
+  - follow-up suggestion chips
+  - voice input via microphone
+  - voice output (AI speaks responses)
+  - Hindi/English auto-switch for speech
+  - persistent per-user conversation memory in PostgreSQL
+- Production-ready backend setup with migration + seed on boot.
 
-| Feature | Details |
-|--------|---------|
-| Compare | Silver vs Gold plans side-by-side |
-| Toggle | Optimize for savings / balance / comfort |
-| Itinerary | Day-by-day plans where applicable |
-| Responsive | Mobile-first layout |
+## AI Assistant Capabilities
 
----
+JourneyMate AI combines LLM reasoning with lightweight rule-based NLP:
 
-## Quick start (local)
+- Intent detection: itinerary, comparison, budget, seasonality, transport, safety, general queries.
+- Entity extraction: source city, destination city, days, budget, month, known city mentions.
+- Context-aware prompting with user profile + extracted entities.
+- Graceful fallback engine if external LLM is unavailable.
+- Server-sent events (SSE) stream API for progressive responses.
+- Conversation memory table (`ai_chat_messages`) for user-specific continuity.
+
+## Tech Stack
+
+- Frontend: React 18, Vite, Tailwind CSS, Axios
+- Backend: Node.js, Express, express-validator, rate limiting
+- Database: PostgreSQL
+- Auth: JWT-style bearer token flow + Google identity support
+- AI: OpenAI-compatible chat completions API + NLP augmentation
+
+## Monorepo Structure
+
+```text
+travel-app/
+  backend/      # Node/Express API + schema + seed/migrate scripts
+  frontend/     # React/Vite client
+  photos/       # source image assets used in UI
+```
+
+## Local Setup
 
 ### Prerequisites
 
-- **Node.js** 20+
-- **PostgreSQL** 14+ (local install, cloud, or Postgres.app)
+- Node.js 20+
+- PostgreSQL 14+
 
-### 1. Database
+### 1) Database
 
-Create a database (name can match `PGDATABASE` in `.env`, default `journeymate`):
+Create database (or use any existing DB and set env accordingly):
 
 ```bash
 psql -U postgres -c "CREATE DATABASE journeymate;"
 ```
 
-### 2. Backend
+### 2) Backend
 
 ```bash
 cd backend
-# Add .env with PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE (or DATABASE_URL)
 npm install
 npm run dev
 ```
 
-API: `http://localhost:8080` (or `PORT` from `.env`) — e.g. `http://localhost:8080/api/health`.
+Backend health check:
 
-### 3. Frontend
+```text
+http://localhost:8080/api/health
+```
+
+### 3) Frontend
 
 ```bash
 cd frontend
@@ -49,142 +90,96 @@ npm install
 npm run dev
 ```
 
-App: `http://localhost:5173` (Vite proxies `/api` to the backend in dev when configured).
+Frontend runs on:
 
----
-
-## Architecture (overview)
-
-```
-travel-app/
-├── frontend/          # React + Vite + Tailwind
-├── backend/           # Express API, migrations under src/schema
-└── README.md
+```text
+http://localhost:5173
 ```
 
----
+## Environment Variables
 
-## Cloud deployment
+### Backend (`backend/.env`)
 
-| Layer | Notes |
-|-------|--------|
-| Frontend | e.g. Vercel — root **frontend**, set env vars below, then redeploy |
-| Backend | e.g. Vercel (`backend`), Railway, Render — `DATABASE_URL`, `AUTH_SECRET`, `CORS_ORIGIN`, etc. |
-| Database | Neon, Supabase, RDS — connection string in `DATABASE_URL` or `PG*` vars |
+- `NODE_ENV=development`
+- `PORT=8080`
+- `DATABASE_URL=...` (preferred in cloud) or `PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD`
+- `AUTH_SECRET=...`
+- `TOKEN_TTL_MS=...`
+- `CORS_ORIGIN=http://localhost:5173,...`
+- `GOOGLE_CLIENT_ID=...` (optional)
+- `GOOGLE_CLIENT_SECRET=...` (optional)
+- `AI_API_KEY=...`
+- `AI_MODEL=gpt-4o-mini`
+- `AI_API_URL=https://api.openai.com/v1/chat/completions`
+- `AI_TIMEOUT_MS=20000`
+- `SEED_ON_BOOT=true`
+- `TRUST_PROXY=true`
 
-### Vercel frontend — fix “Network Error”
+### Frontend (`frontend/.env` / Render static env)
 
-The SPA is static; **`/api` on the same domain is not your Node server** unless you add a separate rewrite. By default the UI must call your API by **full URL**.
+- `VITE_API_URL=https://<your-api-host>/api`
 
-1. Deploy the **backend** and copy its public base (e.g. `https://journeymate-api.vercel.app`).
-2. In the **frontend** Vercel project → **Settings → Environment Variables** (Production):
-   - **`VITE_API_URL`** = `https://<your-api-host>/api`  
-     (must end with **`/api`** — Express mounts routes under `/api`.)
-3. **Redeploy** the frontend (env is baked in at build time).
-4. On the **backend**, set **`CORS_ORIGIN`** to your live frontend origin, e.g. `https://your-app.vercel.app` (comma-separated for several). Using `*` works but is loose; prefer the real UI URL with credentials if you tighten CORS later.
+Important: `VITE_API_URL` must include `/api` at the end.
 
-See `frontend/.env.example`.
+## API Overview
 
----
+Base URL:
 
-## Deploy on Render.com
+```text
+/api
+```
 
-Use **one Git repo** (`007Harshvardhan/JourneyMate`). Create resources in this order: **PostgreSQL → Web Service (API) → Static Site (UI)**.
+Key route groups:
 
-### 1. PostgreSQL (Render)
+- `/auth` - login, register, google auth, forgot-password, me, stats
+- `/trips` - trip comparison/search flow
+- `/cities` - city lookup data
+- `/bookings` - booking-related operations
+- `/ai/chat` - normal AI response
+- `/ai/chat/stream` - streamed AI response (SSE)
+- `/health` - service/database health check
 
-1. Dashboard → **New +** → **PostgreSQL**.
-2. Name: e.g. `journeymate-db`, region (match API below), plan as needed.
-3. After it is **Available**, open the DB → copy **Internal Database URL** (preferred if API is on Render in the same region) or **External Database URL**.
+## Deploy on Render (Recommended)
 
-You do **not** need to create `journeymate` manually: the URL Render gives already includes a database name — use that URL as **`DATABASE_URL`** on the API.
+Create resources in this order:
 
----
+1. PostgreSQL
+2. Backend Web Service (`backend`)
+3. Frontend Static Site (`frontend`)
 
-### 2. Web Service — Node API (`backend`)
+### Backend (Render Web Service)
 
-| Field | Value |
-|--------|--------|
-| **Name** | `journeymate-api` (becomes `https://journeymate-api.onrender.com`) |
-| **Project** | Optional — create a project if you want grouping |
-| **Language** | **Node** |
-| **Branch** | `main` |
-| **Region** | Same as Postgres (e.g. **Oregon** or **Singapore**) |
-| **Root Directory** | `backend` |
-| **Build Command** | `npm install` |
-| **Start Command** | `npm start` |
-| **Health Check Path** | `/api/health` |
+- Root directory: `backend`
+- Build command: `npm install`
+- Start command: `npm start`
+- Health path: `/api/health`
+- Env vars: `DATABASE_URL`, `AUTH_SECRET`, `CORS_ORIGIN`, `AI_API_KEY`, `AI_MODEL`, `VITE/Google vars as needed`
 
-**Environment → Environment Variables** (add manually or **Link database** so `DATABASE_URL` is injected):
+### Frontend (Render Static Site)
 
-| Key | Value |
-|-----|--------|
-| `NODE_ENV` | `production` |
-| `DATABASE_URL` | Paste from Render Postgres (**Link** the DB to auto-fill), or Neon/Supabase URL |
-| `AUTH_SECRET` | Long random string (e.g. 32+ chars); used to sign session tokens |
-| `CORS_ORIGIN` | Your **frontend** URL after step 3, e.g. `https://journeymate-web.onrender.com` (comma-separated for multiple). For a quick test you can use `*` |
-| `GOOGLE_CLIENT_ID` | Optional — same value as local if you use Google Sign-In |
-| `SEED_ON_BOOT` | `true` (seeds demo users + cities on deploy) |
-| `TRUST_PROXY` | `true` |
+- Root directory: `frontend`
+- Build command: `npm install && npm run build`
+- Publish directory: `dist`
+- Env var: `VITE_API_URL=https://<api-service>.onrender.com/api`
+- Add SPA rewrite:
+  - Source: `/*`
+  - Destination: `/index.html`
+  - Action: Rewrite
 
-Render sets **`PORT`** automatically — the app already reads `process.env.PORT`.
+### Render Deployment Checklist
 
-Deploy the API, wait until it is **Live**, then open `https://<your-api-name>.onrender.com/api/health` — JSON should show `"ok": true` and `"database": true`.
+- API health endpoint returns success.
+- Frontend points to correct API host (`VITE_API_URL`).
+- Backend `CORS_ORIGIN` includes frontend domain.
+- AI key configured in backend environment.
+- Frontend and backend redeployed after env updates.
 
----
+## Security Notes
 
-### 3. Static Site — Vite frontend (`frontend`)
+- Do not commit production secrets to Git.
+- Keep `AI_API_KEY`, DB credentials, and auth secret in Render environment variables.
+- If any key is exposed, rotate it immediately.
 
-| Field | Value |
-|--------|--------|
-| **Name** | `journeymate-web` (or any name; URL becomes `https://<name>.onrender.com`) |
-| **Branch** | `main` |
-| **Root Directory** | `frontend` |
-| **Build Command** | `npm install && npm run build` |
-| **Publish directory** | `dist` |
+## License
 
-**Environment → Environment Variables** (needed at **build** time):
-
-| Key | Value |
-|-----|--------|
-| `VITE_API_URL` | `https://<your-api-name>.onrender.com/api` — **exact** URL of step 2, must end with `/api` |
-
-**SPA routing (React Router):** In the static site on Render, add a **Rewrite** (Redirects / Rewrites section, names vary):
-
-- **Source:** `/*`
-- **Destination:** `/index.html`
-- **Action:** Rewrite (not redirect)
-
-If direct links to routes 404 without this, that rule is missing.
-
-Redeploy the static site after changing `VITE_API_URL`.
-
----
-
-### 4. Wire CORS
-
-After the static site URL is known, set **`CORS_ORIGIN`** on the **Web Service** to that origin (e.g. `https://journeymate-web.onrender.com`) and **clear redeploy** the API so the browser is allowed to call the API with cookies/headers you use.
-
----
-
-### Checklist
-
-- [ ] Postgres running; `DATABASE_URL` on API
-- [ ] API `/api/health` returns 200 with `database: true`
-- [ ] `VITE_API_URL` on static site = `https://<api>.onrender.com/api` + rebuild
-- [ ] `CORS_ORIGIN` on API = `https://<web>.onrender.com`
-- [ ] SPA rewrite `/*` → `/index.html` on static site
-
----
-
-## Tech stack
-
-**Frontend:** React 18 · Vite · Tailwind CSS  
-**Backend:** Node.js · Express · `pg`  
-**Database:** PostgreSQL  
-
----
-
-## Demo login (after seed)
-
-If `SEED_ON_BOOT` seeds users: `demo@journeymate.app` / `demo123` (see `backend/src/scripts/seed.js`).
+Private project by Harsh Vardhan Kumar.
