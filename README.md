@@ -140,8 +140,21 @@ http://localhost:5173
 - `AI_MODEL=gpt-4o-mini`
 - `AI_API_URL=https://api.openai.com/v1/chat/completions`
 - `AI_TIMEOUT_MS=20000`
+- `AI_REALTIME_ENABLED=true`
+- `AI_LIVE_TIMEOUT_MS=8000`
 - `SEED_ON_BOOT=true`
 - `TRUST_PROXY=true`
+
+### AI model providers (incl. free-tier options)
+
+This project uses an **OpenAI Chat Completions compatible** `POST` request to `AI_API_URL` with a bearer token. That means you can point it to any compatible provider, not only OpenAI.
+
+- **OpenAI (paid/usage)**: set `AI_API_URL` to `https://api.openai.com/v1/chat/completions` and an OpenAI key.
+- **Groq (common free-credit / fast)**: set `AI_API_URL` to `https://api.groq.com/openai/v1/chat/completions` and a Groq API key, pick a model like `llama-3.1-8b-instant`.
+- **Together (sometimes free credits)**: set their OpenAI-compatible chat completions URL + key.
+- **Local Ollama (dev only)**: run Ollama with an OpenAI-compatible server and point `AI_API_URL` to that host (often not suitable for a public website unless you also host a dedicated inference server).
+
+Copy `backend/.env.example` to `backend/.env` locally, then set keys in **Render** for production. Do not commit real secrets.
 
 ### Frontend (`frontend/.env` / Render static env)
 
