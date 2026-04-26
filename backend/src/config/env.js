@@ -35,6 +35,8 @@ const env = {
   AI_MODEL: process.env.AI_MODEL || 'gpt-4o-mini',
   AI_API_URL: process.env.AI_API_URL || 'https://api.openai.com/v1/chat/completions',
   AI_TIMEOUT_MS: Number(process.env.AI_TIMEOUT_MS || 20000),
+  AI_REALTIME_ENABLED: bool(process.env.AI_REALTIME_ENABLED, true),
+  AI_LIVE_TIMEOUT_MS: Number(process.env.AI_LIVE_TIMEOUT_MS || 8000),
 
   SEED_ON_BOOT: bool(process.env.SEED_ON_BOOT, true),
   TRUST_PROXY: bool(process.env.TRUST_PROXY, true),

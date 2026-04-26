@@ -27,6 +27,23 @@ function detectSpeechLang(text) {
   return /[\u0900-\u097F]/.test(String(text || '')) ? 'hi-IN' : 'en-IN'
 }
 
+function getRealtimeHint(realtime) {
+  if (!realtime) return ''
+  if (realtime.weather?.city) {
+    const t = realtime.weather.current?.temperature_2m
+    return Number.isFinite(t)
+      ? `Live data used: ${realtime.weather.city} weather (${t}C).`
+      : `Live data used: ${realtime.weather.city} weather.`
+  }
+  if (realtime.routeStats?.citySlug) {
+    return `Live data used: platform routes for ${realtime.routeStats.citySlug}.`
+  }
+  if (realtime.userBookingStats && Number.isFinite(realtime.userBookingStats.totalBookings)) {
+    return `Live data used: your booking history.`
+  }
+  return ''
+}
+
 function getInitialMessages() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -149,6 +166,7 @@ export default function ChatbotWidget() {
       role: 'bot',
       text: '',
       followUps: [],
+      liveHint: '',
     }
 
     const withUser = [...messages, userMessage, draftBotMessage]
@@ -166,10 +184,12 @@ export default function ChatbotWidget() {
           content: m.text,
         }))
       let streamedText = ''
+      let liveHint = ''
 
       const final = await streamChatWithAi(userText, history, {
         onMeta: (payload) => {
           setActiveModel(payload?.model || 'AI')
+          liveHint = getRealtimeHint(payload?.realtime)
         },
         onToken: (chunk) => {
           streamedText += chunk
@@ -184,6 +204,7 @@ export default function ChatbotWidget() {
                 ? {
                     ...m,
                     followUps: Array.isArray(payload?.followUps) ? payload.followUps.slice(0, 3) : [],
+                    liveHint,
                   }
                 : m
             )
@@ -194,7 +215,11 @@ export default function ChatbotWidget() {
       setMessages((prev) => {
         const next = prev.map((m) =>
           m.id === botMessageId
-            ? { ...m, text: m.text.trim() || 'I could not generate a response right now.' }
+            ? {
+                ...m,
+                text: m.text.trim() || 'I could not generate a response right now.',
+                liveHint: m.liveHint || getRealtimeHint(final?.realtime),
+              }
             : m
         )
         persistMessages(next)
@@ -206,7 +231,7 @@ export default function ChatbotWidget() {
       const msg = error?.message ||
         'AI service is currently unavailable. Please try again after backend restart/config.'
       setMessages((prev) => {
-        const next = prev.map((m) => (m.id === botMessageId ? { ...m, text: msg, followUps: [] } : m))
+        const next = prev.map((m) => (m.id === botMessageId ? { ...m, text: msg, followUps: [], liveHint: '' } : m))
         persistMessages(next)
         return next
       })
@@ -292,6 +317,9 @@ export default function ChatbotWidget() {
                 }`}
               >
                 <p>{msg.text}</p>
+                {msg.role === 'bot' && msg.liveHint && (
+                  <p className="mt-1 text-[10px] text-cyan-300/90">{msg.liveHint}</p>
+                )}
                 {msg.role === 'bot' && Array.isArray(msg.followUps) && msg.followUps.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {msg.followUps.map((item) => (

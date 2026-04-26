@@ -3,14 +3,17 @@
 const ApiError = require('../../lib/ApiError')
 const env = require('../../config/env')
 const memoryRepo = require('./ai.memory.repo')
+const { pool } = require('../../config/db')
 
 const SYSTEM_PROMPT =
-  'You are JourneyMate AI, an advanced India travel planner combining LLM reasoning with extracted trip entities. ' +
-  'Use user context + extracted entities to give practical answers. Keep responses concise, clear, and highly actionable. ' +
-  'If user asks for itinerary/comparison, use structured headings with bullet points. ' +
-  'If information is uncertain, say what to verify. Avoid hallucinated prices or guaranteed timings.'
+  'You are JourneyMate AI, an advanced India travel planner using LLM reasoning + real-time data + extracted entities. ' +
+  'Use provided realtime context whenever available and clearly mention when data is unavailable. ' +
+  'Keep responses concise, practical, and highly actionable. ' +
+  'If user asks itinerary/comparison, use structured headings with bullet points. ' +
+  'Avoid hallucinated prices, schedules, weather, or guarantees.'
 
 const MAX_HISTORY_MESSAGES = 10
+const DEFAULT_LIVE_TIMEOUT_MS = env.AI_LIVE_TIMEOUT_MS || 8000
 
 const MONTHS = [
   'january', 'february', 'march', 'april', 'may', 'june',
@@ -125,16 +128,19 @@ function buildNlpContext(prompt) {
   return { intent, entities, language }
 }
 
-function buildUserMessage({ prompt, user, nlp }) {
+function buildUserMessage({ prompt, user, nlp, realtimeContext }) {
   return [
     `User: ${user?.name || 'Traveler'} (${user?.email || 'unknown'})`,
     `Intent: ${nlp.intent}`,
     `Language: ${nlp.language}`,
     `Entities: ${JSON.stringify(nlp.entities)}`,
     '',
+    'Realtime context (external + platform data):',
+    realtimeContext || 'No live context available.',
+    '',
     `Original query: ${prompt}`,
     '',
-    'Respond in concise practical format. For itinerary/comparison, include headings + bullets.',
+    'Respond in concise practical format. For itinerary/comparison, include headings + bullets and add what data user should verify.',
   ].join('\n')
 }
 
@@ -160,6 +166,196 @@ function localFallbackReply({ prompt, nlp }) {
   return `I can help with itinerary, budget comparison, timing, and route ideas. Try: "Plan a 3-day budget trip from Delhi to Goa in November under 20000 INR".`
 }
 
+function titleCase(v) {
+  return String(v || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((s) => s[0].toUpperCase() + s.slice(1).toLowerCase())
+    .join(' ')
+}
+
+function toSlug(v) {
+  return String(v || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function shouldFetchWeather(prompt, nlp) {
+  const q = prompt.toLowerCase()
+  return (
+    nlp.intent === 'seasonality' ||
+    /(weather|temperature|rain|forecast|today|tomorrow|climate)/.test(q)
+  )
+}
+
+function shouldFetchPlatformStats(prompt, nlp) {
+  const q = prompt.toLowerCase()
+  return (
+    nlp.intent === 'comparison' ||
+    nlp.intent === 'transport' ||
+    nlp.intent === 'itinerary' ||
+    /(route|routes|booking|bookings|popular|availability)/.test(q)
+  )
+}
+
+async function fetchJsonWithTimeout(url, options = {}, timeoutMs = DEFAULT_LIVE_TIMEOUT_MS) {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { ...options, signal: ctrl.signal })
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function fetchCityWeather(cityName) {
+  const city = titleCase(cityName)
+  if (!city) return null
+
+  const geocodeUrl =
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=in&limit=1&q=${encodeURIComponent(city)}`
+  const geo = await fetchJsonWithTimeout(
+    geocodeUrl,
+    { headers: { 'User-Agent': 'JourneyMate/2.0 travel assistant' } },
+    DEFAULT_LIVE_TIMEOUT_MS
+  )
+  if (!Array.isArray(geo) || geo.length === 0) return null
+
+  const first = geo[0]
+  const lat = Number(first.lat)
+  const lon = Number(first.lon)
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+
+  const weatherUrl =
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+    '&current=temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&timezone=auto'
+  const weather = await fetchJsonWithTimeout(weatherUrl, {}, DEFAULT_LIVE_TIMEOUT_MS)
+  if (!weather?.current) return null
+
+  return {
+    city,
+    lat,
+    lon,
+    timezone: weather.timezone || null,
+    current: weather.current,
+  }
+}
+
+async function fetchRouteStats(cityName) {
+  const slug = toSlug(cityName)
+  if (!slug) return null
+
+  const q = `
+    SELECT origin_slug, destination_slug, tag, duration
+    FROM routes
+    WHERE origin_slug = $1 OR destination_slug = $1
+    ORDER BY id DESC
+    LIMIT 6
+  `
+  const { rows } = await pool.query(q, [slug]).catch(() => ({ rows: [] }))
+  if (!rows.length) return null
+  return {
+    citySlug: slug,
+    totalMatches: rows.length,
+    recentRoutes: rows.slice(0, 3).map((r) => ({
+      from: r.origin_slug,
+      to: r.destination_slug,
+      tag: r.tag,
+      duration: r.duration,
+    })),
+  }
+}
+
+async function fetchUserBookingStats(userId) {
+  if (!userId) return null
+  const summaryQ = `
+    SELECT COUNT(*)::int AS total_bookings, COALESCE(SUM(price_inr), 0)::int AS total_spend_inr
+    FROM bookings
+    WHERE user_id = $1
+  `
+  const recentQ = `
+    SELECT origin, destination, plan, price_inr, travel_date, status
+    FROM bookings
+    WHERE user_id = $1
+    ORDER BY id DESC
+    LIMIT 3
+  `
+
+  const [summaryRes, recentRes] = await Promise.all([
+    pool.query(summaryQ, [userId]).catch(() => ({ rows: [{ total_bookings: 0, total_spend_inr: 0 }] })),
+    pool.query(recentQ, [userId]).catch(() => ({ rows: [] })),
+  ])
+
+  const summary = summaryRes.rows[0] || { total_bookings: 0, total_spend_inr: 0 }
+  return {
+    totalBookings: Number(summary.total_bookings || 0),
+    totalSpendInr: Number(summary.total_spend_inr || 0),
+    recent: recentRes.rows || [],
+  }
+}
+
+function toRealtimeContextText(realtime) {
+  const lines = []
+  lines.push(`Context generated at: ${new Date().toISOString()}`)
+
+  if (realtime.weather) {
+    const w = realtime.weather
+    lines.push(
+      `Live weather (${w.city}): temp=${w.current.temperature_2m}C, feels_like=${w.current.apparent_temperature}C, ` +
+      `precipitation=${w.current.precipitation}, wind=${w.current.wind_speed_10m} km/h, timezone=${w.timezone || 'unknown'}`
+    )
+  } else {
+    lines.push('Live weather: unavailable')
+  }
+
+  if (realtime.routeStats) {
+    lines.push(
+      `Platform routes for "${realtime.routeStats.citySlug}": ${realtime.routeStats.totalMatches} recent matches.`
+    )
+    for (const r of realtime.routeStats.recentRoutes) {
+      lines.push(`- ${r.from} -> ${r.to} (${r.tag || 'General'}, ${r.duration || 'duration unknown'})`)
+    }
+  } else {
+    lines.push('Platform routes: no matching route context found')
+  }
+
+  if (realtime.userBookingStats) {
+    const b = realtime.userBookingStats
+    lines.push(`User bookings: total=${b.totalBookings}, total_spend_inr=${b.totalSpendInr}`)
+    for (const x of b.recent || []) {
+      lines.push(
+        `- booking: ${x.origin} -> ${x.destination}, plan=${x.plan}, price=${x.price_inr}, status=${x.status}`
+      )
+    }
+  }
+
+  return lines.join('\n')
+}
+
+async function buildRealtimeContext({ prompt, nlp, user }) {
+  if (!env.AI_REALTIME_ENABLED) {
+    return { realtime: null, realtimeText: 'Realtime lookups disabled by server config.' }
+  }
+
+  const candidateCity = nlp.entities.toCity || nlp.entities.fromCity || nlp.entities.knownCities[0] || ''
+  const [weather, routeStats, userBookingStats] = await Promise.all([
+    shouldFetchWeather(prompt, nlp) && candidateCity ? fetchCityWeather(candidateCity) : Promise.resolve(null),
+    shouldFetchPlatformStats(prompt, nlp) && candidateCity ? fetchRouteStats(candidateCity) : Promise.resolve(null),
+    fetchUserBookingStats(user?.id),
+  ])
+
+  const realtime = { weather, routeStats, userBookingStats }
+  return {
+    realtime,
+    realtimeText: toRealtimeContextText(realtime),
+  }
+}
+
 async function chat({ message, history, user }) {
   const prompt = String(message || '').trim()
   if (!prompt) throw ApiError.badRequest('Message is required')
@@ -168,6 +364,7 @@ async function chat({ message, history, user }) {
   const followUps = buildFollowUps(nlp.intent, nlp.entities)
   const dbHistory = await memoryRepo.getRecentMessages(user?.id, 20).catch(() => [])
   const mergedHistory = [...dbHistory, ...sanitizeHistory(history)].slice(-MAX_HISTORY_MESSAGES)
+  const { realtime, realtimeText } = await buildRealtimeContext({ prompt, nlp, user })
 
   if (!env.AI_API_KEY) {
     const fallback = {
@@ -176,6 +373,7 @@ async function chat({ message, history, user }) {
       usage: null,
       nlp,
       followUps,
+      realtime,
     }
     await persistConversation(user?.id, prompt, fallback.reply)
     return fallback
@@ -193,7 +391,7 @@ async function chat({ message, history, user }) {
     ...mergedHistory,
     {
       role: 'user',
-      content: buildUserMessage({ prompt, user, nlp }),
+      content: buildUserMessage({ prompt, user, nlp, realtimeContext: realtimeText }),
     },
   ]
 
@@ -229,6 +427,7 @@ async function chat({ message, history, user }) {
       usage: data?.usage || null,
       nlp,
       followUps,
+      realtime,
     }
     await persistConversation(user?.id, prompt, reply)
     return result
@@ -239,6 +438,7 @@ async function chat({ message, history, user }) {
       usage: null,
       nlp,
       followUps,
+      realtime,
     }
     await persistConversation(user?.id, prompt, fallbackResult.reply)
 
@@ -272,7 +472,7 @@ function splitForStreaming(text) {
 async function *chatStream({ message, history, user }) {
   const result = await chat({ message, history, user })
   const pieces = splitForStreaming(result.reply)
-  yield { type: 'meta', model: result.model, nlp: result.nlp }
+  yield { type: 'meta', model: result.model, nlp: result.nlp, realtime: result.realtime || null }
   for (const piece of pieces) {
     yield { type: 'token', content: piece + ' ' }
   }

@@ -32,7 +32,7 @@ export async function streamChatWithAi(message, history = [], handlers = {}) {
 
   const decoder = new TextDecoder()
   let buffer = ''
-  let finalPayload = { model: 'AI', followUps: [], usage: null }
+  let finalPayload = { model: 'AI', followUps: [], usage: null, realtime: null }
 
   while (true) {
     const { done, value } = await reader.read()
@@ -58,7 +58,11 @@ export async function streamChatWithAi(message, history = [], handlers = {}) {
       }
 
       if (payload.type === 'meta') {
-        finalPayload = { ...finalPayload, model: payload.model || 'AI' }
+        finalPayload = {
+          ...finalPayload,
+          model: payload.model || 'AI',
+          realtime: payload.realtime || null,
+        }
         handlers.onMeta?.(payload)
       } else if (payload.type === 'token') {
         handlers.onToken?.(payload.content || '')
