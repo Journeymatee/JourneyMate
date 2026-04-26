@@ -37,6 +37,9 @@ const env = {
   AI_TIMEOUT_MS: Number(process.env.AI_TIMEOUT_MS || 20000),
   AI_REALTIME_ENABLED: bool(process.env.AI_REALTIME_ENABLED, true),
   AI_LIVE_TIMEOUT_MS: Number(process.env.AI_LIVE_TIMEOUT_MS || 8000),
+  // Optional: Insights BFF microservice base URL, e.g. http://127.0.0.1:4100
+  INSIGHTS_BFF_URL: process.env.INSIGHTS_BFF_URL || '',
+  INSIGHTS_BFF_TIMEOUT_MS: Number(process.env.INSIGHTS_BFF_TIMEOUT_MS || 2500),
 
   SEED_ON_BOOT: bool(process.env.SEED_ON_BOOT, true),
   TRUST_PROXY: bool(process.env.TRUST_PROXY, true),

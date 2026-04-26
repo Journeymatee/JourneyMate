@@ -17,5 +17,24 @@ services:
       timeout: 5s
       retries: 10
 
+  insights-bff:
+    build:
+      context: ./services/insights-bff
+    container_name: journeymate-insights-bff
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      INSIGHTS_PORT: 4100
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: journeymate
+      PGUSER: postgres
+      PGPASSWORD: journeymate123
+    ports:
+      - "4100:4100"
+
 volumes:
   journeymate_pg_data:

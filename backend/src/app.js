@@ -17,6 +17,7 @@ const authRoutes     = require('./modules/auth/auth.routes')
 const cityRoutes     = require('./modules/cities/city.routes')
 const tripRoutes     = require('./modules/trips/trip.routes')
 const bookingRoutes  = require('./modules/bookings/booking.routes')
+const insightsRoutes = require('./modules/insights/insights.routes')
 const aiRoutes       = require('./modules/ai/ai.routes')
 
 function buildApp() {
@@ -63,6 +64,7 @@ function buildApp() {
   app.use('/api/cities',   cityRoutes)
   app.use('/api/trips',    tripRoutes)
   app.use('/api/bookings', bookingRoutes)
+  app.use('/api/insights', insightsRoutes)
   app.use('/api/ai',       aiRoutes)
 
   // Keep legacy route alive for older clients: /api/trips/search was previously

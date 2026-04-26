@@ -1,0 +1,17 @@
+{
+  "name": "journeymate-insights-bff",
+  "version": "1.0.0",
+  "private": true,
+  "description": "JourneyMate Insights BFF (microservice) — read-only travel insights endpoints.",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.21.1",
+    "pg": "^8.13.1"
+  }
+}

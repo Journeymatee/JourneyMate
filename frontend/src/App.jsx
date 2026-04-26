@@ -4,6 +4,7 @@ import Navbar from './components/Navbar'
 import HeroSearch from './components/HeroSearch'
 import ComparisonPage from './components/ComparisonPage'
 import FeaturesSection from './components/FeaturesSection'
+import InsightsStrip from './components/InsightsStrip'
 import Footer from './components/Footer'
 import LoadingSpinner from './components/LoadingSpinner'
 import LoginPage from './components/LoginPage'
@@ -77,6 +78,7 @@ function HomePage() {
       {view === 'home' && (
         <>
           <HeroSearch onSearch={handleSearch} loading={false} />
+          <InsightsStrip />
           <FeaturesSection />
           <Footer />
         </>

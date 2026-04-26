@@ -180,6 +180,14 @@ Key route groups:
 - `/ai/chat/stream` - streamed AI response (SSE)
 - `/health` - service/database health check
 
+## Microservice pattern (optional)
+
+This repo includes a small, separate read-only service `services/insights-bff` (Insights BFF). It is meant to show how a monolith can call another HTTP service to fetch domain-specific data.
+
+- Run locally with Docker: `docker compose up -d insights-bff`
+- Point the API gateway to the BFF using backend env: `INSIGHTS_BFF_URL` (see `backend/.env.example`)
+- The main API still works without the BFF (it falls back to a direct database query in the monolith).
+
 ## Deploy on Render (Recommended)
 
 Create resources in this order:
