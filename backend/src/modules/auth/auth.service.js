@@ -6,6 +6,7 @@ const ApiError = require('../../lib/ApiError')
 const token = require('../../lib/token')
 const repo = require('./auth.repo')
 const env = require('../../config/env')
+const { isDisposableDomain, FAKE_DOMAINS } = require('../../lib/emailValidator')
 
 const BCRYPT_ROUNDS = 10
 
@@ -85,10 +86,19 @@ const authService = {
       throw ApiError.unauthorized('Invalid Google credential. Please try signing in again.')
     }
 
-    const { sub: googleId, email, name, picture: avatarUrl } = payload
+    const { sub: googleId, email, name, picture: avatarUrl, email_verified: emailVerified } = payload
     if (!email) throw ApiError.badRequest('Google account has no email address')
+    if (emailVerified === false) {
+      throw ApiError.unauthorized('Your Google account email is not verified. Please verify it with Google first.')
+    }
 
-    const row = await repo.findOrCreateByGoogle({ googleId, email, name, avatarUrl })
+    const lower = String(email).trim().toLowerCase()
+    const domain = lower.split('@')[1] || ''
+    if (FAKE_DOMAINS.has(domain) || isDisposableDomain(domain)) {
+      throw ApiError.badRequest('This email domain is not allowed. Please sign in with a real address.')
+    }
+
+    const row = await repo.findOrCreateByGoogle({ googleId, email: lower, name, avatarUrl })
     return { token: issueToken(row), user: toPublicUser(row) }
   },
 
