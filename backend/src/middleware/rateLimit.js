@@ -22,4 +22,28 @@ const authLimiter = rateLimit({
   max: 30,
 })
 
-module.exports = { globalLimiter, authLimiter }
+const experienceCreateLimiter = rateLimit({
+  ...baseOptions,
+  windowMs: 15 * 60 * 1000,
+  max: 12,
+})
+
+const experienceLikeLimiter = rateLimit({
+  ...baseOptions,
+  windowMs: 5 * 60 * 1000,
+  max: 120,
+})
+
+const experienceCommentLimiter = rateLimit({
+  ...baseOptions,
+  windowMs: 5 * 60 * 1000,
+  max: 40,
+})
+
+module.exports = {
+  globalLimiter,
+  authLimiter,
+  experienceCreateLimiter,
+  experienceLikeLimiter,
+  experienceCommentLimiter,
+}

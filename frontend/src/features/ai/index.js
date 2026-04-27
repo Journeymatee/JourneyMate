@@ -1,0 +1,6 @@
+export { default as AssistantWidget } from './AssistantWidget'
+export { default as ChatPanel } from './ChatPanel'
+export { useChatStream } from './hooks/useChatStream'
+export { useSpeechRecognition } from './hooks/useSpeechRecognition'
+export { useTextToSpeech } from './hooks/useTextToSpeech'
+export { chatWithAi, streamChatWithAi } from './services/aiService'

@@ -8,7 +8,16 @@ import axios from 'axios'
 function apiBaseUrl() {
   const raw = import.meta.env.VITE_API_URL
   if (raw != null && String(raw).trim() !== '') {
-    return String(raw).trim().replace(/\/$/, '')
+    const u = String(raw).trim().replace(/\/$/, '')
+    try {
+      const parsed = new URL(u)
+      if (parsed.pathname === '/' || parsed.pathname === '') {
+        return u.endsWith('/api') ? u : `${u}/api`
+      }
+    } catch {
+      // ignore, fall through
+    }
+    return u
   }
   if (import.meta.env.DEV) return '/api'
   if (import.meta.env.PROD && typeof console !== 'undefined') {

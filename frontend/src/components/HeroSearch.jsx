@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Search, MapPin, ArrowRight, Zap, TrendingUp, Navigation, X, Check, Users } from 'lucide-react'
 import { filterCitiesSync, searchCitiesAPI } from '../data/indianCities'
 import { POPULAR_DESTINATIONS } from '../services/travelService'
+import HeroBackground from './HeroBackground'
 
 /* ------------------------------------------------------------------ */
 /*  Dropdown                                                          */
@@ -233,11 +234,8 @@ export default function HeroSearch({ onSearch, loading }) {
   }
 
   return (
-    <section
-      className="relative min-h-[100dvh] flex flex-col items-center justify-center bg-cover bg-center bg-no-repeat pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6 safe-pad"
-      style={{ backgroundImage: "url('/hero-bg.webp')" }}
-    >
-      <div className="absolute inset-0 bg-slate-950/75" aria-hidden />
+    <section className="relative min-h-[100dvh] flex flex-col items-center justify-center pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6 safe-pad overflow-hidden">
+      <HeroBackground />
       {/* Background blobs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
         <div className="absolute top-1/4 left-1/4 w-48 xs:w-72 sm:w-96 h-48 xs:h-72 sm:h-96 bg-green-500/5 rounded-full blur-3xl animate-pulse-slow" />

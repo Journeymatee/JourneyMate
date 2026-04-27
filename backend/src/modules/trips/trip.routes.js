@@ -9,10 +9,19 @@ const controller = require('./trip.controller')
 const router = express.Router()
 
 router.get(
+  '/place-article',
+  requireAuth,
+  query('q').isString().trim().isLength({ min: 2, max: 200 }).withMessage('q required'),
+  validate,
+  controller.placeArticle
+)
+
+router.get(
   '/search',
   requireAuth,
   query('from').isString().trim().isLength({ min: 2, max: 80 }).withMessage('from required'),
   query('to').isString().trim().isLength({ min: 2, max: 80 }).withMessage('to required'),
+  // `days` parsed in service (1–5) — not validated here so string query values never 400
   validate,
   controller.search
 )

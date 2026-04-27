@@ -2,6 +2,7 @@
 
 const ApiError = require('../../lib/ApiError')
 const cityService = require('../cities/city.service')
+const { enrichForComparison, getWikipediaSummary } = require('./placeIntel.service')
 const { CURATED_ROUTES, DESTINATION_KNOWLEDGE } = require('./trip.data')
 
 const INDIA_CENTER = { lat: 22.5937, lng: 78.9629 }
@@ -55,23 +56,124 @@ function getDestKnowledge(to) {
   return DESTINATION_KNOWLEDGE.default
 }
 
-/** Generate a realistic itinerary using real destination activities */
-function makeItinerary(city, activities, days, prefix) {
+/**
+ * @param {object} [opts] startIndex: day offset for this segment; totalDays: last day of full trip (for Arrival/Departure titles)
+ */
+function makeItinerary(city, activities, days, prefix, opts = {}) {
+  const { startIndex = 0, totalDays = startIndex + days } = opts
   const acts = [...activities]
-  // Shuffle deterministically (no random)
   const itineraryDays = []
-  for (let i = 0; i < days; i++) {
-    const dayActs = acts.slice(i * 2, i * 2 + 3)
+  for (let i = 0; i < days; i += 1) {
+    const abs = startIndex + i
+    const dayNo = abs + 1
+    const dayActs = acts.slice(abs * 2, abs * 2 + 3)
     if (dayActs.length === 0) dayActs.push(...activities.slice(0, 2))
-    itineraryDays.push({
-      day: i + 1,
-      title: i === 0 ? `Arrival & First Impressions of ${city}`
-           : i === days - 1 ? `Departure from ${city}`
-           : `${prefix} Day ${i + 1} — ${city}`,
-      activities: dayActs,
-    })
+    const title = (() => {
+      if (totalDays === 1) {
+        return `Key sights in one day — ${city} (arrival, visit & return)`
+      }
+      if (abs === 0) return `Arrival & First Impressions of ${city}`
+      if (abs === totalDays - 1) return `Departure from ${city}`
+      return `${prefix} Day ${dayNo} — ${city}`
+    })()
+    itineraryDays.push({ day: dayNo, title, activities: dayActs })
   }
   return itineraryDays
+}
+
+/** User-selected itinerary length: 1–5 days (visit places by day; max 5 in UI). */
+function parseRequestedDays(raw) {
+  if (raw === undefined || raw === null || String(raw).trim() === '') return 5
+  const n = parseInt(String(raw).trim(), 10)
+  if (Number.isNaN(n) || n < 1) return 5
+  return Math.min(5, n)
+}
+
+function formatDurationFromDays(n) {
+  if (n <= 1) return '1 Day'
+  const ni = n - 1
+  return `${n} Day${n > 1 ? 's' : ''} / ${ni} Night${ni > 1 ? 's' : ''}`
+}
+
+function renumberItinerary(arr) {
+  return (arr || []).map((d, i) => ({ ...d, day: i + 1 }))
+}
+
+/**
+ * Reference days the list price is “for” (1–5). Shorter user picks → lower price.
+ * Curated routes: use the longer of silver/gold itinerary length, capped at 5.
+ * Generic: both plans start at 5 days.
+ */
+function referenceListDays(trip) {
+  const a = trip.silver?.itinerary?.length || 0
+  const b = trip.gold?.itinerary?.length || 0
+  const m = Math.max(a, b, 1)
+  return Math.min(5, m)
+}
+
+function scalePlanPriceForDays(plan, nDays, refDays) {
+  const ref = Math.min(5, Math.max(1, refDays))
+  const n = Math.min(5, Math.max(1, nDays))
+  const base = Number(plan.price)
+  if (!Number.isFinite(base) || base <= 0) return { ...plan, price: plan.price }
+  const raw = (base * n) / ref
+  const rounded = Math.round(raw / 100) * 100
+  const min = plan.price >= 15000 ? 4000 : 2000
+  return { ...plan, price: Math.max(min, rounded) }
+}
+
+function regenGenericPlan(destLabel, isGold, plan, nDays) {
+  const dest = getDestKnowledge(destLabel)
+  const act = isGold ? dest.activities.slice(2, 10) : dest.activities.slice(0, 8)
+  const prefix = isGold ? 'Premium' : 'Explore'
+  return {
+    ...plan,
+    itinerary: makeItinerary(destLabel, act, nDays, prefix),
+  }
+}
+
+function reshapeCuratedPlan(plan, nDays, destLabel, prefix) {
+  const it0 = plan.itinerary || []
+  const dest = getDestKnowledge(destLabel)
+  const pool = dest.activities
+  if (it0.length === 0) {
+    return { ...plan, itinerary: makeItinerary(destLabel, pool, nDays, prefix) }
+  }
+  if (nDays <= it0.length) {
+    return { ...plan, itinerary: renumberItinerary(it0.slice(0, nDays)) }
+  }
+  const base = renumberItinerary(it0)
+  const more = nDays - it0.length
+  return {
+    ...plan,
+    itinerary: [
+      ...base,
+      ...makeItinerary(destLabel, pool, more, prefix, { startIndex: it0.length, totalDays: nDays }),
+    ],
+  }
+}
+
+function applyRequestedDaysToTrip(trip, nDays, destLabel, isCurated) {
+  const d = formatDurationFromDays(nDays)
+  const refDays = referenceListDays(trip)
+  if (!isCurated) {
+    const silver = regenGenericPlan(destLabel, false, trip.silver, nDays)
+    const gold = regenGenericPlan(destLabel, true, trip.gold, nDays)
+    return {
+      ...trip,
+      duration: d,
+      silver: scalePlanPriceForDays(silver, nDays, refDays),
+      gold: scalePlanPriceForDays(gold, nDays, refDays),
+    }
+  }
+  const silver = reshapeCuratedPlan(trip.silver, nDays, destLabel, 'Explore')
+  const gold = reshapeCuratedPlan(trip.gold, nDays, destLabel, 'Premium')
+  return {
+    ...trip,
+    duration: d,
+    silver: scalePlanPriceForDays(silver, nDays, refDays),
+    gold: scalePlanPriceForDays(gold, nDays, refDays),
+  }
 }
 
 function generateGeneric(from, to) {
@@ -142,13 +244,39 @@ function attachMaps(trip, fromC, toC) {
 /* ── service ─────────────────────────────────────────────────── */
 
 const tripService = {
-  async search(fromRaw, toRaw) {
+  /**
+   * @param {{ days?: string|number }} [options] Requested trip length 1–5 days (itinerary days per UI).
+   */
+  async search(fromRaw, toRaw, options = {}) {
     if (!fromRaw || !toRaw) throw ApiError.badRequest('from and to are required')
     const [fromC, toC] = await Promise.all([resolveCoords(fromRaw), resolveCoords(toRaw)])
+    const nDays = parseRequestedDays(options.days)
 
     const key = slugKey(fromRaw, toRaw)
-    const raw = CURATED_ROUTES[key] || generateGeneric(fromRaw, toRaw)
-    return attachMaps(raw, fromC, toC)
+    const isCurated = Boolean(CURATED_ROUTES[key])
+    const raw0 = CURATED_ROUTES[key] || generateGeneric(fromRaw, toRaw)
+    const raw = applyRequestedDaysToTrip(raw0, nDays, toC.label, isCurated)
+    const withMaps = attachMaps(raw, fromC, toC)
+    const emptyIntel = { osrm: null, wikipedia: null, topSights: [], weather: null, attributions: [] }
+    let placeIntel = null
+    try {
+      placeIntel = await enrichForComparison(fromC, toC)
+    } catch {
+      placeIntel = emptyIntel
+    }
+    return {
+      ...withMaps,
+      placeIntel: placeIntel || emptyIntel,
+      requestedDays: nDays,
+    }
+  },
+
+  async placeArticle(qRaw) {
+    const q = String(qRaw || '').trim()
+    if (q.length < 2) throw ApiError.badRequest('query too short')
+    const article = await getWikipediaSummary(q)
+    if (!article) throw ApiError.notFound('No Wikipedia article found for that search')
+    return { article }
   },
 
   listPopular() {

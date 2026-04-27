@@ -3,10 +3,12 @@ import {
   Train, Plane, Hotel, Building, UtensilsCrossed, Star,
   ChevronRight, ChevronDown, Check, Calendar, MapPin, ArrowLeft,
   Sparkles, Shield, Coffee, Wifi, Car, Waves, Mountain,
-  Route, X, ExternalLink
+  Route, X, ExternalLink, History, Clock, Ruler, Landmark, Loader2, AlertCircle
 } from 'lucide-react'
 import PlaceMap from './PlaceMap'
 import RouteDirectionMap from './RouteDirectionMap'
+import WeatherPanel from './WeatherPanel'
+import { getPlaceArticle } from '../services/travelService'
 
 /* ------------------------------------------------------------------ */
 /*  Perk icon helper                                                   */
@@ -309,9 +311,243 @@ function BookingSheet({ open, onClose, origin, destination, type }) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Wikipedia / history modal (fetches on demand or uses preload)      */
+/* ------------------------------------------------------------------ */
+function PlaceHistoryModal({ open, onClose, searchQuery, preload }) {
+  const [article, setArticle] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState(null)
+
+  useEffect(() => {
+    if (!open) {
+      setArticle(null)
+      setErr(null)
+      return
+    }
+    if (preload) {
+      setArticle(preload)
+      setErr(null)
+      setLoading(false)
+      return
+    }
+    if (!searchQuery || searchQuery.length < 2) {
+      setArticle(null)
+      return
+    }
+    let cancel = false
+    setLoading(true)
+    setErr(null)
+    setArticle(null)
+    getPlaceArticle(searchQuery)
+      .then((d) => {
+        if (cancel) return
+        setArticle(d.article)
+      })
+      .catch((e) => {
+        if (cancel) return
+        const st = e?.response?.status
+        if (st === 404) {
+          setErr({ type: 'not_found' })
+        } else {
+          setErr({ type: 'other' })
+        }
+      })
+      .finally(() => {
+        if (!cancel) setLoading(false)
+      })
+    return () => { cancel = true }
+  }, [open, searchQuery, preload])
+
+  useEffect(() => {
+    if (open) document.body.style.overflow = 'hidden'
+    else document.body.style.overflow = ''
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
+  if (!open) return null
+
+  const wikiSearchUrl = searchQuery
+    ? `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(searchQuery)}&title=Special%3ASearch&fulltext=1`
+    : 'https://en.wikipedia.org/wiki/Main_Page'
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[80]" onClick={onClose} role="presentation" />
+      <div
+        className="fixed z-[90] left-1/2 top-1/2 w-[min(100vw-1.5rem,28rem)] sm:w-[min(100vw-2rem,32rem)] max-h-[85vh] -translate-x-1/2 -translate-y-1/2 glass border border-white/12 rounded-2xl shadow-2xl flex flex-col"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ph-title"
+      >
+        <div className="flex items-start justify-between gap-3 p-4 border-b border-white/10 shrink-0">
+          <div className="flex items-start gap-2 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center shrink-0">
+              <History size={18} className="text-amber-400" />
+            </div>
+            <h2 id="ph-title" className="text-base font-bold text-white leading-tight pr-1">
+              {article?.title || (loading ? 'Loading…' : 'Place history')}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-9 h-9 rounded-full bg-white/8 hover:bg-white/15 flex items-center justify-center text-slate-400 hover:text-white shrink-0"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 p-4 min-h-0">
+          {loading && (
+            <div className="flex items-center gap-2 text-slate-400 text-sm py-8 justify-center">
+              <Loader2 size={18} className="animate-spin" />
+              Fetching from Wikipedia…
+            </div>
+          )}
+          {err && !loading && (
+            <div className="flex flex-col gap-2 text-rose-200/95 text-sm p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
+              <div className="flex items-start gap-2">
+                <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                <span>
+                  {err.type === 'not_found'
+                    ? 'No automatic match on English Wikipedia for that phrase.'
+                    : 'Could not reach the server or Wikipedia. Check your connection or try again.'}
+                </span>
+              </div>
+              <a
+                href={wikiSearchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 pl-0.5 text-amber-400 text-xs font-semibold hover:text-amber-300"
+              >
+                Search on Wikipedia
+                <ExternalLink size={12} />
+              </a>
+            </div>
+          )}
+          {article && !loading && (
+            <div className="space-y-3">
+              {article.thumbnail && (
+                <img
+                  src={article.thumbnail}
+                  alt=""
+                  className="w-full max-h-40 object-cover rounded-xl border border-white/10"
+                />
+              )}
+              <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-line">
+                {article.extract || 'No preview available.'}
+              </p>
+              {article.url && (
+                <a
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-400 hover:text-amber-300"
+                >
+                  Open full article on Wikipedia
+                  <ExternalLink size={12} />
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+        <p className="text-[10px] text-slate-600 border-t border-white/8 p-3 shrink-0">
+          Text: Wikipedia (CC BY-SA). This feature uses the MediaWiki &apos;search + summary&apos; flow.
+        </p>
+      </div>
+    </>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Real data strip: driving time/distance, intro, top sights         */
+/* ------------------------------------------------------------------ */
+function PlaceIntelSection({ placeIntel, destination, onOpenHistory, onOpenWithPreload }) {
+  if (!placeIntel) return null
+  const { osrm, wikipedia, topSights, attributions } = placeIntel
+  const hasAny = osrm || wikipedia || (Array.isArray(topSights) && topSights.length > 0)
+  if (!hasAny) return null
+
+  return (
+    <div className="mb-6 sm:mb-8 rounded-2xl border border-white/10 glass p-4 sm:p-5 animate-slide-up w-full min-w-0" style={{ animationDelay: '0.12s' }}>
+      <div className="flex items-center gap-2 mb-3">
+        <Landmark size={16} className="text-emerald-400" />
+        <h3 className="text-sm font-bold text-white tracking-wide">Compare — live place data</h3>
+      </div>
+      <p className="text-xs text-slate-500 mb-4">
+        Road time and distance use the public OSRM router; top sights come from OpenStreetMap near your destination. History text is from English Wikipedia.
+      </p>
+
+      {osrm && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-white/10 text-xs text-slate-200">
+            <Ruler size={12} className="text-cyan-400" />
+            <span className="text-slate-500">By road (approx.):</span>
+            <span className="font-semibold text-white">{osrm.distanceKm} km</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-white/10 text-xs text-slate-200">
+            <Clock size={12} className="text-cyan-400" />
+            <span className="text-slate-500">Drive time (approx.):</span>
+            <span className="font-semibold text-white">{osrm.durationMin} min</span>
+          </div>
+        </div>
+      )}
+
+      {wikipedia && (
+        <div className="p-3 rounded-xl bg-white/[0.04] border border-white/8 mb-4">
+          <p className="text-xs text-slate-500 uppercase font-semibold mb-1">About the destination</p>
+          <p className="text-sm text-slate-300 line-clamp-3 leading-relaxed">
+            {wikipedia.extract}
+          </p>
+          <button
+            type="button"
+            onClick={() => onOpenWithPreload(wikipedia)}
+            className="mt-2 text-xs font-semibold text-amber-400 hover:text-amber-300 inline-flex items-center gap-1"
+          >
+            <History size={12} />
+            Read place history
+          </button>
+        </div>
+      )}
+
+      {Array.isArray(topSights) && topSights.length > 0 && (
+        <div>
+          <p className="text-xs text-slate-500 font-semibold mb-2">Places to visit nearby (from OpenStreetMap)</p>
+          <ul className="space-y-1.5">
+            {topSights.map((s) => (
+              <li
+                key={s.name}
+                className="flex items-center justify-between gap-2 text-xs sm:text-sm text-slate-300 pl-0"
+              >
+                <span className="min-w-0 truncate">{s.name}</span>
+                <button
+                  type="button"
+                  onClick={() => onOpenHistory(`${s.name} ${destination} India`, null)}
+                  className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] sm:text-xs font-semibold hover:bg-amber-500/20"
+                >
+                  <History size={12} />
+                  History
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {Array.isArray(attributions) && attributions.length > 0 && (
+        <p className="text-[9px] text-slate-600 mt-3 leading-snug">
+          {attributions.join(' ')}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
 /*  Itinerary day accordion                                            */
 /* ------------------------------------------------------------------ */
-function ItineraryDay({ day, isGold, expanded, onToggle }) {
+function ItineraryDay({ day, isGold, expanded, onToggle, onHistoryForActivity, destinationName }) {
   const accent = isGold ? 'amber' : 'green'
   return (
     <div className={`rounded-xl border transition-all duration-300 overflow-hidden ${
@@ -341,7 +577,20 @@ function ItineraryDay({ day, isGold, expanded, onToggle }) {
                 {day.activities.map((act, i) => (
                   <li key={i} className="flex items-start gap-2 text-xs text-slate-400">
                     <ChevronRight size={12} className={`mt-0.5 shrink-0 ${isGold ? 'text-amber-500' : 'text-green-500'}`} />
-                    <span className="min-w-0">{act}</span>
+                    <span className="min-w-0 flex-1 leading-snug">{act}</span>
+                    {onHistoryForActivity && destinationName && (
+                      <button
+                        type="button"
+                        onClick={() => onHistoryForActivity(act)}
+                        className={`shrink-0 p-0.5 rounded border border-dashed ${
+                          isGold ? 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10' : 'border-green-500/30 text-green-400 hover:bg-green-500/10'
+                        }`}
+                        title="History of this place"
+                        aria-label={`History: ${act}`}
+                      >
+                        <History size={12} className="block" />
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -374,12 +623,12 @@ function ItineraryDay({ day, isGold, expanded, onToggle }) {
 /* ------------------------------------------------------------------ */
 /*  Plan card                                                          */
 /* ------------------------------------------------------------------ */
-function PlanCard({ plan, type, tripData, onBook }) {
+function PlanCard({ plan, type, tripData, onBook, onHistoryForActivity }) {
   const isGold = type === 'gold'
   const [activeTab, setActiveTab] = useState('overview')
   const [openDay, setOpenDay] = useState(1)
 
-  useEffect(() => { setOpenDay(1) }, [tripData.destination])
+  useEffect(() => { setOpenDay(1) }, [tripData.destination, plan?.itinerary?.length, tripData?.requestedDays])
 
   const color = isGold ? {
     primary: 'text-amber-400',
@@ -434,6 +683,11 @@ function PlanCard({ plan, type, tripData, onBook }) {
               ₹{plan.price.toLocaleString('en-IN')}
             </div>
             <div className="text-xs text-slate-500">per person</div>
+            {tripData?.requestedDays != null && (
+              <p className="text-[10px] text-slate-500 mt-1 max-w-[12rem] sm:max-w-none sm:text-right leading-snug">
+                For {tripData.requestedDays} day{tripData.requestedDays === 1 ? '' : 's'} of places — shorter trips cost less
+              </p>
+            )}
           </div>
         </div>
 
@@ -456,18 +710,20 @@ function PlanCard({ plan, type, tripData, onBook }) {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-white/8">
+      <div className="flex border-b border-white/8 min-w-0">
         {tabs.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2.5 sm:py-3 px-1 text-[10px] xs:text-[11px] sm:text-xs font-semibold uppercase tracking-wide sm:tracking-wider transition-all duration-200 whitespace-nowrap ${
+            className={`flex-1 min-w-0 py-2.5 sm:py-3 px-0.5 sm:px-1 text-[9px] 2xs:text-[10px] sm:text-xs font-semibold uppercase tracking-tight sm:tracking-wider transition-all duration-200 ${
               activeTab === tab
                 ? `${color.tab} border-b-2`
                 : 'text-slate-500 hover:text-slate-300 border-b-2 border-transparent'
             }`}
           >
-            {tab === 'book' ? '🎟 Book' : tab}
+            <span className="line-clamp-2 sm:line-clamp-none break-words hyphens-auto">
+              {tab === 'book' ? '🎟 Book' : tab}
+            </span>
           </button>
         ))}
       </div>
@@ -513,6 +769,8 @@ function PlanCard({ plan, type, tripData, onBook }) {
                 isGold={isGold}
                 expanded={openDay === day.day}
                 onToggle={() => setOpenDay(openDay === day.day ? 0 : day.day)}
+                onHistoryForActivity={onHistoryForActivity}
+                destinationName={tripData.destination}
               />
             ))}
           </div>
@@ -607,12 +865,39 @@ function PlanCard({ plan, type, tripData, onBook }) {
 /* ------------------------------------------------------------------ */
 /*  Main comparison page                                               */
 /* ------------------------------------------------------------------ */
-export default function ComparisonPage({ tripData, onBack }) {
-  const [mode, setMode] = useState('both')
+/** 1 day = one-day visit plan; max 5 days of places to visit. */
+const DAY_OPTIONS = [1, 2, 3, 4, 5]
+
+export default function ComparisonPage({
+  tripData,
+  onBack,
+  onChangeDays,
+  daysLoading = false,
+  selectedDays: selectedDaysProp,
+}) {
+  /** 'silver' | 'both' | 'gold' — one tier at a time or side-by-side */
+  const [planView, setPlanView] = useState('both')
+  const selectedDays = (() => {
+    const n = Number(selectedDaysProp ?? tripData.requestedDays ?? 5)
+    if (!Number.isFinite(n)) return 5
+    return Math.min(5, Math.max(1, n))
+  })()
   const savings = tripData.gold.price - tripData.silver.price
   const savingsPct = Math.round((savings / tripData.gold.price) * 100)
   const [showCta, setShowCta] = useState(false)
   const [bookingModal, setBookingModal] = useState({ open: false, type: null })
+  const [historyModal, setHistoryModal] = useState({ open: false, q: '', preload: null })
+
+  const openHistoryByQuery = (q) => {
+    setHistoryModal({ open: true, q, preload: null })
+  }
+  const openHistoryWithPreload = (article) => {
+    setHistoryModal({ open: true, q: '', preload: article })
+  }
+  const closeHistory = () => setHistoryModal((s) => ({ ...s, open: false }))
+  const onItineraryHistory = (act) => {
+    openHistoryByQuery(`${act} ${tripData.destination} India`.trim())
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => setShowCta(true), 600)
@@ -625,102 +910,187 @@ export default function ComparisonPage({ tripData, onBack }) {
   const closeBooking = () => setBookingModal({ open: false, type: null })
 
   return (
-    <section className="min-h-[100dvh] mesh-bg pt-20 sm:pt-24 pb-32 sm:pb-36 px-3 sm:px-5 lg:px-6">
-      <div className="max-w-7xl mx-auto">
+    <section className="min-h-[100dvh] mesh-bg pt-20 sm:pt-24 pb-36 sm:pb-40 px-2.5 sm:px-5 lg:px-6 overflow-x-hidden">
+      <div className="max-w-7xl mx-auto w-full min-w-0">
 
         {/* Back + Route header */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-6 sm:mb-8 animate-slide-up">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap min-w-0">
-            <button
-              type="button"
-              onClick={onBack}
-              className="flex items-center justify-center sm:justify-start gap-2 text-sm text-slate-400 hover:text-white transition-colors glass px-4 py-2 rounded-xl border border-white/10 hover:border-white/20 w-full sm:w-auto"
-            >
-              <ArrowLeft size={16} /> Back
-            </button>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-white min-w-0">
-              <MapPin size={16} className="text-green-400 shrink-0" />
-              <span className="font-semibold truncate max-w-[40vw] sm:max-w-none">{tripData.origin}</span>
-              <ChevronRight size={16} className="text-slate-500 shrink-0 hidden sm:inline" />
-              <span className="text-slate-500 sm:hidden text-xs px-1" aria-hidden>→</span>
-              <MapPin size={16} className="text-amber-400 shrink-0" />
-              <span className="font-semibold truncate max-w-[40vw] sm:max-w-none">{tripData.destination}</span>
-              <span className="text-slate-500 text-xs sm:text-sm w-full sm:w-auto sm:ml-2">• {tripData.duration}</span>
+        <div className="flex flex-col gap-3 sm:gap-4 mb-5 sm:mb-8 animate-slide-up">
+          <div className="flex flex-col gap-2 sm:gap-3 min-w-0 w-full">
+            <div className="flex flex-col xs:flex-row xs:items-center gap-2 sm:gap-3 min-w-0">
+              <button
+                type="button"
+                onClick={onBack}
+                className="inline-flex items-center justify-center sm:justify-start gap-2 text-sm text-slate-400 hover:text-white transition-colors glass px-3.5 sm:px-4 py-2.5 rounded-xl border border-white/10 hover:border-white/20 w-full xs:w-auto shrink-0"
+              >
+                <ArrowLeft size={16} /> Back
+              </button>
+              <div className="flex flex-wrap items-baseline gap-x-1.5 sm:gap-x-2 gap-y-1 text-white min-w-0 text-sm sm:text-base">
+                <MapPin size={16} className="text-green-400 shrink-0" />
+                <span className="font-semibold break-words min-w-0 max-w-full">{tripData.origin}</span>
+                <ChevronRight size={14} className="text-slate-500 shrink-0 hidden sm:block" />
+                <span className="text-slate-500 sm:hidden" aria-hidden>·</span>
+                <MapPin size={16} className="text-amber-400 shrink-0" />
+                <span className="font-semibold break-words min-w-0 max-w-full">{tripData.destination}</span>
+                <span className="text-slate-500 text-xs sm:text-sm w-full sm:w-auto sm:ml-1">• {tripData.duration}</span>
+              </div>
             </div>
           </div>
 
-          {/* Toggle */}
-          <div className="w-full lg:w-auto overflow-x-auto no-scrollbar">
-            <div className="flex items-center gap-1 sm:gap-2 glass rounded-2xl p-1 border border-white/10 min-w-0">
-              <span className="text-xs text-slate-500 px-2 font-medium hidden md:block shrink-0">Optimize:</span>
-              {[
-                { id: 'savings', label: '💰 Savings', color: 'from-green-500 to-emerald-600' },
-                { id: 'both',    label: '⚖️ Both',    color: 'from-slate-600 to-slate-700' },
-                { id: 'comfort', label: '👑 Comfort', color: 'from-amber-500 to-orange-500' },
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setMode(opt.id)}
-                  className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap shrink-0 ${
-                    mode === opt.id
-                      ? `bg-gradient-to-r ${opt.color} text-white shadow-lg`
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+          {/* View: one tier or compare — 3-up grid on narrow screens avoids horizontal scroll */}
+          <div className="w-full min-w-0 flex flex-col gap-3 sm:gap-3">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5 sm:hidden">View</div>
+              <div
+                className="grid grid-cols-3 gap-1 w-full min-w-0 p-1 rounded-2xl glass border border-white/10"
+                style={{ maxWidth: '100%' }}
+              >
+                {[
+                  { id: 'silver', label: 'Silver',  compact: 'Silver',  color: 'from-green-500 to-emerald-600' },
+                  { id: 'both',   label: 'Compare', compact: 'Both',    color: 'from-slate-600 to-slate-700' },
+                  { id: 'gold',   label: 'Gold',   compact: 'Gold',   color: 'from-amber-500 to-orange-500' },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setPlanView(opt.id)}
+                    className={`min-w-0 py-2.5 sm:py-2.5 px-1 sm:px-2 rounded-xl text-xs sm:text-sm font-semibold text-center leading-snug transition-all duration-300 ${
+                      planView === opt.id
+                        ? `bg-gradient-to-r ${opt.color} text-white shadow-lg`
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                    title={opt.id === 'both' ? 'Show Silver and Gold side by side' : `Show ${opt.label} only`}
+                  >
+                    <span className="sm:hidden block">{opt.compact}</span>
+                    <span className="hidden sm:block">
+                      {opt.id === 'silver' && '🛡 '}
+                      {opt.id === 'both' && '⚖ '}
+                      {opt.id === 'gold' && '👑 '}
+                      {opt.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
+            {onChangeDays && (
+              <div className="w-full min-w-0 space-y-1.5">
+                <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-1.5 gap-y-0">
+                  <span className="text-xs text-slate-500 font-medium">Visit places (days 1–5)</span>
+                  {daysLoading && (
+                    <span className="text-xs text-slate-500 flex items-center gap-1.5 sm:justify-end">
+                      <Loader2 size={14} className="animate-spin shrink-0" /> Updating…
+                    </span>
+                  )}
+                </div>
+                <div
+                  className="grid w-full min-w-0 grid-cols-5 gap-1.5 sm:gap-2"
+                  role="group"
+                  aria-label="Choose how many days of places to visit, from 1 to 5"
+                >
+                  {DAY_OPTIONS.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      disabled={daysLoading}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        if (daysLoading) return
+                        if (Number(d) === Number(selectedDays)) return
+                        onChangeDays(Number(d))
+                      }}
+                      className={`min-h-11 min-w-0 flex items-center justify-center rounded-lg text-xs sm:text-sm font-bold transition-all border touch-manipulation ${
+                        selectedDays === d
+                          ? 'bg-cyan-500/25 border-cyan-400/50 text-cyan-200'
+                          : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20 active:scale-95'
+                      } ${daysLoading ? 'opacity-50 pointer-events-none' : ''}`}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Route map ONLY (removed individual city maps) */}
         {routeMaps?.origin && routeMaps?.destination && (
-          <div className="mb-8 animate-slide-up" style={{ animationDelay: '0.08s' }}>
-            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2 flex items-center gap-2">
-              <Route size={12} className="text-green-400" />
-              Route — {routeMaps.origin.label} → {routeMaps.destination.label}
+          <div className="mb-6 sm:mb-8 animate-slide-up w-full min-w-0" style={{ animationDelay: '0.08s' }}>
+            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2 flex items-start sm:items-center gap-2 min-w-0">
+              <Route size={12} className="text-green-400 shrink-0 mt-0.5 sm:mt-0" />
+              <span className="min-w-0 break-words leading-snug">
+                Route — {routeMaps.origin.label} → {routeMaps.destination.label}
+              </span>
             </div>
-            <RouteDirectionMap
-              originCoords={routeMaps.origin}
-              destCoords={routeMaps.destination}
-            />
+            <div className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl">
+              <RouteDirectionMap
+                originCoords={routeMaps.origin}
+                destCoords={routeMaps.destination}
+              />
+            </div>
           </div>
         )}
 
-        {/* Comparison grid — single column on mobile/tablet, side-by-side on xl */}
-        <div className={`grid gap-4 sm:gap-5 lg:gap-6 animate-slide-up ${
-          mode === 'savings' ? 'grid-cols-1 max-w-2xl mx-auto' :
-          mode === 'comfort' ? 'grid-cols-1 max-w-2xl mx-auto' :
-          'grid-cols-1 xl:grid-cols-2'
-        }`} style={{ animationDelay: '0.2s' }}>
-          {(mode === 'both' || mode === 'savings') && (
-            <PlanCard plan={tripData.silver} type="silver" tripData={tripData} onBook={() => openBooking('silver')} />
+        <WeatherPanel
+          weather={tripData.placeIntel?.weather}
+          originLabel={tripData.origin}
+          destinationLabel={tripData.destination}
+        />
+
+        <PlaceIntelSection
+          placeIntel={tripData.placeIntel}
+          destination={tripData.destination}
+          onOpenHistory={(q) => openHistoryByQuery(q)}
+          onOpenWithPreload={openHistoryWithPreload}
+        />
+
+        {/* Plans: stack with VS between on small screens; 2 columns from xl up */}
+        <div
+          className={`flex flex-col gap-4 sm:gap-5 lg:gap-6 animate-slide-up w-full min-w-0 ${
+            planView === 'both' ? 'xl:grid xl:grid-cols-2 xl:items-start' : 'max-w-2xl mx-auto w-full'
+          }`}
+          style={{ animationDelay: '0.2s' }}
+        >
+          {(planView === 'both' || planView === 'silver') && (
+            <div className="min-w-0 w-full">
+              <PlanCard
+                plan={tripData.silver}
+                type="silver"
+                tripData={tripData}
+                onBook={() => openBooking('silver')}
+                onHistoryForActivity={onItineraryHistory}
+              />
+            </div>
           )}
-          {(mode === 'both' || mode === 'comfort') && (
-            <PlanCard plan={tripData.gold} type="gold" tripData={tripData} onBook={() => openBooking('gold')} />
+          {planView === 'both' && (
+            <div className="flex items-center gap-3 py-0.5 shrink-0 xl:hidden w-full" aria-hidden="true">
+              <div className="flex-1 h-px bg-white/8 min-w-0" />
+              <div className="glass rounded-full w-9 h-9 flex items-center justify-center border border-white/10 text-xs font-bold text-slate-500 shrink-0">VS</div>
+              <div className="flex-1 h-px bg-white/8 min-w-0" />
+            </div>
+          )}
+          {(planView === 'both' || planView === 'gold') && (
+            <div className="min-w-0 w-full">
+              <PlanCard
+                plan={tripData.gold}
+                type="gold"
+                tripData={tripData}
+                onBook={() => openBooking('gold')}
+                onHistoryForActivity={onItineraryHistory}
+              />
+            </div>
           )}
         </div>
-
-        {mode === 'both' && (
-          <div className="xl:hidden flex items-center gap-4 -my-1 z-10 relative">
-            <div className="flex-1 h-px bg-white/8" />
-            <div className="glass rounded-full w-9 h-9 flex items-center justify-center border border-white/10 text-xs font-bold text-slate-500">VS</div>
-            <div className="flex-1 h-px bg-white/8" />
-          </div>
-        )}
       </div>
 
       {/* Floating savings banner — compact on mobile */}
       {showCta && (
-        <div className="floating-cta fixed bottom-4 left-0 right-0 z-40 flex justify-center px-4 safe-bottom">
-          <div className="w-full max-w-3xl glass border border-white/15 rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-2 sm:gap-4 shadow-2xl shadow-black/40">
-            {/* Left: savings info */}
-            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+        <div className="floating-cta fixed bottom-3 sm:bottom-4 left-0 right-0 z-40 flex justify-center px-2.5 sm:px-4 safe-bottom">
+          <div className="w-full max-w-3xl glass border border-white/15 rounded-2xl p-2.5 sm:p-4 flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2.5 sm:gap-4 shadow-2xl shadow-black/40 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 pr-0">
               <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-green-500/20 border border-green-500/30 flex items-center justify-center text-base sm:text-xl shrink-0">💰</div>
-              <div className="min-w-0">
-                <div className="text-white font-bold text-xs sm:text-base leading-tight">
+              <div className="min-w-0 flex-1">
+                <div className="text-white font-bold text-xs sm:text-base leading-tight break-words">
                   Save <span className="text-green-400 text-sm sm:text-lg font-bold">₹{savings.toLocaleString('en-IN')}</span>
                   <span className="text-slate-400 text-[10px] sm:text-sm ml-1 hidden xs:inline">({savingsPct}% less)</span>
                 </div>
@@ -729,19 +1099,18 @@ export default function ComparisonPage({ tripData, onBack }) {
                 </div>
               </div>
             </div>
-            {/* Right: action buttons */}
-            <div className="flex gap-1.5 sm:gap-3 shrink-0">
+            <div className="flex gap-2 sm:gap-3 shrink-0 w-full xs:w-auto">
               <button
                 type="button"
                 onClick={() => openBooking('silver')}
-                className="px-3 xs:px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-green-500/25 transition-all hover:-translate-y-0.5 whitespace-nowrap"
+                className="flex-1 xs:flex-initial min-h-11 min-w-0 touch-manipulation px-3 sm:px-5 py-2.5 sm:py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-green-500/25 transition-all active:scale-[0.98] sm:hover:-translate-y-0.5"
               >
                 Book Silver
               </button>
               <button
                 type="button"
                 onClick={() => openBooking('gold')}
-                className="px-3 xs:px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl glass border border-amber-500/30 text-amber-400 font-bold text-xs sm:text-sm hover:bg-amber-500/10 transition-all hover:-translate-y-0.5 whitespace-nowrap"
+                className="flex-1 xs:flex-initial min-h-11 min-w-0 touch-manipulation px-3 sm:px-5 py-2.5 sm:py-2.5 rounded-xl glass border border-amber-500/30 text-amber-400 font-bold text-xs sm:text-sm hover:bg-amber-500/10 transition-all active:scale-[0.98] sm:hover:-translate-y-0.5"
               >
                 Gold 👑
               </button>
@@ -757,6 +1126,12 @@ export default function ComparisonPage({ tripData, onBack }) {
         origin={tripData.origin}
         destination={tripData.destination}
         type={bookingModal.type}
+      />
+      <PlaceHistoryModal
+        open={historyModal.open}
+        onClose={closeHistory}
+        searchQuery={historyModal.q}
+        preload={historyModal.preload}
       />
     </section>
   )

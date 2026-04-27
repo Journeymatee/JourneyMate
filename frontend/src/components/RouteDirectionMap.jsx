@@ -168,19 +168,22 @@ export default function RouteDirectionMap({ originCoords, destCoords }) {
   if (!originCoords || !destCoords) return null
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-white/10 shadow-xl">
+    <div className="rounded-2xl overflow-hidden border border-white/10 shadow-xl w-full min-w-0 max-w-full">
       {/* Header bar */}
-      <div className="bg-slate-900/70 px-4 py-2.5 border-b border-white/8 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" />
-          <span className="font-medium">
+      <div className="bg-slate-900/70 px-2.5 sm:px-4 py-2 sm:py-2.5 border-b border-white/8 flex flex-col xs:flex-row xs:items-center xs:justify-between gap-1.5 sm:gap-2 min-w-0">
+        <div className="flex items-start sm:items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-slate-400 min-w-0">
+          <span className="w-2 h-2 rounded-full bg-green-400 shrink-0 mt-1 sm:mt-0" />
+          <span className="font-medium min-w-0 break-words leading-snug">
             {originCoords.label}
-            <span className="text-slate-600 mx-1.5">→</span>
+            <span className="text-slate-600 mx-0.5 sm:mx-1.5" aria-hidden>→</span>
             {destCoords.label}
           </span>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/10 text-slate-500">
-          {GMAPS_KEY ? 'Google Maps' : 'OpenStreetMap · OSRM routing · free'}
+        <span
+          className="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full border border-white/10 text-slate-500 shrink-0 w-full xs:w-auto text-center xs:text-left"
+          title={GMAPS_KEY ? 'Google Maps' : 'OpenStreetMap, OSRM routing (free)'}
+        >
+          {GMAPS_KEY ? 'Google Maps' : 'OSM · OSRM (free)'}
         </span>
       </div>
 
