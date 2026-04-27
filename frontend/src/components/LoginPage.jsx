@@ -5,6 +5,37 @@ import { useAuth } from '../context/AuthContext'
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 const GOOGLE_CONFIGURED = Boolean(GOOGLE_CLIENT_ID)
 
+const EMAIL_RE =
+  /^[A-Za-z0-9](?:[A-Za-z0-9._%+\-]{0,62}[A-Za-z0-9])?@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\.[A-Za-z]{2,24}$/
+
+const FAKE_DOMAINS = new Set([
+  'example.com', 'example.net', 'example.org', 'test.com', 'test.org',
+  'foo.com', 'bar.com', 'baz.com', 'aaa.com', 'bbb.com', 'ccc.com',
+  'qqq.com', 'xyz.com', 'asdf.com', 'abc.com', 'mail.com', 'email.com',
+])
+
+const DISPOSABLE_DOMAINS = new Set([
+  'mailinator.com', 'tempmail.com', 'temp-mail.org', '10minutemail.com',
+  'guerrillamail.com', 'sharklasers.com', 'yopmail.com', 'fakeinbox.com',
+  'trashmail.com', 'getnada.com', 'maildrop.cc', 'dispostable.com',
+  'throwawaymail.com', 'mintemail.com', 'mohmal.com', 'tempinbox.com',
+])
+
+function quickEmailCheck(value) {
+  const v = String(value || '').trim().toLowerCase()
+  if (!v) return 'Please enter your email address'
+  if (v.length > 254) return 'Email address is too long'
+  if (!EMAIL_RE.test(v)) return 'That email looks invalid. Try something like name@gmail.com.'
+  const domain = v.split('@')[1] || ''
+  const tld = domain.split('.').pop()
+  if (['test', 'example', 'invalid', 'localhost', 'local'].includes(tld)) {
+    return 'Test/example email domains are not allowed.'
+  }
+  if (FAKE_DOMAINS.has(domain)) return 'Please use a real email address (placeholder domains are not allowed).'
+  if (DISPOSABLE_DOMAINS.has(domain)) return 'Disposable / temporary email addresses are not allowed.'
+  return ''
+}
+
 /* ── Load Google Identity Services script once ─────────────── */
 function loadGIS() {
   return new Promise((resolve) => {
@@ -22,6 +53,7 @@ export default function LoginPage() {
   const { login, register, loginWithGoogle, forgotPassword } = useAuth()
   const [mode, setMode]           = useState('login')
   const [email, setEmail]         = useState('')
+  const [emailTouched, setEmailTouched] = useState(false)
   const [password, setPassword]   = useState('')
   const [name, setName]           = useState('')
   const [error, setError]         = useState('')
@@ -86,12 +118,18 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    const emailIssue = quickEmailCheck(email)
+    if (emailIssue) {
+      setError(emailIssue)
+      setEmailTouched(true)
+      return
+    }
     setSubmitting(true)
     try {
       if (mode === 'login') {
-        await login(email.trim(), password)
+        await login(email.trim().toLowerCase(), password)
       } else {
-        await register({ email: email.trim(), password, name: name.trim() || 'Traveler' })
+        await register({ email: email.trim().toLowerCase(), password, name: name.trim() || 'Traveler' })
       }
     } catch (err) {
       const api = err.response?.data?.error
@@ -131,7 +169,8 @@ export default function LoginPage() {
     setResetMsg('')
 
     const cleanEmail = resetEmail.trim().toLowerCase()
-    if (!cleanEmail) return setResetError('Please enter your email.')
+    const emailIssue = quickEmailCheck(cleanEmail)
+    if (emailIssue) return setResetError(emailIssue)
     if (resetPassword.length < 6) return setResetError('Password must be at least 6 characters.')
     if (resetPassword !== resetConfirm) return setResetError('Passwords do not match.')
 
@@ -334,18 +373,26 @@ export default function LoginPage() {
 
             <label className="block">
               <span className="text-[10px] sm:text-xs font-medium text-slate-300 uppercase tracking-wider">Email</span>
-              <div className="mt-1.5 flex items-center gap-3 rounded-2xl bg-slate-900/55 hover:bg-white/[0.07] border border-white/12 px-4 py-3 focus-within:border-green-500/45 focus-within:ring-2 focus-within:ring-green-500/20 transition-all">
+              <div className={`mt-1.5 flex items-center gap-3 rounded-2xl bg-slate-900/55 hover:bg-white/[0.07] border px-4 py-3 focus-within:ring-2 transition-all ${
+                emailTouched && quickEmailCheck(email)
+                  ? 'border-red-500/45 focus-within:border-red-500/60 focus-within:ring-red-500/20'
+                  : 'border-white/12 focus-within:border-green-500/45 focus-within:ring-green-500/20'
+              }`}>
                 <Mail size={16} className="text-slate-400 shrink-0" />
                 <input
                   className="w-full bg-transparent text-white text-sm outline-none placeholder:text-slate-400"
                   type="email"
                   required
-                  placeholder="you@example.com"
+                  placeholder="you@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => setEmailTouched(true)}
                   autoComplete="email"
                 />
               </div>
+              {emailTouched && quickEmailCheck(email) && (
+                <p className="mt-1.5 text-[11px] text-red-300/90">{quickEmailCheck(email)}</p>
+              )}
             </label>
 
             <label className="block">
