@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, MapPin, ArrowRight, Zap, TrendingUp, Navigation, X, Check, Users } from 'lucide-react'
+import { Search, MapPin, ArrowRight, Zap, TrendingUp, Navigation, X, Check, Sparkles, AlertCircle } from 'lucide-react'
 import { filterCitiesSync, searchCitiesAPI } from '../data/indianCities'
-import { POPULAR_DESTINATIONS } from '../services/travelService'
 import HeroBackground from './HeroBackground'
+import { TRIP_TYPES } from '../data/tripVibes'
 
 /* ------------------------------------------------------------------ */
-/*  Dropdown                                                          */
+/*  City dropdown                                                     */
 /* ------------------------------------------------------------------ */
 
 function CityDropdown({ open, items, loading, accent, onPick, onClose }) {
@@ -67,17 +67,18 @@ function CityDropdown({ open, items, loading, accent, onPick, onClose }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Controlled city input — single state, no value-clearing weirdness */
+/*  City input                                                        */
 /* ------------------------------------------------------------------ */
 
 function CityInput({
-  label, accent, ringColor, value, onChange, exclude, placeholder,
+  label, accent, ringColor, value, onChange, exclude, placeholder, error, inputRef: forwardedRef,
 }) {
   const [open, setOpen] = useState(false)
   const [apiItems, setApiItems] = useState([])
   const [apiLoading, setApiLoading] = useState(false)
   const wrapRef = useRef(null)
-  const inputRef = useRef(null)
+  const internalInputRef = useRef(null)
+  const inputRef = forwardedRef || internalInputRef
   const timerRef = useRef(null)
 
   const syncItems = useMemo(() => {
@@ -159,7 +160,11 @@ function CityInput({
   return (
     <div className="relative flex-1 min-w-0" ref={wrapRef}>
       <div
-        className={`flex items-center gap-3 px-4 py-3.5 sm:py-4 rounded-2xl bg-white/5 hover:bg-white/[0.07] border border-white/10 transition-all ${ringColor} ${open ? 'ring-2' : ''}`}
+        className={`flex items-center gap-3 px-4 py-3.5 sm:py-4 rounded-2xl bg-white/5 hover:bg-white/[0.07] border transition-all ${
+          error
+            ? 'border-red-500/45 ring-2 ring-red-500/30'
+            : `border-white/10 ${ringColor} ${open ? 'ring-2' : ''}`
+        }`}
         onClick={() => inputRef.current?.focus()}
       >
         <MapPin size={18} className={`${accent} shrink-0`} />
@@ -203,13 +208,30 @@ function CityInput({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Hero                                                              */
+/*  Hero — single search block + trip-type chips that *are* the CTA    */
 /* ------------------------------------------------------------------ */
 
-export default function HeroSearch({ onSearch, loading }) {
+export default function HeroSearch({ onSearch, loading, initialTripType = null, initialVibes = [] }) {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
+  const [tripType, setTripType] = useState(initialTripType)
+  const [vibes, setVibes] = useState(Array.isArray(initialVibes) ? initialVibes : [])
+  const [validation, setValidation] = useState(null)   // { from?: bool, to?: bool, msg }
   const [userCount, setUserCount] = useState(null)
+  const fromRef = useRef(null)
+  const toRef = useRef(null)
+
+  // Late hydration (server preferences arrive after first render).
+  useEffect(() => {
+    if (initialTripType && !tripType) setTripType(initialTripType)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTripType])
+  useEffect(() => {
+    if (Array.isArray(initialVibes) && initialVibes.length > 0 && vibes.length === 0) {
+      setVibes(initialVibes)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialVibes])
 
   useEffect(() => {
     import('../api/client').then(({ default: api }) => {
@@ -219,64 +241,88 @@ export default function HeroSearch({ onSearch, loading }) {
     })
   }, [])
 
-  const handleSearch = () => {
-    if (!from.trim() || !to.trim() || loading) return
-    onSearch(from.trim(), to.trim())
+  const swapCities = () => { setFrom(to); setTo(from) }
+
+  /** Toggle a trip-type chip — clicking the active one clears it. */
+  const toggleType = (typeId) => {
+    setValidation(null)
+    setTripType((cur) => (cur === typeId ? null : typeId))
   }
 
-  const handleQuickRoute = (route) => {
-    setFrom(route.from); setTo(route.to)
-    onSearch(route.from, route.to)
-  }
-
-  const swapCities = () => {
-    setFrom(to); setTo(from)
+  /**
+   * The single Compare button. Validates from/to first; trip-type is OPTIONAL
+   * (no chip selected → backend serves the baseline plan with no overrides).
+   */
+  const handleCompare = () => {
+    if (loading) return
+    const f = String(from || '').trim()
+    const t = String(to || '').trim()
+    if (!f || !t) {
+      setValidation({
+        from: !f,
+        to: !t,
+        msg: !f && !t
+          ? 'Add origin and destination first.'
+          : !f
+            ? 'Add an origin city first.'
+            : 'Add a destination city first.',
+      })
+      if (!f) fromRef.current?.focus()
+      else if (!t) toRef.current?.focus()
+      return
+    }
+    setValidation(null)
+    onSearch(f, t, undefined, { tripType, vibes })
   }
 
   return (
     <section className="relative min-h-[100dvh] flex flex-col items-center justify-center pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6 safe-pad overflow-hidden">
       <HeroBackground />
-      {/* Background blobs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
         <div className="absolute top-1/4 left-1/4 w-48 xs:w-72 sm:w-96 h-48 xs:h-72 sm:h-96 bg-green-500/5 rounded-full blur-3xl animate-pulse-slow" />
         <div className="absolute bottom-1/4 right-1/4 w-48 xs:w-72 sm:w-96 h-48 xs:h-72 sm:h-96 bg-amber-500/5 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1.5s' }} />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[600px] h-[400px] sm:h-[600px] bg-indigo-500/[0.04] rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 max-w-4xl w-full text-center">
-        {/* Badge */}
-        <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full glass border border-white/10 mb-5 sm:mb-8 animate-fade-in">
-          <Zap size={12} className="text-amber-400 shrink-0" />
-          <span className="text-[11px] xs:text-xs sm:text-sm text-slate-300 font-medium">Compare Budget vs Luxury in seconds</span>
-          <TrendingUp size={12} className="text-green-400 shrink-0" />
+      <div className="relative z-10 max-w-3xl w-full">
+        {/* Hero text */}
+        <div className="text-center">
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full glass border border-white/10 mb-4 sm:mb-6 animate-fade-in">
+            <Zap size={12} className="text-amber-400 shrink-0" />
+            <span className="text-[11px] xs:text-xs sm:text-sm text-slate-300 font-medium">Compare Budget vs Luxury in seconds</span>
+            <TrendingUp size={12} className="text-green-400 shrink-0" />
+          </div>
+          <h1 className="hero-title font-display font-bold text-white mb-3 sm:mb-4 animate-slide-up">
+            Travel Smart,
+            <br />
+            <span className="shimmer-silver">Save Big</span>
+            <span className="text-slate-500"> or </span>
+            <span className="shimmer-gold">Live Gold</span>
+          </h1>
+          <p className="text-slate-400 text-sm sm:text-base md:text-lg mb-7 sm:mb-9 max-w-xl mx-auto leading-relaxed animate-fade-in px-2" style={{ animationDelay: '0.2s' }}>
+            Side-by-side comparison of budget and luxury packages across India.
+          </p>
         </div>
 
-        {/* Hero title — fluid size so it never wraps weirdly on any device */}
-        <h1 className="hero-title font-display font-bold text-white mb-4 sm:mb-6 animate-slide-up">
-          Travel Smart,
-          <br />
-          <span className="shimmer-silver">Save Big</span>
-          <span className="text-slate-500"> or </span>
-          <span className="shimmer-gold">Live Gold</span>
-        </h1>
-        <p className="text-slate-400 text-sm xs:text-base sm:text-lg md:text-xl mb-8 sm:mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-in px-2" style={{ animationDelay: '0.2s' }}>
-          Side-by-side comparison of budget and luxury packages across every state, every city, every route in India.
-        </p>
-
-        {/* Search card */}
-        <div className="glass rounded-3xl p-2 sm:p-3 animate-slide-up shadow-2xl relative z-20" style={{ animationDelay: '0.3s' }}>
+        {/* Single search block — inputs first, then trip-type chips that act as Compare */}
+        <div
+          className="glass rounded-3xl border border-white/10 p-3 sm:p-4 shadow-2xl shadow-black/30 animate-slide-up text-left"
+          style={{ animationDelay: '0.3s' }}
+        >
+          {/* From / To inputs */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 items-stretch">
             <CityInput
               label="From"
               accent="text-green-400"
               ringColor="ring-green-500/30"
               value={from}
-              onChange={setFrom}
+              onChange={(v) => { setFrom(v); if (validation?.from) setValidation(null) }}
               exclude={to}
               placeholder="Origin city, town or village"
+              error={!!validation?.from}
+              inputRef={fromRef}
             />
 
-            {/* Swap */}
             <div className="hidden sm:flex items-center justify-center w-10 shrink-0">
               <button
                 type="button"
@@ -288,7 +334,6 @@ export default function HeroSearch({ onSearch, loading }) {
               </button>
             </div>
 
-            {/* Mobile swap */}
             <button
               type="button"
               onClick={swapCities}
@@ -303,57 +348,120 @@ export default function HeroSearch({ onSearch, loading }) {
               accent="text-amber-400"
               ringColor="ring-amber-500/30"
               value={to}
-              onChange={setTo}
+              onChange={(v) => { setTo(v); if (validation?.to) setValidation(null) }}
               exclude={from}
               placeholder="Destination — e.g. Goa, Kaziranga"
+              error={!!validation?.to}
+              inputRef={toRef}
             />
-
-            <button
-              type="button"
-              onClick={handleSearch}
-              disabled={!from || !to || loading}
-              className="flex items-center justify-center gap-2 px-6 sm:px-8 py-4 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm transition-all duration-200 shadow-lg shadow-green-500/25 hover:shadow-green-500/40 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  <Search size={18} />
-                  <span>Compare</span>
-                </>
-              )}
-            </button>
           </div>
 
+          {/* Validation hint when user clicks a chip without filling cities */}
+          {validation && (
+            <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/25 text-[12px] text-red-100">
+              <AlertCircle size={14} className="text-red-300 shrink-0" />
+              <span className="leading-snug">{validation.msg}</span>
+            </div>
+          )}
+
+          {/* Mobile-only echo of from → to */}
           {(from || to) && (
-            <div className="sm:hidden mt-2 px-2 pb-1 flex items-center justify-center gap-2 text-xs text-slate-400">
+            <div className="sm:hidden mt-2 px-1 flex items-center justify-center gap-2 text-xs text-slate-400">
               {from && <span className="text-green-400 font-medium truncate max-w-[35vw]">{from}</span>}
               {from && to && <Navigation size={11} className="text-slate-500 rotate-90" />}
               {to && <span className="text-amber-400 font-medium truncate max-w-[35vw]">{to}</span>}
             </div>
           )}
-        </div>
 
-        {/* Popular routes — scrollable row on mobile */}
-        <div className="mt-6 sm:mt-8 animate-fade-in relative z-10" style={{ animationDelay: '0.5s' }}>
-          <p className="text-xs text-slate-500 font-medium text-center mb-3">Popular routes:</p>
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 justify-start sm:justify-center sm:flex-wrap">
-            {POPULAR_DESTINATIONS.map((route) => (
-              <button
-                key={`${route.from}-${route.to}`}
-                type="button"
-                onClick={() => handleQuickRoute(route)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full glass border border-white/8 hover:border-white/20 text-xs text-slate-400 hover:text-white transition-all duration-200 hover:-translate-y-0.5 whitespace-nowrap shrink-0"
-              >
-                <span>{route.emoji}</span>
-                <span>{route.from} → {route.to}</span>
-              </button>
-            ))}
+          {/* Trip-type chips — selection only (optional filter) */}
+          <div className="mt-4 sm:mt-5 pt-4 border-t border-white/8">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs uppercase tracking-wider font-semibold text-slate-400">
+                <Sparkles size={12} className="text-fuchsia-300" />
+                Who&apos;s travelling? <span className="text-slate-600 normal-case font-medium tracking-normal">(optional)</span>
+              </div>
+              {tripType && (
+                <button
+                  type="button"
+                  onClick={() => setTripType(null)}
+                  className="text-[10px] uppercase tracking-wider text-slate-500 hover:text-slate-200 font-semibold"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <div
+              role="radiogroup"
+              aria-label="Trip type filter (optional)"
+              className="grid grid-cols-2 sm:grid-cols-4 gap-2"
+            >
+              {TRIP_TYPES.map((t) => {
+                const active = tripType === t.id
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    disabled={loading}
+                    onClick={() => toggleType(t.id)}
+                    className={`group relative overflow-hidden min-w-0 flex flex-col items-start gap-0.5 px-3 py-3 sm:py-3.5 rounded-2xl border text-left transition-all duration-200 active:scale-[0.98] ${
+                      active
+                        ? `${t.border} shadow-lg shadow-black/30 ring-2 ${t.ring}`
+                        : 'bg-white/5 border-white/10 hover:bg-white/8 hover:border-white/25 hover:-translate-y-0.5'
+                    } ${loading ? 'opacity-60 pointer-events-none' : ''}`}
+                  >
+                    {active && (
+                      <span aria-hidden className={`absolute inset-0 bg-gradient-to-br ${t.gradient} pointer-events-none`} />
+                    )}
+
+                    <div className="relative z-10 flex items-center gap-2 w-full min-w-0">
+                      <span className="text-base sm:text-lg leading-none shrink-0" aria-hidden>{t.icon}</span>
+                      <span className={`text-xs sm:text-sm font-bold truncate min-w-0 flex-1 ${active ? 'text-white' : 'text-slate-200'}`}>
+                        {t.label}
+                      </span>
+                      {active && (
+                        <Check size={12} className={`${t.accent} shrink-0`} aria-hidden />
+                      )}
+                    </div>
+                    <span className={`relative z-10 hidden sm:block text-[10px] leading-snug truncate w-full ${active ? 'text-white/85' : 'text-slate-500'}`}>
+                      {t.blurb}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Compare button — single CTA after From, To, and (optional) trip-type */}
+            <button
+              type="button"
+              onClick={handleCompare}
+              disabled={loading}
+              className="mt-4 w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm transition-all duration-200 shadow-lg shadow-green-500/25 hover:shadow-green-500/40 hover:-translate-y-0.5 active:translate-y-0"
+            >
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Comparing…</span>
+                </>
+              ) : (
+                <>
+                  <Search size={16} />
+                  <span>Compare plans</span>
+                  {tripType && (
+                    <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 ml-1 rounded-full bg-white/15 border border-white/20">
+                      {TRIP_TYPES.find((t) => t.id === tripType)?.icon}
+                      {TRIP_TYPES.find((t) => t.id === tripType)?.short}
+                    </span>
+                  )}
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Stats — all clickable */}
+      {/* Stats — popular routes block remains removed */}
       <div className="relative z-[5] max-w-3xl w-full mt-10 sm:mt-16 animate-fade-in" style={{ animationDelay: '0.7s' }}>
         <div className="glass rounded-2xl p-4 sm:p-6 border border-white/8">
           <div className="grid grid-cols-3 gap-0 text-center divide-x divide-white/8">

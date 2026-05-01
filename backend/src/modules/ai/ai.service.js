@@ -4,6 +4,8 @@ const ApiError = require('../../lib/ApiError')
 const env = require('../../config/env')
 const memoryRepo = require('./ai.memory.repo')
 const { pool } = require('../../config/db')
+const { getDestinationStreetFood } = require('../trips/trip.data')
+const { closestMatch } = require('../../lib/strings')
 
 const SYSTEM_PROMPT =
   'You are JourneyMate AI, an advanced India travel planner using LLM reasoning + real-time data + extracted entities. ' +
@@ -24,6 +26,10 @@ const COMMON_CITIES = [
   'delhi', 'mumbai', 'bengaluru', 'bangalore', 'kolkata', 'chennai', 'hyderabad', 'pune',
   'ahmedabad', 'jaipur', 'goa', 'manali', 'shimla', 'agra', 'varanasi', 'udaipur', 'kochi',
   'amritsar', 'rishikesh', 'darjeeling', 'srinagar', 'leh', 'dehradun', 'lucknow', 'patna',
+  'mysore', 'ooty', 'munnar', 'coorg', 'pondicherry', 'puducherry', 'alleppey', 'kashmir',
+  'spiti', 'indore', 'bhopal', 'surat', 'nagpur', 'guwahati', 'kanyakumari', 'puri',
+  'bhubaneswar', 'gangtok', 'jodhpur', 'mangalore', 'vadodara', 'madurai', 'shillong',
+  'bikaner', 'trivandrum', 'thiruvananthapuram', 'kolhapur', 'chandigarh',
 ]
 
 function sanitizeHistory(history) {
@@ -40,6 +46,7 @@ function sanitizeHistory(history) {
 
 function detectIntent(text) {
   const q = text.toLowerCase()
+  if (/(famous|street).*(food|eat|dish)|what.*(eat|food|dishes)|local food|must[-\s]?try.*(food|dish)|where.*eat|cuisine|breakfast|dinner|biryani|kebab|dosa|chaat|sweets?\b/.test(q)) return 'food'
   if (/(itinerary|plan|day[-\s]?wise|schedule)/.test(q)) return 'itinerary'
   if (/(compare|budget vs|luxury|premium|cheap)/.test(q)) return 'comparison'
   if (/(weather|season|best time|month)/.test(q)) return 'seasonality'
@@ -50,12 +57,46 @@ function detectIntent(text) {
   return 'general'
 }
 
+// Words that are NEVER a city — used to reject false captures like
+// "what TO EAT" → toCity = "eat", or "I want TO VISIT".
+const VERB_STOP_WORDS = new Set([
+  'eat', 'visit', 'go', 'see', 'buy', 'book', 'stay', 'travel', 'sleep',
+  'reach', 'meet', 'find', 'have', 'do', 'take', 'know', 'plan', 'look',
+  'search', 'explore', 'try', 'check', 'get', 'be', 'come',
+])
+// Boundary words that end a city capture: "Hydrabad next week" → "Hydrabad".
+const TRAILING_STOP_WORDS = [
+  'next', 'tomorrow', 'today', 'yesterday', 'for', 'on', 'at', 'by',
+  'this', 'last', 'during', 'around', 'near', 'with', 'and', 'or',
+  'when', 'what', 'why', 'how', 'please', 'tell',
+]
+
+function cleanCityCapture(value) {
+  let s = String(value || '').replace(/[?.!,;]/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!s) return ''
+  // Truncate at the first trailing stop-word so "Hydrabad next week" → "Hydrabad".
+  for (const sw of TRAILING_STOP_WORDS) {
+    const re = new RegExp('\\b' + sw + '\\b', 'i')
+    const m = s.match(re)
+    if (m && m.index > 0) s = s.slice(0, m.index).trim()
+  }
+  s = s.replace(/\b(for|in|on|at)\b/gi, '').replace(/\s+/g, ' ').trim()
+  // Reject captures whose head word is a verb stop-word ("eat", "visit"...).
+  const head = s.split(/\s+/)[0]?.toLowerCase() || ''
+  if (VERB_STOP_WORDS.has(head)) return ''
+  return s
+}
+
 function extractEntities(text) {
   const raw = String(text || '')
   const q = raw.toLowerCase()
 
   const fromMatch = q.match(/\bfrom\s+([a-z][a-z\s]{1,30})/i)
   const toMatch = q.match(/\bto\s+([a-z][a-z\s]{1,30})/i)
+  // catches "eat in <city>", "what about <city>", "visiting <city>", "around <city>", etc.
+  const aboutMatch =
+    q.match(/\b(?:in|at|about|around|near|visiting)\s+([a-z][a-z\s]{1,30})/i) ||
+    null
   const dayMatch = q.match(/\b(\d{1,2})\s*(day|days|night|nights)\b/i)
   const budgetMatch =
     q.match(/(?:₹|rs\.?|inr)\s?(\d{3,7})/i) ||
@@ -64,15 +105,30 @@ function extractEntities(text) {
   const month = MONTHS.find((m) => q.includes(m)) || null
   const knownCities = COMMON_CITIES.filter((city) => q.includes(city)).slice(0, 4)
 
-  const normalizeEntity = (value) =>
-    String(value || '')
-      .replace(/\b(for|in|on|at)\b/gi, '')
-      .replace(/\s+/g, ' ')
-      .trim()
+  // Auto-correct fallback: if the user typed a typo'd city name ("Banglore",
+  // "Varansi", "Mumbi"), try to match it against COMMON_CITIES by edit distance.
+  if (knownCities.length === 0) {
+    const tokens = q.match(/\b[a-z]{4,15}\b/g) || []
+    for (const tok of tokens) {
+      if (VERB_STOP_WORDS.has(tok)) continue
+      const fuzzy = closestMatch(tok, COMMON_CITIES)
+      if (fuzzy && fuzzy.distance <= (tok.length <= 5 ? 1 : 2)) {
+        knownCities.push(fuzzy.match)
+        break
+      }
+    }
+  }
+
+  // Prefer "to <city>", then "in/about <city>", then the first known-city hit.
+  // `cleanCityCapture` rejects verb captures and trims trailing time words.
+  const toCity =
+    cleanCityCapture(toMatch?.[1] || '') ||
+    cleanCityCapture(aboutMatch?.[1] || '') ||
+    (knownCities[0] || '')
 
   return {
-    fromCity: normalizeEntity(fromMatch?.[1] || ''),
-    toCity: normalizeEntity(toMatch?.[1] || ''),
+    fromCity: cleanCityCapture(fromMatch?.[1] || ''),
+    toCity,
     days: dayMatch ? Number(dayMatch[1]) : null,
     budgetInr: budgetMatch ? Number(budgetMatch[1]) : null,
     month,
@@ -86,6 +142,14 @@ function extractLanguage(text) {
 }
 
 function buildFollowUps(intent, entities) {
+  if (intent === 'food') {
+    const city = entities.toCity || entities.knownCities[0] || 'this place'
+    return [
+      `Where should I eat in ${city}?`,
+      `Famous sweets and desserts in ${city}`,
+      `Recommend fine-dining in ${city}`,
+    ]
+  }
   if (intent === 'itinerary') {
     return [
       'Give me a day-wise itinerary',
@@ -144,8 +208,27 @@ function buildUserMessage({ prompt, user, nlp, realtimeContext }) {
   ].join('\n')
 }
 
-function localFallbackReply({ prompt, nlp }) {
+function localFallbackReply({ prompt, nlp, realtime }) {
   const city = nlp.entities.toCity || nlp.entities.knownCities[0] || 'your destination'
+
+  if (nlp.intent === 'food') {
+    const sf = realtime?.streetFood
+    if (sf && sf.items?.length > 0) {
+      const lines = [
+        `Top ${Math.min(6, sf.items.length)} must-try foods in ${sf.city}:`,
+        ...sf.items.slice(0, 6).map((it) => {
+          const tag = it.tier === 'fine' ? ' (fine-dining)' : ''
+          const where = it.where ? ` — try at ${it.where}` : ''
+          return `- ${it.name}${tag}: ${it.description}${where}`
+        }),
+        '',
+        'Tip: street stalls peak 7–10 PM. Pick spots with high local turnover.',
+      ]
+      return lines.join('\n')
+    }
+    return `I can suggest local food once you tell me the city. Try: "Famous food in ${city}".`
+  }
+
   if (nlp.intent === 'comparison') {
     return [
       `Here is a quick budget vs luxury comparison for ${city}:`,
@@ -197,6 +280,30 @@ function shouldFetchPlatformStats(prompt, nlp) {
     nlp.intent === 'itinerary' ||
     /(route|routes|booking|bookings|popular|availability)/.test(q)
   )
+}
+
+function shouldFetchStreetFood(prompt, nlp) {
+  if (nlp.intent === 'food' || nlp.intent === 'itinerary') return true
+  const q = prompt.toLowerCase()
+  return /(food|eat|dish|cuisine|breakfast|dinner|street ?food|restaurant|cafe|fine.?dining|biryani|kebab|dosa|chaat|sweets?)/.test(q)
+}
+
+async function fetchStreetFoodFor(cityName) {
+  if (!cityName) return null
+  const items = (await getDestinationStreetFood(cityName, { tier: 'all' }).catch(() => [])) || []
+  if (!items.length) return null
+  return {
+    city: cityName,
+    count: items.length,
+    items: items.slice(0, 8).map((it) => ({
+      name: it.name,
+      description: it.description,
+      where: it.where || null,
+      tier: it.tier,
+      mapsUrl: it.mapsUrl || null,
+      affiliateUrl: it.affiliateUrl || null,
+    })),
+  }
 }
 
 async function fetchJsonWithTimeout(url, options = {}, timeoutMs = DEFAULT_LIVE_TIMEOUT_MS) {
@@ -334,6 +441,22 @@ function toRealtimeContextText(realtime) {
     }
   }
 
+  if (realtime.streetFood) {
+    const sf = realtime.streetFood
+    lines.push(
+      `Curated famous food in "${sf.city}" (${sf.count} picks; showing ${sf.items.length}):`
+    )
+    for (const it of sf.items) {
+      const tier = it.tier === 'fine' ? 'fine-dining' : 'street'
+      const where = it.where ? ` @ ${it.where}` : ''
+      lines.push(`- [${tier}] ${it.name}: ${it.description}${where}`)
+    }
+    lines.push(
+      'When recommending food, prefer items from this curated list. ' +
+      'Use the dish names verbatim. If the user asks for fine-dining, prefer items tagged fine-dining.'
+    )
+  }
+
   return lines.join('\n')
 }
 
@@ -343,13 +466,14 @@ async function buildRealtimeContext({ prompt, nlp, user }) {
   }
 
   const candidateCity = nlp.entities.toCity || nlp.entities.fromCity || nlp.entities.knownCities[0] || ''
-  const [weather, routeStats, userBookingStats] = await Promise.all([
+  const [weather, routeStats, userBookingStats, streetFood] = await Promise.all([
     shouldFetchWeather(prompt, nlp) && candidateCity ? fetchCityWeather(candidateCity) : Promise.resolve(null),
     shouldFetchPlatformStats(prompt, nlp) && candidateCity ? fetchRouteStats(candidateCity) : Promise.resolve(null),
     fetchUserBookingStats(user?.id),
+    shouldFetchStreetFood(prompt, nlp) && candidateCity ? fetchStreetFoodFor(candidateCity) : Promise.resolve(null),
   ])
 
-  const realtime = { weather, routeStats, userBookingStats }
+  const realtime = { weather, routeStats, userBookingStats, streetFood }
   return {
     realtime,
     realtimeText: toRealtimeContextText(realtime),
@@ -368,7 +492,7 @@ async function chat({ message, history, user }) {
 
   if (!env.AI_API_KEY) {
     const fallback = {
-      reply: localFallbackReply({ prompt, nlp }),
+      reply: localFallbackReply({ prompt, nlp, realtime }),
       model: 'rnlp-fallback',
       usage: null,
       nlp,
@@ -433,7 +557,7 @@ async function chat({ message, history, user }) {
     return result
   } catch (err) {
     const fallbackResult = {
-      reply: localFallbackReply({ prompt, nlp }),
+      reply: localFallbackReply({ prompt, nlp, realtime }),
       model: 'rnlp-fallback',
       usage: null,
       nlp,
