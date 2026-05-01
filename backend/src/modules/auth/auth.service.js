@@ -17,6 +17,11 @@ function getGoogleClient() {
   return googleClient
 }
 
+function isAdminEmail(email) {
+  if (!email) return false
+  return env.ADMIN_EMAILS.includes(String(email).trim().toLowerCase())
+}
+
 function toPublicUser(row) {
   return {
     id:        row.id,
@@ -24,6 +29,7 @@ function toPublicUser(row) {
     name:      row.full_name || row.name,
     avatarUrl: row.avatar_url || null,
     provider:  row.provider || 'local',
+    isAdmin:   isAdminEmail(row.email),
   }
 }
 

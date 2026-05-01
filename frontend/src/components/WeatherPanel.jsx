@@ -153,27 +153,31 @@ function WeatherCard({ label, weather, accent }) {
   )
 }
 
-export default function WeatherPanel({ weather, originLabel, destinationLabel }) {
+export default function WeatherPanel({ weather, destinationLabel }) {
   if (!weather) return null
-  const { origin, destination } = weather
-  if (!origin && !destination) return null
+  // Only show weather for the destination (where the user is going).
+  const destination = weather.destination
+  if (!destination) return null
+
+  const placeName = destinationLabel || 'Destination'
 
   return (
     <div
       className="mb-6 sm:mb-8 rounded-2xl border border-white/10 glass p-4 sm:p-5 animate-slide-up w-full min-w-0"
       style={{ animationDelay: '0.14s' }}
     >
-      <div className="mb-3 flex items-center gap-2">
-        <CloudSun size={16} className="text-cyan-300" />
-        <h3 className="text-sm font-bold tracking-wide text-white">Live weather on your route</h3>
+      <div className="mb-3 flex items-center gap-2 min-w-0">
+        <CloudSun size={16} className="text-cyan-300 shrink-0" />
+        <h3 className="text-sm font-bold tracking-wide text-white truncate">
+          Weather in {placeName}
+        </h3>
       </div>
       <p className="mb-4 text-xs text-slate-500">
-        Current conditions and a 3-day outlook for both cities — pack accordingly.
+        Current conditions and a 3-day outlook for your destination — pack accordingly.
       </p>
 
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
-        <WeatherCard label={originLabel || 'Origin'} weather={origin} accent="cool" />
-        <WeatherCard label={destinationLabel || 'Destination'} weather={destination} accent="gold" />
+      <div className="max-w-xl mx-auto">
+        <WeatherCard label={placeName} weather={destination} accent="gold" />
       </div>
     </div>
   )

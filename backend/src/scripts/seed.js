@@ -184,14 +184,72 @@ async function seedBlog() {
   }
 }
 
+/**
+ * Upsert the curated street-food catalog defined in trip.data.js into Postgres.
+ * Idempotent — safe to re-run on every boot. Edits to the JS map flow into
+ * the DB on next start because we UPSERT on (city_slug, name).
+ */
+async function seedStreetFood() {
+  const { DESTINATION_STREET_FOOD, buildMapsUrl, safeAffiliateUrl } = require('../modules/trips/trip.data')
+
+  let upserted = 0
+  let cities = 0
+  for (const [citySlug, items] of Object.entries(DESTINATION_STREET_FOOD || {})) {
+    if (!Array.isArray(items) || items.length === 0) continue
+    cities += 1
+    for (let i = 0; i < items.length; i += 1) {
+      const it = items[i] || {}
+      const tier = it.tier === 'fine' ? 'fine' : 'street'
+      const cityLabel = citySlug === 'default' ? '' : citySlug
+      const mapsUrl = it.mapsUrl || buildMapsUrl(it.where, cityLabel)
+      const affiliateUrl = safeAffiliateUrl(it.affiliateUrl)
+
+      await pool.query(
+        `
+        INSERT INTO street_food_items
+          (city_slug, name, emoji, description, where_to_eat, tier,
+           maps_url, affiliate_url, affiliate_partner, position, is_published, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, NOW())
+        ON CONFLICT (city_slug, name) DO UPDATE SET
+          emoji             = EXCLUDED.emoji,
+          description       = EXCLUDED.description,
+          where_to_eat      = EXCLUDED.where_to_eat,
+          tier              = EXCLUDED.tier,
+          maps_url          = EXCLUDED.maps_url,
+          affiliate_url     = EXCLUDED.affiliate_url,
+          affiliate_partner = EXCLUDED.affiliate_partner,
+          position          = EXCLUDED.position,
+          is_published      = true,
+          updated_at        = NOW()
+        `,
+        [
+          citySlug,
+          it.name,
+          it.emoji || null,
+          it.description || null,
+          it.where || null,
+          tier,
+          mapsUrl,
+          affiliateUrl,
+          it.affiliatePartner || null,
+          i,
+        ]
+      )
+      upserted += 1
+    }
+  }
+  logger.info({ msg: 'street food seeded', cities, items: upserted })
+}
+
 async function runAll() {
   await migrate()
   await seedUsers()
   await seedCities()
   await seedBlog()
+  await seedStreetFood()
 }
 
-module.exports = { seedUsers, seedCities, seedBlog, runAll }
+module.exports = { seedUsers, seedCities, seedBlog, seedStreetFood, runAll }
 
 if (require.main === module) {
   runAll()

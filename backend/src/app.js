@@ -21,6 +21,7 @@ const blogExperiencesListRoutes = require('./modules/blog/blog.experiencesList.r
 const blogRoutes     = require('./modules/blog/blog.routes')
 const insightsRoutes = require('./modules/insights/insights.routes')
 const aiRoutes       = require('./modules/ai/ai.routes')
+const adminRoutes    = require('./modules/admin/admin.routes')
 
 function buildApp() {
   const app = express()
@@ -71,6 +72,7 @@ function buildApp() {
   app.use('/api/blog',     blogRoutes)
   app.use('/api/insights', insightsRoutes)
   app.use('/api/ai',       aiRoutes)
+  app.use('/api/admin',    adminRoutes)
 
   // Keep legacy route alive for older clients: /api/trips/search was previously
   // documented and some code still calls it — already served above. Nothing else to alias.

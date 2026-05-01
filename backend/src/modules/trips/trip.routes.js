@@ -21,10 +21,13 @@ router.get(
   requireAuth,
   query('from').isString().trim().isLength({ min: 2, max: 80 }).withMessage('from required'),
   query('to').isString().trim().isLength({ min: 2, max: 80 }).withMessage('to required'),
-  // `days` parsed in service (1–5) — not validated here so string query values never 400
+  // `days` / `tripType` / `vibes` are normalised in the service so that
+  // unknown values never 400 — older clients still get a valid response.
   validate,
   controller.search
 )
+
+router.get('/preferences', requireAuth, controller.preferences)
 
 router.get('/popular', controller.popular)
 

@@ -3,11 +3,14 @@ import {
   Train, Plane, Hotel, Building, UtensilsCrossed, Star,
   ChevronRight, ChevronDown, Check, Calendar, MapPin, ArrowLeft,
   Sparkles, Shield, Coffee, Wifi, Car, Waves, Mountain,
-  Route, X, ExternalLink, History, Clock, Ruler, Landmark, Loader2, AlertCircle
+  Route, X, ExternalLink, History, Clock, Ruler, Landmark, Loader2, AlertCircle,
+  SlidersHorizontal, Scale, ChefHat
 } from 'lucide-react'
 import PlaceMap from './PlaceMap'
 import RouteDirectionMap from './RouteDirectionMap'
 import WeatherPanel from './WeatherPanel'
+import { TripTypePicker, VibeChips } from './TripVibePicker'
+import { findTripType, VIBES_BY_TYPE } from '../data/tripVibes'
 import { getPlaceArticle } from '../services/travelService'
 
 /* ------------------------------------------------------------------ */
@@ -465,19 +468,16 @@ function PlaceHistoryModal({ open, onClose, searchQuery, preload }) {
 /* ------------------------------------------------------------------ */
 function PlaceIntelSection({ placeIntel, destination, onOpenHistory, onOpenWithPreload }) {
   if (!placeIntel) return null
-  const { osrm, wikipedia, topSights, attributions } = placeIntel
+  const { osrm, wikipedia, topSights } = placeIntel
   const hasAny = osrm || wikipedia || (Array.isArray(topSights) && topSights.length > 0)
   if (!hasAny) return null
 
   return (
     <div className="mb-6 sm:mb-8 rounded-2xl border border-white/10 glass p-4 sm:p-5 animate-slide-up w-full min-w-0" style={{ animationDelay: '0.12s' }}>
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-4">
         <Landmark size={16} className="text-emerald-400" />
         <h3 className="text-sm font-bold text-white tracking-wide">Compare — live place data</h3>
       </div>
-      <p className="text-xs text-slate-500 mb-4">
-        Road time and distance use the public OSRM router; top sights come from OpenStreetMap near your destination. History text is from English Wikipedia.
-      </p>
 
       {osrm && (
         <div className="flex flex-wrap gap-2 mb-4">
@@ -535,11 +535,326 @@ function PlaceIntelSection({ placeIntel, destination, onOpenHistory, onOpenWithP
         </div>
       )}
 
-      {Array.isArray(attributions) && attributions.length > 0 && (
-        <p className="text-[9px] text-slate-600 mt-3 leading-snug">
-          {attributions.join(' ')}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Famous street food — trigger button + popup modal                  */
+/*                                                                     */
+/*  The whole feature now lives INSIDE the Itinerary tab as a small    */
+/*  attention-grabbing trigger; clicking it opens a full-screen modal  */
+/*  with the curated list (street + fine-dining) and the tier filter.  */
+/* ------------------------------------------------------------------ */
+
+/** A small attention banner inside the itinerary tab — opens the modal. */
+function StreetFoodTrigger({ destination, count, hasFine, isGold, onOpen }) {
+  if (!count) return null
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`group w-full mb-3 flex items-center gap-3 p-3 sm:p-3.5 rounded-xl border text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
+        isGold
+          ? 'bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border-amber-500/25 hover:border-amber-500/40 hover:shadow-amber-500/10'
+          : 'bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/5 border-orange-500/25 hover:border-orange-500/40 hover:shadow-orange-500/10'
+      }`}
+    >
+      <div
+        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+          isGold
+            ? 'bg-amber-500/20 border border-amber-500/30'
+            : 'bg-orange-500/20 border border-orange-500/30'
+        }`}
+      >
+        <ChefHat size={18} className={isGold ? 'text-amber-300' : 'text-orange-300'} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-sm font-bold text-white leading-tight">
+            Famous street food in {destination}
+          </span>
+          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider bg-orange-500/20 text-orange-200 border border-orange-500/40 whitespace-nowrap">
+            Must try
+          </span>
+        </div>
+        <p className="text-[11px] text-slate-400 leading-snug mt-0.5 truncate">
+          {count} curated pick{count === 1 ? '' : 's'}
+          {hasFine ? ' · includes fine-dining' : ''} · tap to view
         </p>
+      </div>
+      <ChevronRight
+        size={16}
+        className={`shrink-0 transition-transform group-hover:translate-x-0.5 ${
+          isGold ? 'text-amber-300' : 'text-orange-300'
+        }`}
+      />
+    </button>
+  )
+}
+
+/** Inner panel — filter pills + dish grid + footer tip. */
+function StreetFoodPanel({ items, destination }) {
+  // Always default to 'all' — the user's plan view should NOT lock the filter.
+  // This way the modal always shows every dish on open and the user can refine.
+  const [tier, setTier] = useState('all')
+
+  const counts = {
+    all: items.length,
+    street: items.filter((i) => i.tier !== 'fine').length,
+    fine: items.filter((i) => i.tier === 'fine').length,
+  }
+  const visible = tier === 'all' ? items : items.filter((i) => (i.tier || 'street') === tier)
+
+  // Always render all 3 tiers so the UI is consistent across destinations;
+  // a tier with 0 items renders disabled but stays visible for clarity.
+  const TIERS = [
+    { id: 'all',    label: 'All',         count: counts.all,    icon: null },
+    { id: 'street', label: 'Street',      count: counts.street, icon: null },
+    { id: 'fine',   label: 'Fine dining', count: counts.fine,   icon: null },
+  ]
+
+  return (
+    <>
+      <p className="mb-4 text-xs text-slate-500 leading-snug">
+        Local favourites picked from markets, dhabas and old-city lanes — eat where the locals do.
+      </p>
+
+      <div
+        className="grid grid-cols-3 gap-1 w-full min-w-0 p-1 rounded-2xl bg-slate-900/60 border border-white/10 mb-4"
+        role="group"
+        aria-label="Filter by food tier"
+      >
+        {TIERS.map((t) => {
+          const disabled = t.count === 0 && t.id !== 'all'
+          return (
+            <button
+              key={t.id}
+              type="button"
+              disabled={disabled}
+              onClick={() => !disabled && setTier(t.id)}
+              aria-pressed={tier === t.id}
+              className={`min-w-0 py-2 px-1 sm:px-2 rounded-xl text-xs sm:text-sm font-semibold text-center leading-snug transition-all duration-300 ${
+                tier === t.id
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg'
+                  : disabled
+                  ? 'text-slate-600 cursor-not-allowed opacity-50'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span className="truncate inline-block max-w-full align-middle">{t.label}</span>
+              <span className="ml-1 text-[10px] opacity-80">({t.count})</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {visible.length === 0 ? (
+        <p className="text-xs text-slate-500 italic px-1 py-4">
+          No {tier === 'fine' ? 'fine-dining' : 'street-food'} picks listed for this place — try
+          the All tab.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+          {visible.map((item, i) => {
+            const isFine = item.tier === 'fine'
+            return (
+              <div
+                key={`${item.name}-${i}`}
+                className={`flex items-start gap-3 p-3 rounded-xl border transition-colors ${
+                  isFine
+                    ? 'bg-amber-500/5 border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10'
+                    : 'bg-orange-500/5 border-orange-500/15 hover:border-orange-500/30 hover:bg-orange-500/8'
+                }`}
+              >
+                <div
+                  className={`w-9 h-9 rounded-lg border flex items-center justify-center text-lg leading-none shrink-0 ${
+                    isFine
+                      ? 'bg-amber-500/15 border-amber-500/30'
+                      : 'bg-orange-500/15 border-orange-500/25'
+                  }`}
+                >
+                  {item.emoji || '🍽️'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                    <span className="text-sm font-semibold text-white leading-tight truncate">
+                      {item.name}
+                    </span>
+                    {isFine && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 whitespace-nowrap">
+                        Fine
+                      </span>
+                    )}
+                  </div>
+                  {item.description && (
+                    <p className="text-[11px] sm:text-xs text-slate-400 leading-snug mt-0.5">
+                      {item.description}
+                    </p>
+                  )}
+                  {item.where && (
+                    item.mapsUrl ? (
+                      <a
+                        href={item.mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`mt-1 inline-flex items-start gap-1 text-[10px] sm:text-[11px] leading-snug font-medium hover:underline ${
+                          isFine ? 'text-amber-300/90 hover:text-amber-200' : 'text-orange-300/90 hover:text-orange-200'
+                        }`}
+                        title="Open on Google Maps"
+                      >
+                        <MapPin size={10} className="mt-0.5 shrink-0" />
+                        <span className="min-w-0 break-words">{item.where}</span>
+                        <ExternalLink size={9} className="mt-0.5 shrink-0 opacity-70" />
+                      </a>
+                    ) : (
+                      <p
+                        className={`text-[10px] sm:text-[11px] leading-snug mt-1 flex items-start gap-1 ${
+                          isFine ? 'text-amber-300/90' : 'text-orange-300/90'
+                        }`}
+                      >
+                        <MapPin size={10} className="mt-0.5 shrink-0" />
+                        <span className="min-w-0 break-words">{item.where}</span>
+                      </p>
+                    )
+                  )}
+                  {item.affiliateUrl && (
+                    <a
+                      href={item.affiliateUrl}
+                      target="_blank"
+                      rel="noopener noreferrer sponsored"
+                      className={`mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full transition-colors ${
+                        isFine
+                          ? 'bg-amber-500/20 text-amber-200 border border-amber-500/40 hover:bg-amber-500/30'
+                          : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25'
+                      }`}
+                      title={item.affiliatePartner ? `Book on ${item.affiliatePartner}` : 'Reserve a table'}
+                    >
+                      {isFine ? 'Reserve' : 'Book'}
+                      {item.affiliatePartner && (
+                        <span className="opacity-80 normal-case font-semibold">· {item.affiliatePartner}</span>
+                      )}
+                      <ExternalLink size={9} className="shrink-0 opacity-80" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       )}
+
+      <p className="mt-3 text-[10px] text-slate-600 leading-snug">
+        Tip: many top stalls are cash-only and busiest 7–10 PM. Pin locations open on Google Maps.
+      </p>
+    </>
+  )
+}
+
+/** Centered popup, fully responsive — sits above every other UI layer. */
+function StreetFoodModal({ open, onClose, streetFood, destination }) {
+  useEffect(() => {
+    if (!open) return undefined
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    const prevPaddingRight = document.body.style.paddingRight
+    // Compensate for scrollbar disappearing when we lock body scroll so the
+    // page underneath doesn't visibly shift sideways.
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+    document.body.style.overflow = 'hidden'
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`
+    }
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+      document.body.style.paddingRight = prevPaddingRight
+    }
+  }, [open, onClose])
+
+  if (!open) return null
+  const items = Array.isArray(streetFood) ? streetFood : []
+  const fineCount = items.filter((i) => i.tier === 'fine').length
+  const streetCount = items.length - fineCount
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="street-food-modal-title"
+    >
+      {/* Backdrop */}
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={onClose}
+        tabIndex={-1}
+        className="absolute inset-0 bg-black/80 backdrop-blur-md cursor-default"
+      />
+
+      {/* Centered dialog */}
+      <div
+        className="relative glass border border-white/15 shadow-2xl shadow-black/60
+                   w-full max-w-3xl
+                   max-h-[min(88vh,46rem)]
+                   flex flex-col overflow-hidden
+                   rounded-2xl sm:rounded-3xl
+                   animate-scale-in"
+        style={{ animationDuration: '180ms' }}
+      >
+        {/* Sticky header */}
+        <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 bg-slate-950/50 backdrop-blur-sm shrink-0">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-orange-500/30 to-amber-500/20 border border-orange-500/30 flex items-center justify-center shrink-0">
+            <ChefHat size={18} className="text-orange-200" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3
+              id="street-food-modal-title"
+              className="text-base sm:text-lg font-bold text-white leading-tight truncate font-display"
+            >
+              Famous food in {destination}
+            </h3>
+            <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-400 flex-wrap">
+              <span className="inline-flex items-center text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-200 border border-orange-500/40">
+                Must try
+              </span>
+              <span className="leading-tight">
+                {streetCount} street
+                {fineCount > 0 ? <> · {fineCount} fine-dining</> : null}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-all active:scale-95 shrink-0"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div
+          className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 pt-4 sm:pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] min-h-0"
+        >
+          {items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/25 flex items-center justify-center mb-3">
+                <ChefHat size={22} className="text-orange-300" />
+              </div>
+              <p className="text-sm text-slate-300 font-semibold mb-1">No picks yet</p>
+              <p className="text-xs text-slate-500 max-w-xs">
+                We don&apos;t have a curated street-food list for this destination yet — try a nearby city.
+              </p>
+            </div>
+          ) : (
+            <StreetFoodPanel items={items} destination={destination} />
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -621,14 +936,193 @@ function ItineraryDay({ day, isGold, expanded, onToggle, onHistoryForActivity, d
 }
 
 /* ------------------------------------------------------------------ */
+/*  Travellers & vibe modal — focused full-screen edit experience      */
+/* ------------------------------------------------------------------ */
+/**
+ * Two-step modal (Who → Vibes) that mirrors the home wizard but lives at
+ * page-level so the Compare layout stays focused on the trip itself.
+ *
+ * - Body scroll is locked while open, scrollbar gutter compensated for.
+ * - Esc / backdrop tap close. Done button confirms with the parent's setter
+ *   pattern (already debounced upstream via the auto-refetch effect).
+ */
+function TravellersModal({ open, onClose, tripType, vibes, onTripType, onVibes }) {
+  const [step, setStep] = useState(0)
+  useEffect(() => {
+    if (!open) return undefined
+    setStep(tripType ? 1 : 0)
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    const prevPad = document.body.style.paddingRight
+    const sb = window.innerWidth - document.documentElement.clientWidth
+    document.body.style.overflow = 'hidden'
+    if (sb > 0) document.body.style.paddingRight = `${sb}px`
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+      document.body.style.paddingRight = prevPad
+    }
+  }, [open, onClose, tripType])
+
+  if (!open) return null
+  const tripMeta = findTripType(tripType)
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="travellers-modal-title"
+    >
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={onClose}
+        tabIndex={-1}
+        className="absolute inset-0 bg-black/80 backdrop-blur-md cursor-default"
+      />
+
+      <div
+        className="relative glass border border-white/15 shadow-2xl shadow-black/60
+                   w-full max-w-2xl
+                   max-h-[min(88vh,42rem)]
+                   flex flex-col overflow-hidden
+                   rounded-2xl sm:rounded-3xl
+                   animate-scale-in"
+        style={{ animationDuration: '180ms' }}
+      >
+        {/* Sticky header with progress + close */}
+        <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 bg-slate-950/50 backdrop-blur-sm shrink-0">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-fuchsia-500/30 to-pink-500/20 border border-fuchsia-400/30 flex items-center justify-center shrink-0 text-base">
+            <span aria-hidden>{tripMeta?.icon || '✨'}</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 id="travellers-modal-title" className="text-base sm:text-lg font-bold text-white leading-tight truncate font-display">
+              {step === 0 ? "Who's coming on this trip?" : 'Pick the vibes you love'}
+            </h3>
+            <div className="flex items-center gap-1.5 mt-1" aria-hidden>
+              {[0, 1].map((i) => (
+                <span
+                  key={i}
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    step === i ? 'w-5 bg-fuchsia-300' : i < step ? 'w-3 bg-white/55' : 'w-3 bg-white/15'
+                  }`}
+                />
+              ))}
+              <span className="ml-1 text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+                Step {step + 1} / 2
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-all active:scale-95 shrink-0"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 py-5 min-h-0">
+          {step === 0 ? (
+            <TripTypePicker
+              value={tripType}
+              onChange={(next) => {
+                onTripType(next)
+                if (next !== tripType) onVibes([])
+              }}
+              size="md"
+              showHeader={false}
+            />
+          ) : (
+            <>
+              {tripMeta && (
+                <div className="inline-flex items-center gap-1.5 mb-4 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-fuchsia-500/15 text-fuchsia-200 border border-fuchsia-400/30">
+                  <span aria-hidden>{tripMeta.icon}</span>
+                  <span>{tripMeta.short} trip</span>
+                </div>
+              )}
+              {!tripType ? (
+                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-200/85 leading-relaxed">
+                  Pick a travel group on the previous step to see relevant room vibes.
+                </div>
+              ) : (
+                <VibeChips
+                  tripType={tripType}
+                  value={vibes}
+                  onChange={onVibes}
+                  label={`${tripMeta?.short || 'Trip'} vibes`}
+                />
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Sticky footer */}
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-white/10 bg-slate-950/50 backdrop-blur-sm shrink-0">
+          {step === 1 ? (
+            <button
+              type="button"
+              onClick={() => setStep(0)}
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-slate-400 hover:text-white font-semibold transition-colors"
+            >
+              <ArrowLeft size={14} /> Back
+            </button>
+          ) : (
+            <span className="text-[11px] text-slate-500 font-semibold">
+              Updates apply automatically
+            </span>
+          )}
+          {step === 0 ? (
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-2xl text-sm font-bold text-white bg-gradient-to-r from-fuchsia-500 to-pink-500 hover:from-fuchsia-400 hover:to-pink-400 shadow-lg shadow-fuchsia-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
+            >
+              Continue <ChevronRight size={16} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-2xl text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <Check size={16} /> Done
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
 /*  Plan card                                                          */
 /* ------------------------------------------------------------------ */
-function PlanCard({ plan, type, tripData, onBook, onHistoryForActivity }) {
+function PlanCard({ plan, type, tripData, onBook, onHistoryForActivity, onOpenFood, tripType = null, vibes = [] }) {
   const isGold = type === 'gold'
   const [activeTab, setActiveTab] = useState('overview')
   const [openDay, setOpenDay] = useState(1)
 
   useEffect(() => { setOpenDay(1) }, [tripData.destination, plan?.itinerary?.length, tripData?.requestedDays])
+
+  const streetFoodList = Array.isArray(tripData.streetFood) ? tripData.streetFood : []
+  const streetFoodCount = streetFoodList.length
+  const streetFoodHasFine = streetFoodList.some((i) => i.tier === 'fine')
+
+  // The backend already applies pricing, accommodation copy, and perks for
+  // (tripType, vibes). The only thing we still derive client-side is a small
+  // "Tuned for" badge built from the *labels* of the active selection.
+  const tunedBadge = (() => {
+    if (!tripType || !Array.isArray(vibes) || vibes.length === 0) return null
+    const list = VIBES_BY_TYPE[tripType] || []
+    const selected = list.filter((v) => vibes.includes(v.id))
+    if (selected.length === 0) return null
+    return selected.map((v) => `${v.icon} ${v.label}`).join(' · ')
+  })()
 
   const color = isGold ? {
     primary: 'text-amber-400',
@@ -701,12 +1195,19 @@ function PlanCard({ plan, type, tripData, onBook, onHistoryForActivity }) {
           </div>
           <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl ${color.bg} border ${color.border}`}>
             {isGold ? <Hotel size={16} className={color.icon} /> : <Building size={16} className={color.icon} />}
-            <div>
+            <div className="min-w-0">
               <div className="text-xs text-slate-500">Stay</div>
-              <div className="text-xs font-semibold text-white leading-tight">{plan.accommodation}</div>
+              <div className="text-xs font-semibold text-white leading-tight truncate">{plan.accommodation}</div>
             </div>
           </div>
         </div>
+
+        {tunedBadge && (
+          <div className="mt-2.5 flex items-start gap-2 text-[11px] text-fuchsia-100/85 bg-fuchsia-500/10 border border-fuchsia-400/25 rounded-xl px-3 py-2">
+            <span className="font-bold uppercase tracking-wider text-fuchsia-200/80 text-[9px] shrink-0 mt-0.5">Tuned for</span>
+            <span className="leading-snug min-w-0 break-words">{tunedBadge}</span>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -761,18 +1262,27 @@ function PlanCard({ plan, type, tripData, onBook, onHistoryForActivity }) {
         )}
 
         {activeTab === 'itinerary' && (
-          <div className="space-y-3 animate-fade-in">
-            {plan.itinerary.map(day => (
-              <ItineraryDay
-                key={day.day}
-                day={day}
-                isGold={isGold}
-                expanded={openDay === day.day}
-                onToggle={() => setOpenDay(openDay === day.day ? 0 : day.day)}
-                onHistoryForActivity={onHistoryForActivity}
-                destinationName={tripData.destination}
-              />
-            ))}
+          <div className="animate-fade-in">
+            <StreetFoodTrigger
+              destination={tripData.destination}
+              count={streetFoodCount}
+              hasFine={streetFoodHasFine}
+              isGold={isGold}
+              onOpen={() => onOpenFood && onOpenFood(type)}
+            />
+            <div className="space-y-3">
+              {plan.itinerary.map(day => (
+                <ItineraryDay
+                  key={day.day}
+                  day={day}
+                  isGold={isGold}
+                  expanded={openDay === day.day}
+                  onToggle={() => setOpenDay(openDay === day.day ? 0 : day.day)}
+                  onHistoryForActivity={onHistoryForActivity}
+                  destinationName={tripData.destination}
+                />
+              ))}
+            </div>
           </div>
         )}
 
@@ -831,9 +1341,20 @@ function PlanCard({ plan, type, tripData, onBook, onHistoryForActivity }) {
 
         {activeTab === 'perks' && (
           <div className="space-y-2 animate-fade-in">
-            <div className="text-xs text-slate-500 mb-4 uppercase tracking-wider font-semibold">What's Included</div>
-            {plan.perks.map((perk, i) => (
-              <div key={i} className={`flex items-center gap-3 p-3 rounded-xl ${color.bg} border ${color.border}`} style={{ animationDelay: `${i * 0.05}s` }}>
+            <div className="text-xs text-slate-500 mb-4 uppercase tracking-wider font-semibold flex items-center gap-2">
+              <span>What&apos;s Included</span>
+              {tunedBadge && (
+                <span className="ml-auto inline-flex text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-fuchsia-500/15 text-fuchsia-200 border border-fuchsia-400/30">
+                  Tuned · {(vibes || []).length} vibe{(vibes || []).length === 1 ? '' : 's'}
+                </span>
+              )}
+            </div>
+            {(plan.perks || []).map((perk, i) => (
+              <div
+                key={`${perk}-${i}`}
+                className={`flex items-center gap-3 p-3 rounded-xl border ${color.bg} ${color.border}`}
+                style={{ animationDelay: `${i * 0.05}s` }}
+              >
                 <div className={`w-7 h-7 rounded-lg ${color.bg} border ${color.border} flex items-center justify-center shrink-0`}>
                   <PerkIcon perk={perk} />
                 </div>
@@ -874,9 +1395,60 @@ export default function ComparisonPage({
   onChangeDays,
   daysLoading = false,
   selectedDays: selectedDaysProp,
+  tripType = null,
+  vibes = [],
+  onTripTypeChange,
+  onVibesChange,
 }) {
+  // Local fallbacks let the page work standalone (e.g. previews) without
+  // requiring the parent to wire the trip-type props in.
+  const [localTripType, setLocalTripType] = useState(tripType)
+  const [localVibes, setLocalVibes] = useState(vibes)
+  useEffect(() => { setLocalTripType(tripType) }, [tripType])
+  useEffect(() => { setLocalVibes(vibes) }, [vibes])
+  const handleTripType = onTripTypeChange || setLocalTripType
+  const handleVibes = onVibesChange || setLocalVibes
+  const activeTripType = onTripTypeChange ? tripType : localTripType
+  const activeVibes = onVibesChange ? vibes : localVibes
+  const activeTripTypeMeta = findTripType(activeTripType)
   /** 'silver' | 'both' | 'gold' — one tier at a time or side-by-side */
   const [planView, setPlanView] = useState('both')
+  const plansSectionRef = React.useRef(null)
+  /** Bumped on every plan-view toggle so each PlanCard remounts (state resets,
+   *  animations replay) — the user perceives this as a clean "refresh". */
+  const [plansEpoch, setPlansEpoch] = useState(0)
+  const switchPlanView = React.useCallback((next) => {
+    setPlanView((prev) => {
+      if (prev !== next) setPlansEpoch((n) => n + 1)
+      return next
+    })
+    requestAnimationFrame(() => {
+      const el = plansSectionRef.current
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    })
+  }, [])
+
+  /** Food modal lives at the page level (not inside PlanCard) so it can
+   *  centre on the whole viewport AND so we can hide the *other* plan card
+   *  while it's open — the user's intent: "Silver food → Gold disappears". */
+  const [foodModal, setFoodModal] = useState({ open: false, source: null, prevView: null })
+  const openFood = React.useCallback((sourceType) => {
+    setFoodModal((cur) => ({ open: true, source: sourceType || null, prevView: cur.prevView ?? planView }))
+    if (sourceType === 'silver' || sourceType === 'gold') {
+      setPlanView(sourceType)
+    }
+  }, [planView])
+  const closeFood = React.useCallback(() => {
+    setFoodModal((cur) => {
+      // Restore whichever view the user was on before opening the modal.
+      if (cur.prevView && cur.prevView !== planView) {
+        setPlanView(cur.prevView)
+      }
+      return { open: false, source: null, prevView: null }
+    })
+  }, [planView])
   const selectedDays = (() => {
     const n = Number(selectedDaysProp ?? tripData.requestedDays ?? 5)
     if (!Number.isFinite(n)) return 5
@@ -887,6 +1459,7 @@ export default function ComparisonPage({
   const [showCta, setShowCta] = useState(false)
   const [bookingModal, setBookingModal] = useState({ open: false, type: null })
   const [historyModal, setHistoryModal] = useState({ open: false, q: '', preload: null })
+  const [travellersModalOpen, setTravellersModalOpen] = useState(false)
 
   const openHistoryByQuery = (q) => {
     setHistoryModal({ open: true, q, preload: null })
@@ -936,12 +1509,72 @@ export default function ComparisonPage({
             </div>
           </div>
 
-          {/* View: one tier or compare — 3-up grid on narrow screens avoids horizontal scroll */}
-          <div className="w-full min-w-0 flex flex-col gap-3 sm:gap-3">
-            <div>
-              <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5 sm:hidden">View</div>
+        </div>
+
+        {/* Section: Customize your trip ----------------------------------- */}
+        <div
+          className="mb-6 sm:mb-8 rounded-2xl border border-white/10 glass p-4 sm:p-5 animate-slide-up w-full min-w-0"
+          style={{ animationDelay: '0.06s' }}
+        >
+          <div className="mb-3 flex items-center gap-2 flex-wrap">
+            <SlidersHorizontal size={16} className="text-violet-300 shrink-0" />
+            <h3 className="text-sm font-bold tracking-wide text-white">Customize your trip</h3>
+            {activeTripTypeMeta && (
+              <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-fuchsia-500/15 text-fuchsia-200 border border-fuchsia-400/30">
+                <span aria-hidden>{activeTripTypeMeta.icon}</span>
+                <span>{activeTripTypeMeta.short}</span>
+              </span>
+            )}
+          </div>
+          <p className="mb-4 text-xs text-slate-500">
+            Choose who you&apos;re travelling with, your room vibe, and how many days of places — every plan card updates instantly.
+          </p>
+
+          <div className="w-full min-w-0 flex flex-col gap-4">
+            {/* Travellers & vibe — opens a focused modal to keep this page tidy */}
+            <div className="w-full min-w-0 pb-1 border-b border-white/8">
+              <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2">
+                Travellers &amp; vibe
+              </div>
+              <button
+                type="button"
+                onClick={() => setTravellersModalOpen(true)}
+                className="w-full min-w-0 group flex items-center gap-3 px-3 sm:px-4 py-3 rounded-2xl border bg-white/5 hover:bg-white/8 border-white/10 hover:border-fuchsia-400/40 transition-all text-left"
+              >
+                <span
+                  className="shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-500/30 to-pink-500/20 border border-fuchsia-400/30 flex items-center justify-center text-base"
+                  aria-hidden
+                >
+                  {activeTripTypeMeta?.icon || '✨'}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs sm:text-sm font-semibold text-white truncate">
+                    {activeTripTypeMeta ? `${activeTripTypeMeta.label}` : 'Choose travellers & vibe'}
+                  </span>
+                  <span className="block text-[11px] text-slate-400 truncate">
+                    {activeTripTypeMeta
+                      ? (activeVibes && activeVibes.length > 0
+                          ? (VIBES_BY_TYPE[activeTripType] || [])
+                              .filter((v) => activeVibes.includes(v.id))
+                              .map((v) => v.label)
+                              .join(' · ')
+                          : 'No vibes yet — tap to add')
+                      : 'Tune budget, rooms & perks for your trip'}
+                  </span>
+                </span>
+                <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-fuchsia-500/15 text-fuchsia-200 border border-fuchsia-400/30 group-hover:bg-fuchsia-500/20">
+                  Edit
+                  <ChevronRight size={12} />
+                </span>
+              </button>
+            </div>
+            {/* View: one tier or compare — 3-up grid on narrow screens avoids horizontal scroll */}
+            <div className="w-full min-w-0">
+              <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2">
+                View
+              </div>
               <div
-                className="grid grid-cols-3 gap-1 w-full min-w-0 p-1 rounded-2xl glass border border-white/10"
+                className="grid grid-cols-3 gap-1 w-full min-w-0 p-1 rounded-2xl bg-slate-900/60 border border-white/10"
                 style={{ maxWidth: '100%' }}
               >
                 {[
@@ -952,7 +1585,7 @@ export default function ComparisonPage({
                   <button
                     key={opt.id}
                     type="button"
-                    onClick={() => setPlanView(opt.id)}
+                    onClick={() => switchPlanView(opt.id)}
                     className={`min-w-0 py-2.5 sm:py-2.5 px-1 sm:px-2 rounded-xl text-xs sm:text-sm font-semibold text-center leading-snug transition-all duration-300 ${
                       planView === opt.id
                         ? `bg-gradient-to-r ${opt.color} text-white shadow-lg`
@@ -971,10 +1604,13 @@ export default function ComparisonPage({
                 ))}
               </div>
             </div>
+
             {onChangeDays && (
-              <div className="w-full min-w-0 space-y-1.5">
-                <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-1.5 gap-y-0">
-                  <span className="text-xs text-slate-500 font-medium">Visit places (days 1–5)</span>
+              <div className="w-full min-w-0 space-y-2 pt-1 border-t border-white/8">
+                <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-1.5 gap-y-0 pt-3">
+                  <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+                    Days of places to visit
+                  </div>
                   {daysLoading && (
                     <span className="text-xs text-slate-500 flex items-center gap-1.5 sm:justify-end">
                       <Loader2 size={14} className="animate-spin shrink-0" /> Updating…
@@ -1008,21 +1644,28 @@ export default function ComparisonPage({
                     </button>
                   ))}
                 </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Shorter trips cost less. Pick anywhere from 1 to 5 days.
+                </p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Route map ONLY (removed individual city maps) */}
+        {/* Section: Route map -------------------------------------------- */}
         {routeMaps?.origin && routeMaps?.destination && (
-          <div className="mb-6 sm:mb-8 animate-slide-up w-full min-w-0" style={{ animationDelay: '0.08s' }}>
-            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2 flex items-start sm:items-center gap-2 min-w-0">
-              <Route size={12} className="text-green-400 shrink-0 mt-0.5 sm:mt-0" />
-              <span className="min-w-0 break-words leading-snug">
-                Route — {routeMaps.origin.label} → {routeMaps.destination.label}
-              </span>
+          <div
+            className="mb-6 sm:mb-8 rounded-2xl border border-white/10 glass p-4 sm:p-5 animate-slide-up w-full min-w-0"
+            style={{ animationDelay: '0.08s' }}
+          >
+            <div className="mb-3 flex items-center gap-2">
+              <Route size={16} className="text-green-400 shrink-0" />
+              <h3 className="text-sm font-bold tracking-wide text-white">Route on map</h3>
             </div>
-            <div className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl">
+            <p className="mb-4 text-xs text-slate-500 break-words leading-snug">
+              {routeMaps.origin.label} → {routeMaps.destination.label}
+            </p>
+            <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-white/8">
               <RouteDirectionMap
                 originCoords={routeMaps.origin}
                 destCoords={routeMaps.destination}
@@ -1033,7 +1676,6 @@ export default function ComparisonPage({
 
         <WeatherPanel
           weather={tripData.placeIntel?.weather}
-          originLabel={tripData.origin}
           destinationLabel={tripData.destination}
         />
 
@@ -1043,6 +1685,24 @@ export default function ComparisonPage({
           onOpenHistory={(q) => openHistoryByQuery(q)}
           onOpenWithPreload={openHistoryWithPreload}
         />
+
+        {/* Section header: Plan comparison -------------------------------- */}
+        <div
+          ref={plansSectionRef}
+          className="mb-3 sm:mb-4 mt-1 flex items-center gap-2 animate-slide-up scroll-mt-24"
+          style={{ animationDelay: '0.18s' }}
+        >
+          <Scale size={16} className="text-cyan-300 shrink-0" />
+          <h3 className="text-sm font-bold tracking-wide text-white">
+            {planView === 'both' ? 'Compare your plans' : planView === 'gold' ? 'Your Gold plan' : 'Your Silver plan'}
+          </h3>
+          <div className="flex-1 h-px bg-white/8 ml-2" />
+          {planView === 'both' && (
+            <span className="hidden xs:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/25">
+              Save ₹{savings.toLocaleString('en-IN')}
+            </span>
+          )}
+        </div>
 
         {/* Plans: stack with VS between on small screens; 2 columns from xl up */}
         <div
@@ -1054,11 +1714,15 @@ export default function ComparisonPage({
           {(planView === 'both' || planView === 'silver') && (
             <div className="min-w-0 w-full">
               <PlanCard
+                key={`silver-${plansEpoch}`}
                 plan={tripData.silver}
                 type="silver"
                 tripData={tripData}
                 onBook={() => openBooking('silver')}
                 onHistoryForActivity={onItineraryHistory}
+                onOpenFood={openFood}
+                tripType={activeTripType}
+                vibes={activeVibes}
               />
             </div>
           )}
@@ -1072,11 +1736,15 @@ export default function ComparisonPage({
           {(planView === 'both' || planView === 'gold') && (
             <div className="min-w-0 w-full">
               <PlanCard
+                key={`gold-${plansEpoch}`}
                 plan={tripData.gold}
                 type="gold"
                 tripData={tripData}
                 onBook={() => openBooking('gold')}
                 onHistoryForActivity={onItineraryHistory}
+                onOpenFood={openFood}
+                tripType={activeTripType}
+                vibes={activeVibes}
               />
             </div>
           )}
@@ -1132,6 +1800,22 @@ export default function ComparisonPage({
         onClose={closeHistory}
         searchQuery={historyModal.q}
         preload={historyModal.preload}
+      />
+      {/* Famous food popup — page-level so it's centered on the whole viewport */}
+      <StreetFoodModal
+        open={foodModal.open}
+        onClose={closeFood}
+        streetFood={tripData.streetFood}
+        destination={tripData.destination}
+      />
+      {/* Travellers & vibe — focused page so the Compare layout stays clean */}
+      <TravellersModal
+        open={travellersModalOpen}
+        onClose={() => setTravellersModalOpen(false)}
+        tripType={activeTripType}
+        vibes={activeVibes}
+        onTripType={handleTripType}
+        onVibes={handleVibes}
       />
     </section>
   )

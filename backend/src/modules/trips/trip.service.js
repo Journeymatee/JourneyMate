@@ -3,7 +3,12 @@
 const ApiError = require('../../lib/ApiError')
 const cityService = require('../cities/city.service')
 const { enrichForComparison, getWikipediaSummary } = require('./placeIntel.service')
-const { CURATED_ROUTES, DESTINATION_KNOWLEDGE } = require('./trip.data')
+const {
+  CURATED_ROUTES,
+  DESTINATION_KNOWLEDGE,
+  getDestinationStreetFood,
+} = require('./trip.data')
+const tripVibeEngine = require('./tripVibe.engine')
 
 const INDIA_CENTER = { lat: 22.5937, lng: 78.9629 }
 
@@ -17,7 +22,9 @@ function slugKey(from, to) {
 }
 
 async function resolveCoords(name) {
-  const row = await cityService.byName(name)
+  // Fuzzy DB lookup first — recovers from common typos like "Banglore",
+  // "Varansi", "Mumbi" before we pay for a Nominatim round-trip.
+  const row = await cityService.byNameFuzzy(name)
   if (row) return { lat: Number(row.lat), lng: Number(row.lng), label: row.name, slug: row.slug }
   const apiRes = await cityService.searchNominatim(name, { limit: 1 })
   if (apiRes[0]) return { lat: apiRes[0].lat, lng: apiRes[0].lng, label: apiRes[0].name, slug: null }
@@ -245,12 +252,16 @@ function attachMaps(trip, fromC, toC) {
 
 const tripService = {
   /**
-   * @param {{ days?: string|number }} [options] Requested trip length 1–5 days (itinerary days per UI).
+   * @param {{ days?: string|number, tripType?: string, vibes?: string|string[] }} [options]
+   *   - `days`     Requested trip length 1–5 days (itinerary days per UI).
+   *   - `tripType` solo | couple | family | friends (or absent).
+   *   - `vibes`    Comma-separated list (or array) of vibe ids — see tripVibe.engine.
    */
   async search(fromRaw, toRaw, options = {}) {
     if (!fromRaw || !toRaw) throw ApiError.badRequest('from and to are required')
     const [fromC, toC] = await Promise.all([resolveCoords(fromRaw), resolveCoords(toRaw)])
     const nDays = parseRequestedDays(options.days)
+    const { tripType, vibes } = tripVibeEngine.normalizeSelection(options.tripType, options.vibes)
 
     const key = slugKey(fromRaw, toRaw)
     const isCurated = Boolean(CURATED_ROUTES[key])
@@ -264,11 +275,16 @@ const tripService = {
     } catch {
       placeIntel = emptyIntel
     }
-    return {
-      ...withMaps,
-      placeIntel: placeIntel || emptyIntel,
-      requestedDays: nDays,
-    }
+    const streetFood = await getDestinationStreetFood(toC.label, { tier: 'all' }).catch(() => [])
+
+    // Apply trip type & vibe overrides last so they affect the final price
+    // shown to the user (after curated/days reshape).
+    const tuned = tripVibeEngine.applyToTrip(
+      { ...withMaps, placeIntel: placeIntel || emptyIntel, requestedDays: nDays, streetFood },
+      tripType,
+      vibes
+    )
+    return tuned
   },
 
   async placeArticle(qRaw) {

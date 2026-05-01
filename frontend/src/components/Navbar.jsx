@@ -1,20 +1,26 @@
-import React, { useState, useEffect } from 'react'
-import { Menu, X, LogOut, User } from 'lucide-react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { Menu, X, LogOut, ShieldCheck } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-const NAV_LINKS = [
+const BASE_NAV_LINKS = [
   { to: '/how-it-works', label: 'How it Works' },
   { to: '/popular-routes', label: 'Popular Routes' },
   { to: '/blog', label: 'Blog' },
   { to: '/share-experience', label: 'Share a trip' },
   { to: '/about', label: 'About' },
 ]
+const ADMIN_LINK = { to: '/admin', label: 'Admin', adminOnly: true }
 
 export default function Navbar() {
   const { user, logout } = useAuth()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const navLinks = useMemo(
+    () => (user?.isAdmin ? [...BASE_NAV_LINKS, ADMIN_LINK] : BASE_NAV_LINKS),
+    [user?.isAdmin]
+  )
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
@@ -64,18 +70,23 @@ export default function Navbar() {
 
         {/* Desktop nav links */}
         <div className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map((link) => (
+          {navLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
               className={({ isActive }) =>
-                `px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                  isActive
-                    ? 'text-white bg-gradient-to-r from-green-500/15 to-emerald-500/10 border border-green-500/20'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                `px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap inline-flex items-center gap-1.5 ${
+                  link.adminOnly
+                    ? isActive
+                      ? 'text-white bg-gradient-to-r from-violet-500/20 to-cyan-500/15 border border-violet-500/30'
+                      : 'text-violet-300 hover:text-white hover:bg-violet-500/10 border border-violet-500/20'
+                    : isActive
+                      ? 'text-white bg-gradient-to-r from-green-500/15 to-emerald-500/10 border border-green-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
                 }`
               }
             >
+              {link.adminOnly && <ShieldCheck size={13} />}
               {link.label}
             </NavLink>
           ))}
@@ -126,19 +137,24 @@ export default function Navbar() {
         }`}
       >
         <div className="mx-3 sm:mx-4 mt-2 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-3 flex flex-col gap-1">
-          {NAV_LINKS.map((link) => (
+          {navLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
               onClick={() => setMenuOpen(false)}
               className={({ isActive }) =>
-                `text-sm py-3 px-4 rounded-xl transition-all font-medium ${
-                  isActive
-                    ? 'text-white bg-gradient-to-r from-green-500/15 to-emerald-500/10 border border-green-500/20'
-                    : 'text-slate-300 hover:text-white hover:bg-white/6 border border-transparent'
+                `text-sm py-3 px-4 rounded-xl transition-all font-medium inline-flex items-center gap-2 ${
+                  link.adminOnly
+                    ? isActive
+                      ? 'text-white bg-gradient-to-r from-violet-500/20 to-cyan-500/15 border border-violet-500/30'
+                      : 'text-violet-300 hover:text-white hover:bg-violet-500/10 border border-violet-500/20'
+                    : isActive
+                      ? 'text-white bg-gradient-to-r from-green-500/15 to-emerald-500/10 border border-green-500/20'
+                      : 'text-slate-300 hover:text-white hover:bg-white/6 border border-transparent'
                 }`
               }
             >
+              {link.adminOnly && <ShieldCheck size={14} />}
               {link.label}
             </NavLink>
           ))}

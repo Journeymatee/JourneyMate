@@ -17,6 +17,13 @@ const env = {
   AUTH_SECRET: process.env.AUTH_SECRET || 'journeymate-dev-secret-change-me',
   TOKEN_TTL_MS: Number(process.env.TOKEN_TTL_MS || 7 * 24 * 60 * 60 * 1000),
 
+  // Comma-separated list of emails that may use the Admin Agent.
+  // e.g. ADMIN_EMAILS=harsh@example.com,owner@journeymate.app
+  ADMIN_EMAILS: String(process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean),
+
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
 
   PG: {

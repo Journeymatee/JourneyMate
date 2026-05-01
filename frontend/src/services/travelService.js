@@ -15,7 +15,9 @@ function tripErrorMessage(err) {
 
 /**
  * Every search sends explicit `days` (1–5) so the backend always rebuilds itinerary + price.
- * Cache-buster avoids proxy/CDN returning a stale 5-day response.
+ * `tripType` and `vibes` (comma-joined) feed the server-side vibe engine —
+ * unknown values are normalised away on the backend so old/new clients are safe.
+ * Cache-buster avoids proxy/CDN returning a stale response.
  */
 export const searchTrip = async (from, to, options = {}) => {
   let days = 5
@@ -23,17 +25,33 @@ export const searchTrip = async (from, to, options = {}) => {
     const d = Math.round(Number(options.days))
     if (Number.isFinite(d)) days = Math.min(5, Math.max(1, d))
   }
+  const params = {
+    from: String(from).trim(),
+    to: String(to).trim(),
+    days,
+    _t: String(Date.now()),
+  }
+  if (options.tripType) params.tripType = String(options.tripType).trim().toLowerCase()
+  if (Array.isArray(options.vibes) && options.vibes.length > 0) {
+    params.vibes = options.vibes.map((v) => String(v).trim().toLowerCase()).filter(Boolean).join(',')
+  }
   const { data } = await api.get('/trips/search', {
-    params: {
-      from: String(from).trim(),
-      to: String(to).trim(),
-      days,
-      _t: String(Date.now()),
-    },
+    params,
     headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
   })
   return data
 }
+
+/** Returns the logged-in user's last picker selection or null. */
+export const getTripPreferences = async () => {
+  try {
+    const { data } = await api.get('/trips/preferences')
+    return data?.preferences || null
+  } catch {
+    return null
+  }
+}
+
 export { tripErrorMessage }
 
 /** Wikipedia summary (English) for history modal — free API via our backend. */

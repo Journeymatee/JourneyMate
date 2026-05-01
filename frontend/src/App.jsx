@@ -1,5 +1,44 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+
+/* ------------------------------------------------------------------ */
+/*  Refresh-safe session storage for the home view                     */
+/* ------------------------------------------------------------------ */
+/** Keep the Compare view alive across page refresh. sessionStorage is
+ *  per-tab, so closing the tab clears it — exactly the scope of "refresh". */
+const HOME_STATE_KEY = 'jm:home-state-v1'
+
+function readHomeState() {
+  try {
+    if (typeof sessionStorage === 'undefined') return null
+    const raw = sessionStorage.getItem(HOME_STATE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return null
+    if (parsed.view !== 'comparison' || !parsed.tripData) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function writeHomeState(state) {
+  try {
+    if (typeof sessionStorage === 'undefined') return
+    sessionStorage.setItem(HOME_STATE_KEY, JSON.stringify(state))
+  } catch {
+    /* quota / privacy mode — ignore */
+  }
+}
+
+function clearHomeState() {
+  try {
+    if (typeof sessionStorage === 'undefined') return
+    sessionStorage.removeItem(HOME_STATE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
 import Navbar from './components/Navbar'
 import HeroSearch from './components/HeroSearch'
 import ComparisonPage from './components/ComparisonPage'
@@ -16,17 +55,28 @@ import Terms from './pages/Terms'
 import Pricing from './pages/Pricing'
 import ContactUs from './pages/ContactUs'
 import AboutOwner from './pages/AboutOwner'
+import AdminAgent from './pages/AdminAgent'
 import { AssistantWidget } from './features/ai'
 import { useAuth } from './context/AuthContext'
-import { searchTrip, tripErrorMessage } from './services/travelService'
+import { searchTrip, tripErrorMessage, getTripPreferences } from './services/travelService'
 
 function HomePage() {
   const { logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [view, setView] = useState('home')
-  const [tripData, setTripData] = useState(null)
-  const [searchParams, setSearchParams] = useState({ from: '', to: '', days: 5 })
+  // Hydrate from sessionStorage so a browser refresh on the Compare view
+  // lands you back on the Compare view (with the same trip data) instead of
+  // dumping you to Home.
+  const persistedRef = useRef(readHomeState())
+  const persisted = persistedRef.current
+  const [view, setView] = useState(() => (persisted?.view === 'comparison' ? 'comparison' : 'home'))
+  const [tripData, setTripData] = useState(() => persisted?.tripData ?? null)
+  const [searchParams, setSearchParams] = useState(() => persisted?.searchParams ?? { from: '', to: '', days: 5 })
+  // Trip-type radio (solo/couple/family/friends) and multi-select vibes are
+  // page-level so they survive refresh AND are shared between HeroSearch and
+  // ComparisonPage. They're frontend-only — the backend doesn't care.
+  const [tripType, setTripType] = useState(() => persisted?.tripType ?? null)
+  const [vibes, setVibes] = useState(() => Array.isArray(persisted?.vibes) ? persisted.vibes : [])
   const [searchError, setSearchError] = useState('')
   const [refreshingDays, setRefreshingDays] = useState(false)
   const routeRef = useRef({ from: '', to: '' })
@@ -46,12 +96,29 @@ function HomePage() {
     }
   }, []) // eslint-disable-line
 
-  const handleSearch = async (from, to, days = 5) => {
+  // Mirror the comparison view + trip data into sessionStorage so a refresh
+  // re-hydrates the same page. Only persist comparison; clear on home/loading.
+  useEffect(() => {
+    if (view === 'comparison' && tripData) {
+      writeHomeState({ view, tripData, searchParams, tripType, vibes })
+    } else if (view === 'home') {
+      clearHomeState()
+    }
+    // 'loading' is ephemeral — leave whatever is already persisted alone.
+  }, [view, tripData, searchParams, tripType, vibes])
+
+  const handleSearch = async (from, to, days = 5, opts = {}) => {
+    const nextTripType = opts && Object.prototype.hasOwnProperty.call(opts, 'tripType')
+      ? (opts.tripType ?? null)
+      : tripType
+    const nextVibes = opts && Array.isArray(opts.vibes) ? opts.vibes : vibes
+    setTripType(nextTripType)
+    setVibes(nextVibes)
     setSearchParams({ from, to, days })
     setSearchError('')
     setView('loading')
     try {
-      const data = await searchTrip(from, to, { days })
+      const data = await searchTrip(from, to, { days, tripType: nextTripType, vibes: nextVibes })
       setTripData(data)
       setView('comparison')
     } catch (error) {
@@ -69,6 +136,7 @@ function HomePage() {
     setView('home')
     setTripData(null)
     setSearchError('')
+    clearHomeState()
   }
 
   const refetchWithDays = useCallback(
@@ -84,7 +152,7 @@ function HomePage() {
       setSearchError('')
       try {
         setSearchParams((s) => ({ ...s, from, to, days: n }))
-        const data = await searchTrip(from, to, { days: n })
+        const data = await searchTrip(from, to, { days: n, tripType, vibes })
         setTripData(data)
       } catch (error) {
         console.error('Refetch failed:', error)
@@ -97,8 +165,64 @@ function HomePage() {
         setRefreshingDays(false)
       }
     },
-    [logout]
+    [logout, tripType, vibes]
   )
+
+  // ─── Auto-refetch when ONLY tripType / vibes change while on Compare ───
+  // Debounced so a quick burst of vibe toggles results in one network call.
+  // We track the last-applied selection to skip refetches that don't change it.
+  const lastAppliedRef = useRef({ tripType: null, vibes: [] })
+  // Seed the ref so the very first comparison render doesn't trigger a refetch
+  // for what the search already produced.
+  useEffect(() => {
+    lastAppliedRef.current = { tripType: tripData?.tripType ?? null, vibes: tripData?.vibes ?? [] }
+    // Only fire when tripData identity changes — not for our own setTripData below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripData])
+
+  useEffect(() => {
+    if (view !== 'comparison' || !tripData) return undefined
+    const sameType  = lastAppliedRef.current.tripType === tripType
+    const sameVibes = JSON.stringify(lastAppliedRef.current.vibes || []) === JSON.stringify(vibes || [])
+    if (sameType && sameVibes) return undefined
+
+    const handle = setTimeout(async () => {
+      const from = String(routeRef.current.from || '').trim()
+      const to = String(routeRef.current.to || '').trim()
+      if (!from || !to) return
+      setRefreshingDays(true)
+      try {
+        const days = Number(searchParams.days ?? tripData.requestedDays ?? 5) || 5
+        const data = await searchTrip(from, to, { days, tripType, vibes })
+        lastAppliedRef.current = { tripType, vibes: [...vibes] }
+        setTripData(data)
+      } catch (error) {
+        if (error.response?.status === 401) { logout(); return }
+        setSearchError(tripErrorMessage(error) || 'Could not update preferences')
+      } finally {
+        setRefreshingDays(false)
+      }
+    }, 350)
+    return () => clearTimeout(handle)
+  }, [tripType, vibes, view, tripData, searchParams.days, logout])
+
+  // ─── Hydrate trip-type / vibes from server on first sign-in ───
+  // Only when we don't already have a session-restored value (sessionStorage
+  // wins because it represents in-tab intent).
+  const hydratedRef = useRef(false)
+  useEffect(() => {
+    if (hydratedRef.current) return
+    if (persisted) { hydratedRef.current = true; return }
+    let cancelled = false
+    getTripPreferences().then((prefs) => {
+      if (cancelled || !prefs) return
+      if (prefs.tripType) setTripType(prefs.tripType)
+      if (Array.isArray(prefs.vibes)) setVibes(prefs.vibes)
+      hydratedRef.current = true
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <>
@@ -121,7 +245,12 @@ function HomePage() {
 
       {view === 'home' && (
         <>
-          <HeroSearch onSearch={handleSearch} loading={false} />
+          <HeroSearch
+            onSearch={handleSearch}
+            loading={false}
+            initialTripType={tripType}
+            initialVibes={vibes}
+          />
           <FeaturesSection />
           <Footer />
         </>
@@ -143,6 +272,10 @@ function HomePage() {
               if (!Number.isFinite(n)) return 5
               return Math.min(5, Math.max(1, n))
             })()}
+            tripType={tripType}
+            vibes={vibes}
+            onTripTypeChange={setTripType}
+            onVibesChange={setVibes}
           />
           <Footer />
         </>
@@ -166,6 +299,7 @@ function AppShell() {
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/contact" element={<ContactUs />} />
         <Route path="/about" element={<AboutOwner />} />
+        <Route path="/admin" element={<AdminAgent />} />
       </Routes>
       <AssistantWidget />
     </div>

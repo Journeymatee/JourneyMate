@@ -2,6 +2,7 @@
 
 const { pool } = require('../../config/db')
 const logger = require('../../lib/logger')
+const { editDistance } = require('../../lib/strings')
 
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search'
 const UA = 'JourneyMate/2.0 (travel search)'
@@ -140,6 +141,66 @@ const cityService = {
       [name]
     )
     return rows[0] || null
+  },
+
+  /**
+   * Typo-tolerant city lookup — used by trip search so a user typing
+   * "Banglore", "Mumbi", "Varansi" still resolves to the right city.
+   *
+   * Strategy:
+   *   1) Exact case-insensitive match (cheap; covers 99% of clean input).
+   *   2) Pull a candidate set sharing the first character, score each by
+   *      edit distance (Damerau-Levenshtein), prefer the closest with a
+   *      length-aware threshold and popularity tiebreak.
+   */
+  async byNameFuzzy(name) {
+    const trimmed = String(name || '').trim()
+    if (!trimmed) return null
+
+    const exact = await cityService.byName(trimmed)
+    if (exact) return exact
+    if (trimmed.length < 3) return null
+
+    const target = trimmed.toLowerCase()
+    const first = target[0]
+    if (!/[a-z]/.test(first)) return null
+
+    let rows = []
+    try {
+      const result = await pool.query(
+        `SELECT name, slug, state, state_code, type, lat, lng, popularity, tags
+         FROM cities
+         WHERE LOWER(name) LIKE $1
+         ORDER BY popularity DESC
+         LIMIT 250`,
+        [first + '%']
+      )
+      rows = result.rows
+    } catch (e) {
+      logger.warn({ msg: 'city fuzzy db lookup failed', err: e.message })
+      return null
+    }
+
+    const threshold = target.length <= 4 ? 1 : target.length <= 7 ? 2 : 3
+    let best = null
+    let bestScore = Infinity
+    for (const r of rows) {
+      const candidate = String(r.name || '').toLowerCase()
+      if (Math.abs(candidate.length - target.length) > threshold) continue
+      const d = editDistance(target, candidate)
+      if (d > threshold) continue
+      // Lower score = better match. Distance dominates; popularity is a tiebreak.
+      const score = d * 1000 - (Number(r.popularity) || 0)
+      if (score < bestScore) {
+        bestScore = score
+        best = r
+        if (d === 0) break
+      }
+    }
+    if (best) {
+      logger.info({ msg: 'city auto-corrected', input: trimmed, matched: best.name })
+    }
+    return best || null
   },
 
   async listStates() {
