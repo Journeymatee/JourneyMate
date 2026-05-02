@@ -11,6 +11,25 @@ function formatCommentDate(iso) {
   return d.toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
+// Extract markdown-style images out of a body: `![alt](url)` → gallery,
+// remainder → clean prose.  Only http(s) URLs are kept; broken/expired
+// images quietly hide themselves via the <img> onError handler below.
+const MD_IMAGE_RE = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g
+
+function parseExperienceBody(raw) {
+  if (!raw || typeof raw !== 'string') return { text: '', images: [] }
+  const images = []
+  const cleaned = raw
+    .replace(MD_IMAGE_RE, (_, alt, src) => {
+      images.push({ alt: (alt || 'shared photo').trim(), src })
+      return ''
+    })
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+  return { text: cleaned, images }
+}
+
 export default function BlogExperienceCard({
   exp,
   clientId,
@@ -145,7 +164,7 @@ export default function BlogExperienceCard({
           </span>
         </p>
       )}
-      <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap mb-4">{exp.body}</p>
+      <ExperienceBody body={exp.body} />
       <p className="text-xs text-slate-500 mb-4">— {exp.display_name}</p>
 
       <div
@@ -207,7 +226,7 @@ export default function BlogExperienceCard({
           <ul className="space-y-3 mb-4">
             {exp.recent_comments.map((c) => (
               <li key={c.id} className="rounded-xl bg-white/[0.03] border border-white/6 px-3 py-2">
-                <p className="text-slate-200 text-sm whitespace-pre-wrap">{c.body}</p>
+                <ExperienceBody body={c.body} compact />
                 <p className="text-[10px] text-slate-500 mt-1 flex flex-wrap justify-between gap-1">
                   <span>— {c.display_name}</span>
                   <span>{formatCommentDate(c.created_at)}</span>
@@ -249,5 +268,67 @@ export default function BlogExperienceCard({
         </form>
       </div>
     </li>
+  )
+}
+
+/**
+ * Renders an experience / comment body. Pulls markdown-image references
+ * out into a responsive thumbnail gallery and shows the rest as clean
+ * prose. Broken external images quietly hide their tile on error.
+ */
+function ExperienceBody({ body, compact = false }) {
+  const { text, images } = parseExperienceBody(body)
+  if (!text && images.length === 0) return null
+
+  const textCls = compact
+    ? 'text-slate-200 text-sm leading-relaxed whitespace-pre-wrap'
+    : 'text-slate-300 text-sm leading-relaxed whitespace-pre-wrap mb-4'
+
+  return (
+    <>
+      {images.length > 0 && (
+        <div
+          className={`grid gap-2 mb-3 ${
+            images.length === 1
+              ? 'grid-cols-1'
+              : images.length === 2
+                ? 'grid-cols-2'
+                : 'grid-cols-2 sm:grid-cols-3'
+          }`}
+        >
+          {images.map((img, i) => (
+            <ExperienceImage key={`${img.src}-${i}`} {...img} only={images.length === 1} />
+          ))}
+        </div>
+      )}
+      {text && <p className={textCls}>{text}</p>}
+    </>
+  )
+}
+
+function ExperienceImage({ src, alt, only }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) return null
+  return (
+    <a
+      href={src}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`group relative block overflow-hidden rounded-xl bg-white/5 border border-white/8 hover:border-white/20 transition-all ${
+        only ? 'aspect-[16/10]' : 'aspect-[4/3]'
+      }`}
+      title="Open full size"
+    >
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
+        onError={() => setFailed(true)}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+    </a>
   )
 }

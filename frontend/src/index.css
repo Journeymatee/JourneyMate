@@ -2,8 +2,9 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
-/* ── CSS custom properties ───────────────────────────────────── */
-:root {
+/* ── CSS custom properties (DARK is the default) ─────────────── */
+:root,
+:root[data-theme='dark'] {
   --silver-primary: #22c55e;
   --gold-primary:   #f59e0b;
   --bg-dark:        #0a0a0f;
@@ -11,7 +12,33 @@
   --bg-surface:     #1a1a24;
   --text-primary:   #f8fafc;
   --text-muted:     #94a3b8;
-  --border-subtle:  rgba(255,255,255,0.08);
+  --border-subtle:  rgba(255, 255, 255, 0.08);
+  --glass-bg:       rgba(255, 255, 255, 0.04);
+  --glass-silver:   rgba(34, 197, 94, 0.06);
+  --glass-gold:     rgba(245, 158, 11, 0.06);
+  --scroll-track:   #0a0a0f;
+  --scroll-thumb:   #334155;
+  --scroll-hover:   #475569;
+}
+
+/* ── Light theme — warm cream background, ink text ───────────── */
+:root[data-theme='light'] {
+  --silver-primary: #16a34a;
+  --gold-primary:   #d97706;
+  --bg-dark:        #fafaf7;
+  --bg-card:        #ffffff;
+  --bg-surface:     #f5f5f1;
+  --text-primary:   #0f172a;
+  --text-muted:     #475569;
+  --border-subtle:  rgba(15, 23, 42, 0.10);
+  /* Frosted white panels show as real cards on cream + photos. */
+  --glass-bg:       rgba(255, 255, 255, 0.86);
+  --glass-silver:   rgba(34, 197, 94, 0.16);
+  --glass-gold:     rgba(245, 158, 11, 0.16);
+  --scroll-track:   #ece9e2;
+  --scroll-thumb:   #cbd5e1;
+  --scroll-hover:   #94a3b8;
+  color-scheme: light;
 }
 
 /* ── Reset ───────────────────────────────────────────────────── */
@@ -39,23 +66,23 @@ a, button { -webkit-tap-highlight-color: transparent; }
 
 /* ── Scrollbar ───────────────────────────────────────────────── */
 ::-webkit-scrollbar        { width: 4px; height: 4px; }
-::-webkit-scrollbar-track  { background: var(--bg-dark); }
-::-webkit-scrollbar-thumb  { background: #334155; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #475569; }
+::-webkit-scrollbar-track  { background: var(--scroll-track); }
+::-webkit-scrollbar-thumb  { background: var(--scroll-thumb); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scroll-hover); }
 
-/* ── Glass morphism ──────────────────────────────────────────── */
+/* ── Glass morphism (uses theme variables) ───────────────────── */
 .glass {
-  background: rgba(255,255,255,0.04);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 .glass-silver {
-  background: rgba(34,197,94,0.06);
+  background: var(--glass-silver);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 .glass-gold {
-  background: rgba(245,158,11,0.06);
+  background: var(--glass-gold);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
@@ -133,6 +160,74 @@ a, button { -webkit-tap-highlight-color: transparent; }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 .animate-scale-in { animation: scaleIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* ── Page-hero Ken-Burns slow zoom ──────────────────────────── */
+@keyframes heroKenBurns {
+  0%   { transform: scale(1.04) translate3d(0, 0, 0);    filter: saturate(1.05); }
+  100% { transform: scale(1.12) translate3d(-1.5%, -1%, 0); filter: saturate(1.15); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [style*="heroKenBurns"] { animation: none !important; }
+}
+
+/* Custom radial-gradient utility (Tailwind only ships linear/conic). */
+.bg-gradient-radial {
+  background-image: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+/* ── About-page aurora & micro-animations ────────────────────────
+ * Three large blurred orbs that drift in opposite directions to
+ * create a subtle living backdrop. Respects prefers-reduced-motion. */
+@keyframes drift1 {
+  0%   { transform: translate3d(0, 0, 0) scale(1);    }
+  50%  { transform: translate3d(8%, 4%, 0) scale(1.08); }
+  100% { transform: translate3d(2%, 10%, 0) scale(0.95); }
+}
+@keyframes drift2 {
+  0%   { transform: translate3d(0, 0, 0) scale(1);    }
+  50%  { transform: translate3d(-6%, 6%, 0) scale(1.05); }
+  100% { transform: translate3d(-10%, -4%, 0) scale(0.92); }
+}
+@keyframes drift3 {
+  0%   { transform: translate3d(0, 0, 0) scale(1);    }
+  50%  { transform: translate3d(4%, -8%, 0) scale(1.1); }
+  100% { transform: translate3d(-2%, -2%, 0) scale(1.04); }
+}
+
+/* Skill bar moving sheen — overlays a slow lightning glance. */
+@keyframes sheen {
+  0%   { transform: translateX(-150%) skewX(-12deg); }
+  60%  { transform: translateX(260%)  skewX(-12deg); }
+  100% { transform: translateX(260%)  skewX(-12deg); }
+}
+
+/* Caret blink for typewriter. */
+@keyframes blink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.animate-blink { animation: blink 1.05s steps(1, end) infinite; }
+
+/* Conic-gradient ring around the avatar (rotated via transform so we
+ * don't depend on @property to animate the gradient angle). */
+@keyframes ringSpin {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}
+
+/* Soft "lift" pulse used on the open-to-opportunities pill. */
+@keyframes statusPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.45); }
+  50%      { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*="drift1"], [style*="drift2"], [style*="drift3"],
+  [style*="ringSpin"], [style*="sheen"] {
+    animation: none !important;
+  }
+  .animate-blink { animation: none !important; opacity: 1; }
+}
 
 /* ── Day tab ─────────────────────────────────────────────────── */
 .day-tab { transition: all 0.25s ease; position: relative; }
@@ -297,4 +392,579 @@ img { image-rendering: -webkit-optimize-contrast; }
 @media (max-width: 359px) {
   .hero-title { font-size: 1.6rem; }
   body { font-size: 0.9rem; }
+}
+
+/* ────────────────────────────────────────────────────────────────
+ * LIGHT THEME — re-skin every dark-mode utility used across the app.
+ *
+ * The app was authored as dark-only, so most surfaces use hardcoded
+ * Tailwind classes (text-white, bg-slate-950, bg-white/10, …). Rather
+ * than touch every component, we map those classes to a light palette
+ * inside a `[data-theme="light"]` scope. Dark mode keeps the original
+ * styling untouched (the cascade only adds, never overrides).
+ *
+ * Specificity: `[data-theme="light"] .x` (0,1,1) beats Tailwind's
+ * single-class `.x` (0,1,0), so we don't need !important.
+ * ──────────────────────────────────────────────────────────────── */
+
+[data-theme='light'] {
+  color: var(--text-primary);
+}
+[data-theme='light'] body {
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+}
+
+/* ── Headings / text: dark utilities remap to ink + slate ────── */
+[data-theme='light'] .text-white            { color: rgb(15 23 42); }
+[data-theme='light'] .text-slate-100        { color: rgb(15 23 42); }
+[data-theme='light'] .text-slate-200        { color: rgb(30 41 59); }
+[data-theme='light'] .text-slate-300        { color: rgb(30 41 59); }
+[data-theme='light'] .text-slate-400        { color: rgb(51 65 85); }
+[data-theme='light'] .text-slate-500        { color: rgb(71 85 105); }
+[data-theme='light'] .text-slate-600        { color: rgb(71 85 105); }
+[data-theme='light'] .text-slate-700        { color: rgb(51 65 85); }
+
+/* Brighter brand text (originally meant to pop on black) needs a
+ * deeper saturation on cream. */
+[data-theme='light'] .text-cyan-300         { color: rgb(8 145 178); }
+[data-theme='light'] .text-purple-300       { color: rgb(126 34 206); }
+[data-theme='light'] .text-rose-300         { color: rgb(190 18 60); }
+[data-theme='light'] .text-amber-200        { color: rgb(180 83 9); }
+[data-theme='light'] .text-amber-300        { color: rgb(180 83 9); }
+[data-theme='light'] .text-emerald-300      { color: rgb(5 150 105); }
+[data-theme='light'] .text-fuchsia-300\/90  { color: rgb(162 28 175); }
+[data-theme='light'] .text-cyan-400         { color: rgb(14 116 144); }
+[data-theme='light'] .text-purple-400       { color: rgb(126 34 206); }
+[data-theme='light'] .text-amber-400        { color: rgb(180 83 9); }
+[data-theme='light'] .text-emerald-400      { color: rgb(5 150 105); }
+[data-theme='light'] .text-rose-400         { color: rgb(190 18 60); }
+[data-theme='light'] .text-violet-300       { color: rgb(109 40 217); }
+[data-theme='light'] .text-indigo-300       { color: rgb(67 56 202); }
+[data-theme='light'] .text-sky-300          { color: rgb(14 116 144); }
+
+/* ── Surface / card backgrounds ──────────────────────────────── */
+[data-theme='light'] .bg-slate-950          { background-color: rgb(255 255 255); }
+[data-theme='light'] .bg-slate-900          { background-color: rgb(248 250 252); }
+[data-theme='light'] .bg-slate-800          { background-color: rgb(241 245 249); }
+[data-theme='light'] .bg-slate-950\/95      { background-color: rgba(255, 255, 255, 0.92); }
+[data-theme='light'] .bg-slate-950\/90      { background-color: rgba(255, 255, 255, 0.88); }
+[data-theme='light'] .bg-slate-950\/80      { background-color: rgba(255, 255, 255, 0.82); }
+[data-theme='light'] .bg-slate-950\/70      { background-color: rgba(255, 255, 255, 0.75); }
+[data-theme='light'] .bg-slate-950\/55      { background-color: rgba(255, 255, 255, 0.65); }
+[data-theme='light'] .bg-slate-950\/50      { background-color: rgba(255, 255, 255, 0.60); }
+[data-theme='light'] .bg-slate-950\/40      { background-color: rgba(255, 255, 255, 0.50); }
+
+/* `bg-white/X` was used as a pseudo-card on a black backdrop. Flip to
+ * a soft ink tint so cards remain visible on cream. */
+[data-theme='light'] .bg-white\/4           { background-color: rgba(15, 23, 42, 0.04); }
+[data-theme='light'] .bg-white\/5           { background-color: rgba(15, 23, 42, 0.05); }
+[data-theme='light'] .bg-white\/6           { background-color: rgba(15, 23, 42, 0.05); }
+[data-theme='light'] .bg-white\/8           { background-color: rgba(15, 23, 42, 0.06); }
+[data-theme='light'] .bg-white\/10          { background-color: rgba(15, 23, 42, 0.07); }
+[data-theme='light'] .bg-white\/12          { background-color: rgba(15, 23, 42, 0.08); }
+[data-theme='light'] .bg-white\/15          { background-color: rgba(15, 23, 42, 0.10); }
+[data-theme='light'] .bg-white\/20          { background-color: rgba(15, 23, 42, 0.12); }
+[data-theme='light'] .bg-white\/\[0\.03\]   { background-color: rgba(15, 23, 42, 0.04); }
+[data-theme='light'] .bg-white\/\[0\.04\]   { background-color: rgba(15, 23, 42, 0.05); }
+[data-theme='light'] .bg-white\/\[0\.05\]   { background-color: rgba(15, 23, 42, 0.05); }
+
+[data-theme='light'] .hover\:bg-white\/5:hover    { background-color: rgba(15, 23, 42, 0.06); }
+[data-theme='light'] .hover\:bg-white\/8:hover    { background-color: rgba(15, 23, 42, 0.07); }
+[data-theme='light'] .hover\:bg-white\/10:hover   { background-color: rgba(15, 23, 42, 0.08); }
+[data-theme='light'] .hover\:bg-white\/12:hover   { background-color: rgba(15, 23, 42, 0.10); }
+
+/* ── Borders ─────────────────────────────────────────────────── */
+[data-theme='light'] .border-white\/6       { border-color: rgba(15, 23, 42, 0.08); }
+[data-theme='light'] .border-white\/8       { border-color: rgba(15, 23, 42, 0.10); }
+[data-theme='light'] .border-white\/10      { border-color: rgba(15, 23, 42, 0.12); }
+[data-theme='light'] .border-white\/12      { border-color: rgba(15, 23, 42, 0.13); }
+[data-theme='light'] .border-white\/15      { border-color: rgba(15, 23, 42, 0.15); }
+[data-theme='light'] .border-white\/20      { border-color: rgba(15, 23, 42, 0.18); }
+[data-theme='light'] .border-white\/25      { border-color: rgba(15, 23, 42, 0.22); }
+
+[data-theme='light'] .hover\:border-white\/15:hover { border-color: rgba(15, 23, 42, 0.18); }
+[data-theme='light'] .hover\:border-white\/20:hover { border-color: rgba(15, 23, 42, 0.22); }
+[data-theme='light'] .hover\:border-white\/25:hover { border-color: rgba(15, 23, 42, 0.26); }
+
+/* ── Placeholder & input strokes ─────────────────────────────── */
+[data-theme='light'] .placeholder\:text-slate-500::placeholder { color: rgb(100 116 139); }
+[data-theme='light'] .placeholder\:text-slate-400::placeholder { color: rgb(100 116 139); }
+[data-theme='light'] .placeholder\:text-slate-600::placeholder { color: rgb(71 85 105); }
+
+/* ── Mesh / page bg (already var-driven, but tone-shift accents) ─ */
+[data-theme='light'] .mesh-bg {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(34, 197, 94, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(245, 158, 11, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(99, 102, 241, 0.04) 0%, transparent 70%),
+    var(--bg-dark);
+}
+
+/* The page-bg-* utilities already reference var(--bg-dark) so they
+ * auto-switch background — only the overlay tints need softening so
+ * coloured radial gradients don't wash out cream. */
+[data-theme='light'] .page-bg-blue,
+[data-theme='light'] .page-bg-cyan,
+[data-theme='light'] .page-bg-purple,
+[data-theme='light'] .page-bg-amber,
+[data-theme='light'] .page-bg-emerald,
+[data-theme='light'] .page-bg-teal {
+  background-blend-mode: multiply;
+}
+
+/* ── Noise texture: lower opacity on cream ───────────────────── */
+[data-theme='light'] .noise::before { opacity: 0.18; }
+
+/* ── Form controls: visible focus rings on cream ─────────────── */
+[data-theme='light'] *:focus-visible {
+  outline: 2px solid rgba(34, 197, 94, 0.55);
+}
+
+/* (See hero-photo block lower in this file — `.hero-title` is kept
+ * white on the photo in light mode and gets a saturated ink shadow
+ * for legibility.) */
+
+/* `.glass` already auto-themes via --glass-bg; here we add the shadow
+ * + softer hairline border that real elevated cards need on cream. */
+[data-theme='light'] .glass {
+  border-color: rgba(15, 23, 42, 0.06);
+  box-shadow: 0 8px 30px -12px rgba(15, 23, 42, 0.18),
+              0 2px 8px -4px rgba(15, 23, 42, 0.10);
+}
+
+/* Search inputs: solid surface (not see-through over photo). */
+[data-theme='light'] input.bg-white\/5,
+[data-theme='light'] input.bg-white\/8,
+[data-theme='light'] input.bg-white\/10,
+[data-theme='light'] textarea.bg-white\/5,
+[data-theme='light'] textarea.bg-white\/8,
+[data-theme='light'] textarea.bg-white\/10 {
+  background-color: rgba(255, 255, 255, 0.92);
+}
+
+/* Brand shimmer text — deepen so it pops on cream, not pastel. */
+[data-theme='light'] .shimmer-silver {
+  background-image: linear-gradient(90deg, #15803d, #22c55e, #15803d);
+}
+[data-theme='light'] .shimmer-gold {
+  background-image: linear-gradient(90deg, #b45309, #f59e0b, #b45309);
+}
+[data-theme='light'] .shimmer-cyan {
+  background-image: linear-gradient(90deg, #0e7490, #06b6d4, #0e7490);
+}
+[data-theme='light'] .shimmer-purple {
+  background-image: linear-gradient(90deg, #6b21a8, #a855f7, #6b21a8);
+}
+[data-theme='light'] .shimmer-amber {
+  background-image: linear-gradient(90deg, #b45309, #f59e0b, #b45309);
+}
+[data-theme='light'] .shimmer-emerald {
+  background-image: linear-gradient(90deg, #047857, #10b981, #047857);
+}
+[data-theme='light'] .shimmer-teal {
+  background-image: linear-gradient(90deg, #0f766e, #14b8a6, #0f766e);
+}
+[data-theme='light'] .shimmer-blue {
+  background-image: linear-gradient(90deg, #4338ca, #6366f1, #4338ca);
+}
+
+/* Drop-shadows used on the PageHero title — title text stays white in
+ * light mode (it sits on a colourful photo), so we KEEP a saturated
+ * ink shadow so the white type pops against bright photos. */
+[data-theme='light'] .drop-shadow-\[0_2px_24px_rgba\(0\,0\,0\,0\.6\)\] {
+  filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.55))
+          drop-shadow(0 4px 18px rgba(15, 23, 42, 0.45));
+}
+[data-theme='light'] .drop-shadow-\[0_1px_8px_rgba\(0\,0\,0\,0\.7\)\] {
+  filter: drop-shadow(0 1px 4px rgba(15, 23, 42, 0.55))
+          drop-shadow(0 2px 10px rgba(15, 23, 42, 0.40));
+}
+
+/* ── Hero photo overlays — keep photos VIVID in light mode ─────
+ *
+ * In dark mode the gradient (`bg-slate-950/65 → /85`) burns the photo
+ * down so light titles read against it. In light mode we don't want a
+ * thick cream wash hiding the photo — the user expects to see the
+ * actual scene. Instead we:
+ *   - keep the title text WHITE on photos with a strong ink shadow
+ *   - use a tiny lift wash (~10–15% white) to soften shadows
+ *   - apply a strong cream→transparent gradient ONLY at the bottom so
+ *     the photo blends seamlessly into the cream page below
+ *
+ * The home hero is a `<section>` containing the rotating
+ * `HeroBackground`; the secondary pages render through `<header>`
+ * (PageHero). We scope these overrides to those wrappers so chips
+ * and cards using the same Tailwind classes elsewhere keep their
+ * card-like cream surface.
+ * ──────────────────────────────────────────────────────────────── */
+
+/* Home hero — barely-there washes on the rotating photo. We only set
+ * the individual `--tw-gradient-*` colour variables; Tailwind has
+ * already wired `--tw-gradient-stops` to `from, via, to`, and trying
+ * to redefine it from a from-/via- override drops one of the stops. */
+[data-theme='light'] section .bg-slate-950\/35 {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme='light'] section .from-slate-950\/65 {
+  --tw-gradient-from: rgba(255, 255, 255, 0.10) var(--tw-gradient-from-position);
+}
+[data-theme='light'] section .via-slate-950\/70 {
+  --tw-gradient-via: rgba(255, 255, 255, 0.18) var(--tw-gradient-via-position);
+}
+[data-theme='light'] section .to-slate-950\/85 {
+  --tw-gradient-to: rgba(250, 250, 247, 0.95) var(--tw-gradient-to-position);
+}
+
+/* PageHero (secondary pages) — keep photo vivid, fade only at bottom. */
+[data-theme='light'] header .bg-slate-950\/55 {
+  background-color: rgba(255, 255, 255, 0.10) !important;
+}
+[data-theme='light'] header .from-slate-950\/40 {
+  --tw-gradient-from: rgba(255, 255, 255, 0.04) var(--tw-gradient-from-position);
+}
+[data-theme='light'] header .via-slate-950\/30 {
+  --tw-gradient-via: rgba(250, 250, 247, 0.20) var(--tw-gradient-via-position);
+}
+[data-theme='light'] header .to-slate-950 {
+  --tw-gradient-to: rgba(250, 250, 247, 1) var(--tw-gradient-to-position);
+}
+
+/* Hero TITLE on photos — keep text WHITE in light mode too, with a
+ * crisp ink shadow so it reads on any photo. Re-promote because the
+ * global `text-white → slate-900` rule would otherwise make titles
+ * disappear into a colourful photo. */
+[data-theme='light'] .hero-title,
+[data-theme='light'] header h1.text-white {
+  color: rgb(255 255 255) !important;
+  text-shadow:
+    0 1px 0 rgba(15, 23, 42, 0.55),
+    0 2px 6px rgba(15, 23, 42, 0.45),
+    0 4px 24px rgba(15, 23, 42, 0.35);
+}
+
+/* Hero subtitle on photos — keep near-white slate + ink shadow. */
+[data-theme='light'] header .text-slate-200\/90 {
+  color: rgba(241, 245, 249, 0.95) !important;
+  text-shadow: 0 1px 4px rgba(15, 23, 42, 0.55), 0 2px 12px rgba(15, 23, 42, 0.35);
+}
+[data-theme='light'] header > div .text-slate-200 {
+  color: rgba(241, 245, 249, 0.95) !important;
+}
+
+/* PageHero eyebrow chip — promote to dim ink chip with white-ish stroke
+ * so it reads on the photo. (Only inside `<header>` — chip-like uses
+ * of `bg-slate-950/55` elsewhere keep their cream override.) */
+[data-theme='light'] header .bg-slate-950\/55.backdrop-blur-md {
+  background-color: rgba(15, 23, 42, 0.55) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+[data-theme='light'] header .bg-slate-950\/55.backdrop-blur-md .text-slate-200 {
+  color: rgba(248, 250, 252, 0.95) !important;
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.5);
+}
+
+/* Blog "Share your trip" CTA pill (uses bg-slate-950/55 inside the
+ * Blog page header) — keep dark ink so it reads on the photo. */
+[data-theme='light'] header a.bg-slate-950\/55 {
+  background-color: rgba(15, 23, 42, 0.55) !important;
+  border-color: rgba(34, 211, 238, 0.45) !important;
+}
+[data-theme='light'] header a.bg-slate-950\/55 * {
+  color: rgba(248, 250, 252, 0.95) !important;
+}
+
+/* Buttons that used `bg-white/6` over a dark surface (Logout etc.)
+ * become invisible on cream — give them a real surface. */
+[data-theme='light'] .bg-white\/6 {
+  background-color: rgba(15, 23, 42, 0.05);
+}
+
+/* Compare-plans / Login CTA gradients — keep brand colours saturated
+ * but ensure the dark text reads on the green→amber gradient. */
+[data-theme='light'] .from-emerald-500.to-amber-500.text-slate-950 {
+  color: rgb(15 23 42);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+/* Home hero search card — solid elevated panel with a real shadow.
+ * Override the dark-shadow utility so it casts a soft ink shadow
+ * instead of looking floaty on cream. */
+[data-theme='light'] .hero-search-card {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  box-shadow:
+    0 24px 48px -16px rgba(15, 23, 42, 0.22),
+    0 8px 20px -8px rgba(15, 23, 42, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* ────────────────────────────────────────────────────────────────
+ * LIGHT THEME — supplementary overrides (Round 2)
+ *
+ * The block above handles the home page surfaces. This block fills
+ * every remaining dark-mode utility used elsewhere: inputs, modals,
+ * dropdowns, badges, hover states, brand-pastel text, gradients,
+ * the AssistantWidget chat bubble, and the comparison page.
+ * ──────────────────────────────────────────────────────────────── */
+
+/* ── Slate-900 / 800 surfaces (inputs, dropdowns, badges) ────── */
+[data-theme='light'] .bg-slate-900\/40        { background-color: rgba(255, 255, 255, 0.55); }
+[data-theme='light'] .bg-slate-900\/50        { background-color: rgba(255, 255, 255, 0.65); }
+[data-theme='light'] .bg-slate-900\/55        { background-color: rgba(255, 255, 255, 0.72); }
+[data-theme='light'] .bg-slate-900\/60        { background-color: rgba(255, 255, 255, 0.80); }
+[data-theme='light'] .bg-slate-900\/70        { background-color: rgba(255, 255, 255, 0.88); }
+[data-theme='light'] .bg-slate-900\/80        { background-color: rgba(255, 255, 255, 0.92); }
+[data-theme='light'] .bg-slate-900\/90        { background-color: rgba(255, 255, 255, 0.95); }
+[data-theme='light'] .bg-slate-900\/95        { background-color: rgba(255, 255, 255, 0.97); }
+[data-theme='light'] .bg-slate-800\/40        { background-color: rgba(241, 245, 249, 0.55); }
+[data-theme='light'] .bg-slate-800\/50        { background-color: rgba(241, 245, 249, 0.65); }
+[data-theme='light'] .bg-slate-800\/60        { background-color: rgba(241, 245, 249, 0.78); }
+[data-theme='light'] .bg-slate-800\/80        { background-color: rgba(241, 245, 249, 0.92); }
+[data-theme='light'] .bg-slate-950\/60        { background-color: rgba(255, 255, 255, 0.72); }
+[data-theme='light'] .hover\:bg-slate-900:hover     { background-color: rgba(241, 245, 249, 1); }
+[data-theme='light'] .hover\:bg-slate-800:hover     { background-color: rgba(226, 232, 240, 1); }
+
+/* ── White-text / hover-white anchors → slate ink ────────────── */
+[data-theme='light'] .text-white\/95          { color: rgba(15, 23, 42, 0.95); }
+[data-theme='light'] .text-white\/90          { color: rgba(15, 23, 42, 0.92); }
+[data-theme='light'] .text-white\/85          { color: rgba(15, 23, 42, 0.88); }
+[data-theme='light'] .text-white\/80          { color: rgba(15, 23, 42, 0.85); }
+[data-theme='light'] .text-white\/70          { color: rgba(30, 41, 59, 0.85); }
+[data-theme='light'] .text-white\/60          { color: rgba(30, 41, 59, 0.78); }
+[data-theme='light'] .text-slate-300\/95      { color: rgba(30, 41, 59, 0.95); }
+[data-theme='light'] .text-slate-200\/90      { color: rgba(15, 23, 42, 0.90); }
+[data-theme='light'] .text-slate-200\/85      { color: rgba(15, 23, 42, 0.86); }
+[data-theme='light'] .text-slate-300\/90      { color: rgba(30, 41, 59, 0.92); }
+[data-theme='light'] .text-slate-300\/80      { color: rgba(30, 41, 59, 0.85); }
+[data-theme='light'] .text-slate-400\/90      { color: rgba(51, 65, 85, 0.9); }
+
+[data-theme='light'] .hover\:text-white:hover       { color: rgb(15 23 42); }
+[data-theme='light'] .hover\:text-slate-200:hover   { color: rgb(30 41 59); }
+[data-theme='light'] .hover\:text-slate-300:hover   { color: rgb(30 41 59); }
+[data-theme='light'] .hover\:text-slate-400:hover   { color: rgb(51 65 85); }
+[data-theme='light'] .group:hover .group-hover\:text-white         { color: rgb(15 23 42); }
+[data-theme='light'] .group:hover .group-hover\:text-slate-300     { color: rgb(30 41 59); }
+[data-theme='light'] .group:hover .group-hover\:text-slate-400     { color: rgb(51 65 85); }
+
+/* ── Extra brand-pastel text variants (200-line shades) ──────── */
+[data-theme='light'] .text-emerald-100        { color: rgb(6 95 70); }
+[data-theme='light'] .text-emerald-200        { color: rgb(5 122 85); }
+[data-theme='light'] .text-amber-100          { color: rgb(146 64 14); }
+[data-theme='light'] .text-amber-50           { color: rgb(180 83 9); }
+[data-theme='light'] .text-cyan-100           { color: rgb(14 116 144); }
+[data-theme='light'] .text-cyan-200           { color: rgb(8 145 178); }
+[data-theme='light'] .text-cyan-200\/90       { color: rgba(8, 145, 178, 0.95); }
+[data-theme='light'] .text-rose-100           { color: rgb(159 18 57); }
+[data-theme='light'] .text-rose-200           { color: rgb(190 18 60); }
+[data-theme='light'] .text-purple-100         { color: rgb(107 33 168); }
+[data-theme='light'] .text-purple-200         { color: rgb(126 34 206); }
+[data-theme='light'] .text-violet-200         { color: rgb(91 33 182); }
+[data-theme='light'] .text-violet-300         { color: rgb(109 40 217); }
+[data-theme='light'] .text-violet-400         { color: rgb(124 58 237); }
+[data-theme='light'] .text-indigo-200         { color: rgb(55 48 163); }
+[data-theme='light'] .text-indigo-300         { color: rgb(67 56 202); }
+[data-theme='light'] .text-fuchsia-200        { color: rgb(134 25 143); }
+[data-theme='light'] .text-fuchsia-300        { color: rgb(162 28 175); }
+[data-theme='light'] .text-sky-200            { color: rgb(7 89 133); }
+[data-theme='light'] .text-blue-200           { color: rgb(30 64 175); }
+[data-theme='light'] .text-blue-300           { color: rgb(29 78 216); }
+[data-theme='light'] .text-pink-200           { color: rgb(157 23 77); }
+[data-theme='light'] .text-pink-300           { color: rgb(190 24 93); }
+[data-theme='light'] .text-teal-200           { color: rgb(15 118 110); }
+[data-theme='light'] .text-teal-300           { color: rgb(13 148 136); }
+[data-theme='light'] .text-green-200          { color: rgb(22 101 52); }
+[data-theme='light'] .text-green-300          { color: rgb(21 128 61); }
+[data-theme='light'] .text-yellow-200         { color: rgb(133 77 14); }
+[data-theme='light'] .text-yellow-300         { color: rgb(161 98 7); }
+[data-theme='light'] .text-orange-200         { color: rgb(154 52 18); }
+[data-theme='light'] .text-orange-300         { color: rgb(194 65 12); }
+
+/* ── Hover-coloured text → deepen for cream contrast ─────────── */
+[data-theme='light'] .hover\:text-emerald-300:hover { color: rgb(5 150 105); }
+[data-theme='light'] .hover\:text-emerald-400:hover { color: rgb(5 150 105); }
+[data-theme='light'] .hover\:text-amber-300:hover   { color: rgb(180 83 9); }
+[data-theme='light'] .hover\:text-amber-400:hover   { color: rgb(180 83 9); }
+[data-theme='light'] .hover\:text-cyan-300:hover    { color: rgb(8 145 178); }
+[data-theme='light'] .hover\:text-cyan-400:hover    { color: rgb(8 145 178); }
+[data-theme='light'] .hover\:text-rose-300:hover    { color: rgb(190 18 60); }
+[data-theme='light'] .hover\:text-rose-400:hover    { color: rgb(190 18 60); }
+[data-theme='light'] .hover\:text-violet-300:hover  { color: rgb(109 40 217); }
+[data-theme='light'] .hover\:text-purple-300:hover  { color: rgb(126 34 206); }
+[data-theme='light'] .hover\:text-green-300:hover   { color: rgb(21 128 61); }
+
+/* ── Hover surfaces over slate-900 / 800 ─────────────────────── */
+[data-theme='light'] .hover\:bg-slate-900\/60:hover { background-color: rgba(255, 255, 255, 0.85); }
+[data-theme='light'] .hover\:bg-slate-900\/80:hover { background-color: rgba(255, 255, 255, 0.95); }
+[data-theme='light'] .hover\:bg-slate-800\/60:hover { background-color: rgba(241, 245, 249, 0.85); }
+
+/* ── Borders: brand-tint variants used for chips/cards ───────── */
+[data-theme='light'] .border-slate-700        { border-color: rgba(15, 23, 42, 0.18); }
+[data-theme='light'] .border-slate-800        { border-color: rgba(15, 23, 42, 0.14); }
+[data-theme='light'] .border-slate-900        { border-color: rgba(15, 23, 42, 0.12); }
+
+/* ── Generic gradient stops used on inner sheets (cards/headers) ─
+ * `from-slate-900` and `to-slate-900` show up on the WeatherPanel,
+ * cost cards and inner section headers. Soften so they don't
+ * stamp dark blocks on the cream page. */
+[data-theme='light'] .from-slate-900           { --tw-gradient-from: rgb(248 250 252) var(--tw-gradient-from-position); }
+[data-theme='light'] .via-slate-900            { --tw-gradient-via: rgb(248 250 252) var(--tw-gradient-via-position); }
+[data-theme='light'] .to-slate-900             { --tw-gradient-to: rgb(248 250 252) var(--tw-gradient-to-position); }
+[data-theme='light'] .from-slate-950           { --tw-gradient-from: rgb(255 255 255) var(--tw-gradient-from-position); }
+[data-theme='light'] .from-slate-950\/95       { --tw-gradient-from: rgba(255, 255, 255, 0.95) var(--tw-gradient-from-position); }
+[data-theme='light'] .from-slate-950\/90       { --tw-gradient-from: rgba(255, 255, 255, 0.92) var(--tw-gradient-from-position); }
+[data-theme='light'] .from-slate-950\/80       { --tw-gradient-from: rgba(255, 255, 255, 0.85) var(--tw-gradient-from-position); }
+[data-theme='light'] .from-slate-950\/60       { --tw-gradient-from: rgba(250, 250, 247, 0.65) var(--tw-gradient-from-position); }
+[data-theme='light'] .via-slate-950            { --tw-gradient-via:  rgb(255 255 255) var(--tw-gradient-via-position); }
+[data-theme='light'] .via-slate-950\/95        { --tw-gradient-via:  rgba(255, 255, 255, 0.95) var(--tw-gradient-via-position); }
+[data-theme='light'] .to-slate-950\/40         { --tw-gradient-to:   rgba(250, 250, 247, 0.55) var(--tw-gradient-to-position); }
+[data-theme='light'] .to-slate-950\/95         { --tw-gradient-to:   rgba(255, 255, 255, 0.96) var(--tw-gradient-to-position); }
+
+/* ── Shadows: dark-mode shadows are too heavy on cream ───────── */
+[data-theme='light'] .shadow-black\/50        { --tw-shadow-color: rgba(15, 23, 42, 0.18); --tw-shadow: var(--tw-shadow-colored); }
+[data-theme='light'] .shadow-black\/30        { --tw-shadow-color: rgba(15, 23, 42, 0.14); --tw-shadow: var(--tw-shadow-colored); }
+[data-theme='light'] .shadow-black\/20        { --tw-shadow-color: rgba(15, 23, 42, 0.10); --tw-shadow: var(--tw-shadow-colored); }
+[data-theme='light'] .shadow-black\/40        { --tw-shadow-color: rgba(15, 23, 42, 0.16); --tw-shadow: var(--tw-shadow-colored); }
+[data-theme='light'] .shadow-2xl              { box-shadow: 0 18px 50px -16px rgba(15, 23, 42, 0.22), 0 6px 18px -8px rgba(15, 23, 42, 0.12); }
+
+/* ── Dividers / separators used in lists ─────────────────────── */
+[data-theme='light'] .divide-white\/5  > :not([hidden]) ~ :not([hidden]) { border-color: rgba(15, 23, 42, 0.06); }
+[data-theme='light'] .divide-white\/10 > :not([hidden]) ~ :not([hidden]) { border-color: rgba(15, 23, 42, 0.10); }
+[data-theme='light'] .divide-white\/20 > :not([hidden]) ~ :not([hidden]) { border-color: rgba(15, 23, 42, 0.14); }
+
+/* ── AssistantWidget chat bubble (bottom-right "Chat with AI") ──
+ * Floating button sits above pages, so it must read on cream too. */
+[data-theme='light'] button.bg-slate-950\/95 {
+  background-color: rgb(15 23 42) !important; /* keep dark for emphasis */
+  color: rgb(167 243 208) !important;          /* emerald-200-on-ink */
+  box-shadow:
+    0 12px 28px -12px rgba(15, 23, 42, 0.42),
+    0 4px 10px -4px rgba(15, 23, 42, 0.22);
+}
+[data-theme='light'] button.bg-slate-950\/95:hover {
+  background-color: rgb(30 41 59) !important;
+}
+[data-theme='light'] button.bg-slate-950\/95 .text-white {
+  color: rgb(255 255 255) !important; /* keep "Chat with AI" white on dark btn */
+}
+[data-theme='light'] button.bg-slate-950\/95 .text-amber-300 {
+  color: rgb(252 211 77) !important;
+}
+
+/* The chat panel itself uses `bg-slate-950/X` shells — those flip via
+ * the rules above. Ensure the assistant message bubble keeps decent
+ * contrast (assistant bubbles already use white-text-on-dark-grad,
+ * which is fine because the bubble has its own dark gradient). */
+[data-theme='light'] .from-slate-900\/60.via-slate-900\/40 {
+  --tw-gradient-from: rgba(255, 255, 255, 0.92) var(--tw-gradient-from-position);
+  --tw-gradient-via:  rgba(255, 255, 255, 0.85) var(--tw-gradient-via-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to, rgba(255,255,255,0));
+}
+
+/* ── Code/inline-code styling used in legal pages ────────────── */
+[data-theme='light'] code,
+[data-theme='light'] pre {
+  background-color: rgba(15, 23, 42, 0.06);
+  color: rgb(15 23 42);
+}
+
+/* ── Selection colour: brand emerald wash ────────────────────── */
+[data-theme='light'] ::selection {
+  background-color: rgba(34, 197, 94, 0.25);
+  color: rgb(15 23 42);
+}
+
+/* ── PageHero readability — title sits over a softened photo, so
+ * keep a strong white-ink halo + slight ink shadow for legibility. */
+[data-theme='light'] .page-hero-title {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.65),
+    0 2px 18px rgba(255, 255, 255, 0.5),
+    0 1px 4px rgba(15, 23, 42, 0.18);
+}
+
+/* ── Buttons that ride on dark gradients still need white text ─
+ * Keep `text-white` white when explicitly paired with a saturated
+ * brand gradient (so the global `.text-white` → ink remap doesn't
+ * make CTA copy disappear on green/amber). */
+[data-theme='light'] .from-emerald-500.to-green-600 .text-white,
+[data-theme='light'] .from-amber-500.to-orange-600 .text-white,
+[data-theme='light'] .from-rose-500.to-pink-600 .text-white,
+[data-theme='light'] .from-violet-500.to-purple-600 .text-white,
+[data-theme='light'] .from-cyan-500.to-blue-600 .text-white,
+[data-theme='light'] .bg-emerald-500 .text-white,
+[data-theme='light'] .bg-amber-500 .text-white,
+[data-theme='light'] .bg-rose-500 .text-white,
+[data-theme='light'] .bg-violet-500 .text-white {
+  color: rgb(255 255 255);
+}
+
+/* ── Loading skeletons / shimmer over cream ──────────────────── */
+[data-theme='light'] .animate-pulse {
+  background-color: rgba(15, 23, 42, 0.05);
+}
+
+/* ── Top navbar: solid frosted strip on cream so it reads cleanly ─ */
+[data-theme='light'] nav.bg-slate-950\/80,
+[data-theme='light'] header.bg-slate-950\/80 {
+  background-color: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
+}
+
+/* ── Small chips / pills using `bg-emerald-500/10`, `/15`, `/20`
+ * already work because brand alphas survive the cream wash. We just
+ * deepen any text inside them so labels stay readable. */
+[data-theme='light'] [class*='bg-emerald-500\\/'] .text-emerald-200,
+[data-theme='light'] [class*='bg-emerald-500\\/'] .text-emerald-300 {
+  color: rgb(5 122 85);
+}
+[data-theme='light'] [class*='bg-amber-500\\/'] .text-amber-200,
+[data-theme='light'] [class*='bg-amber-500\\/'] .text-amber-300 {
+  color: rgb(146 64 14);
+}
+
+/* ── Footer: solid cream strip with deeper text + crisp border ─ */
+[data-theme='light'] footer {
+  background-color: rgba(245, 245, 241, 1) !important;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+[data-theme='light'] footer .text-slate-400,
+[data-theme='light'] footer .text-slate-500 {
+  color: rgb(71 85 105);
+}
+[data-theme='light'] footer a:hover {
+  color: rgb(15 23 42);
+}
+
+/* ── Modal/drawer SCRIM backdrops keep an ink wash in light mode ──
+ * `fixed inset-0 bg-slate-950/X` is the convention for full-page
+ * scrims (mobile drawer, AssistantWidget overlay, modals). These
+ * should remain a dim ink layer so the modal in front pops; they
+ * must NOT inherit the cream wash applied to general slate-950/X
+ * panels. Specificity beats the earlier rule because of `.fixed`. */
+[data-theme='light'] .fixed.inset-0.bg-slate-950\/70 { background-color: rgba(15, 23, 42, 0.45); }
+[data-theme='light'] .fixed.inset-0.bg-slate-950\/60 { background-color: rgba(15, 23, 42, 0.40); }
+[data-theme='light'] .fixed.inset-0.bg-slate-950\/55 { background-color: rgba(15, 23, 42, 0.38); }
+[data-theme='light'] .fixed.inset-0.bg-slate-950\/50 { background-color: rgba(15, 23, 42, 0.34); }
+[data-theme='light'] .fixed.inset-0.bg-slate-950\/40 { background-color: rgba(15, 23, 42, 0.28); }
+[data-theme='light'] .fixed.inset-0.bg-slate-950\/30 { background-color: rgba(15, 23, 42, 0.22); }
+[data-theme='light'] .fixed.inset-0.bg-slate-950\/20 { background-color: rgba(15, 23, 42, 0.16); }
+[data-theme='light'] .fixed.inset-0.bg-slate-950\/80 { background-color: rgba(15, 23, 42, 0.55); }
+[data-theme='light'] .fixed.inset-0.bg-slate-950\/90 { background-color: rgba(15, 23, 42, 0.65); }
+/* Same idea for absolute-positioned backdrops inside a relative parent
+ * (e.g. drawer's blurred backdrop in Navbar.jsx). */
+[data-theme='light'] .absolute.inset-0.bg-slate-950\/70 { background-color: rgba(15, 23, 42, 0.45); }
+[data-theme='light'] .absolute.inset-0.bg-slate-950\/60 { background-color: rgba(15, 23, 42, 0.38); }
+[data-theme='light'] .absolute.inset-0.bg-slate-950\/50 { background-color: rgba(15, 23, 42, 0.34); }
+[data-theme='light'] .absolute.inset-0.bg-slate-950\/40 { background-color: rgba(15, 23, 42, 0.28); }
+
+/* ── Drawer panel surface (Navbar mobile aside): real cream sheet ─
+ * The drawer's solid panel uses `bg-slate-950/50 backdrop-blur` to
+ * frost over the dark page. In light mode we promote it to a true
+ * elevated cream card with a hairline border. */
+[data-theme='light'] aside .bg-slate-950\/50 {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: -16px 0 40px -12px rgba(15, 23, 42, 0.18);
 }

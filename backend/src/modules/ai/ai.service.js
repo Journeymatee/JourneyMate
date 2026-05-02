@@ -7,6 +7,28 @@ const { pool } = require('../../config/db')
 const { getDestinationStreetFood } = require('../trips/trip.data')
 const { closestMatch } = require('../../lib/strings')
 
+const SYSTEM_PROMPT = [
+  'You are JourneyMate AI — a warm, witty, knowledgeable companion for travellers exploring India.',
+  '',
+  'PERSONALITY',
+  '- Friendly, conversational, and encouraging — like a well-travelled friend, not a reference manual.',
+  '- Match the user\'s tone: small-talk gets small-talk, planning questions get structured plans.',
+  '- Use the user\'s first name occasionally if it is provided, but never every line.',
+  '- A light emoji here and there is fine (✈️🌴🍛🏔️) — never spam them.',
+  '- If the user writes in Hindi, Hinglish, or Indian English, mirror their style naturally.',
+  '',
+  'CAPABILITIES',
+  '- Greetings, small talk, identity & "what can you do" questions — answer naturally.',
+  '- India travel: itineraries, route comparisons, food, weather, seasonality, safety, transport, budgeting.',
+  '- Use the provided realtime context (weather, curated street food, route stats, user bookings) when relevant.',
+  '- For broader knowledge questions, answer briefly and then nudge back toward travel if useful.',
+  '',
+  'OUTPUT RULES',
+  '- Be concise: 2–4 short paragraphs OR a tight bulleted list. Never a wall of text.',
+  '- For itinerary/comparison/list questions: use headings + bullets.',
+  '- Never invent specific prices, schedules, weather forecasts, or hotel names — clearly say "verify before booking" if you must guess.',
+  '- If you do not know, say so honestly and offer the next best step.',
+].join('\n')
 const SYSTEM_PROMPT =
   'You are JourneyMate AI, an advanced India travel planner using LLM reasoning + real-time data + extracted entities. ' +
   'Use provided realtime context whenever available and clearly mention when data is unavailable. ' +
@@ -23,7 +45,28 @@ const MONTHS = [
 ]
 
 const COMMON_CITIES = [
+  // metros & big cities
   'delhi', 'mumbai', 'bengaluru', 'bangalore', 'kolkata', 'chennai', 'hyderabad', 'pune',
+  'ahmedabad', 'jaipur', 'lucknow', 'patna', 'indore', 'bhopal', 'surat', 'nagpur',
+  'gurgaon', 'gurugram', 'noida', 'thane', 'kanpur', 'kochi',
+  // popular leisure spots / hill stations
+  'goa', 'manali', 'shimla', 'agra', 'varanasi', 'udaipur', 'amritsar', 'rishikesh',
+  'darjeeling', 'srinagar', 'leh', 'ladakh', 'spiti', 'kasol', 'mussoorie', 'nainital',
+  'mcleodganj', 'dharamshala', 'dharamsala', 'auli', 'kufri',
+  // south
+  'mysore', 'mysuru', 'ooty', 'munnar', 'coorg', 'pondicherry', 'puducherry', 'alleppey',
+  'mangalore', 'mangaluru', 'madurai', 'kanyakumari', 'gokarna', 'hampi',
+  // east & northeast
+  'bhubaneswar', 'puri', 'gangtok', 'shillong', 'guwahati', 'tawang', 'cherrapunji',
+  'majuli', 'ziro', 'kaziranga',
+  // west & central
+  'jodhpur', 'jaisalmer', 'pushkar', 'mount abu', 'bikaner', 'vadodara', 'kolhapur',
+  'lonavala', 'mahabaleshwar', 'matheran',
+  // states / regions (for "best time to visit X" style queries)
+  'kashmir', 'kerala', 'rajasthan', 'himachal', 'uttarakhand', 'sikkim', 'meghalaya',
+  'andaman', 'lakshadweep', 'gujarat', 'maharashtra', 'karnataka', 'goa',
+  // misc
+  'dehradun', 'chandigarh', 'trivandrum', 'thiruvananthapuram',
   'ahmedabad', 'jaipur', 'goa', 'manali', 'shimla', 'agra', 'varanasi', 'udaipur', 'kochi',
   'amritsar', 'rishikesh', 'darjeeling', 'srinagar', 'leh', 'dehradun', 'lucknow', 'patna',
   'mysore', 'ooty', 'munnar', 'coorg', 'pondicherry', 'puducherry', 'alleppey', 'kashmir',
@@ -44,17 +87,70 @@ function sanitizeHistory(history) {
     .filter((entry) => entry.content.length > 0)
 }
 
+// Intent ordering matters — the most specific patterns are checked first.
 function detectIntent(text) {
+  const raw = String(text || '')
+  const q = raw.toLowerCase().trim()
+  const wc = q.split(/\s+/).filter(Boolean).length
+
+  // Pure conversational signals (handled before travel intents so a "hi how
+  // are you" never hijacks the food matcher).
+  if (/^(hi+|h?ello+|hey+|yo+|hola|namaste|namaskar|salaam|salam)\b/.test(q)) return 'greeting'
+  if (/^(good\s*(morning|afternoon|evening|night))\b/.test(q)) return 'greeting'
+  if (/^(bye+|goodbye|see\s*ya|see\s*you|tata|cya|gn|good\s*night|take\s*care|alvida)\b/.test(q)) return 'farewell'
+  if (/(\bthank\s*(you|s)\b|\bthanks\b|\bthx\b|\bty\b|\bdhanyavad\b|\bshukriya\b)/.test(q)) return 'thanks'
+  if (/^(ok+|okay+|cool|nice|great|awesome|got\s*it|sounds\s*good|sure|fine|alright|👍|thumbs?\s*up)\b/.test(q) && wc <= 4) return 'affirm'
+  if (/^(no+|nope|nah|skip)\b/.test(q) && wc <= 3) return 'negate'
+  if (/(who\s*are\s*you|what\s*are\s*you|your\s*name|tum\s*kaun|aap\s*kaun|introduce\s*your)/.test(q)) return 'identity'
+  if (/(what\s*can\s*you\s*do|what\s*do\s*you\s*do|how\s*do\s*you\s*work|help\s*me|^\s*help\b|capabilit|features?\b|usage)/.test(q)) return 'help'
+  if (/(joke|make\s*me\s*laugh|funny|hass|haso)/.test(q)) return 'joke'
+  if (/(time\s*now|what.*time|kitne\s*baje|current\s*time)/.test(q)) return 'time'
+  if (/(date\s*today|today.*date|what.*date|aaj\s*kya\s*tarikh|tarikh\s*kya)/.test(q)) return 'date'
+  if (/(love\s*you|you\s*are\s*amazing|you\s*are\s*great|you\s*rock|^\s*nice\s*work)/.test(q)) return 'compliment'
+
+  // Inspiration / open-ended travel asks.
+  if (/(suggest|recommend|where\s*should\s*i\s*go|where\s*to\s*go|surprise\s*me|something\s*new|destination\s*idea|trip\s*idea|hidden\s*gem|offbeat|unique\s*place)/.test(q)) return 'inspiration'
+
+  // Domain travel intents (order matters: food before generic plan).
+  if (/(famous|street).*(food|eat|dish)|what.*(eat|food|dishes)|local\s*food|must[-\s]?try.*(food|dish)|where.*eat|cuisine|breakfast|dinner|biryani|kebab|dosa|chaat|sweets?\b/.test(q)) return 'food'
   const q = text.toLowerCase()
   if (/(famous|street).*(food|eat|dish)|what.*(eat|food|dishes)|local food|must[-\s]?try.*(food|dish)|where.*eat|cuisine|breakfast|dinner|biryani|kebab|dosa|chaat|sweets?\b/.test(q)) return 'food'
   if (/(itinerary|plan|day[-\s]?wise|schedule)/.test(q)) return 'itinerary'
-  if (/(compare|budget vs|luxury|premium|cheap)/.test(q)) return 'comparison'
-  if (/(weather|season|best time|month)/.test(q)) return 'seasonality'
-  if (/(train|flight|bus|transport|route)/.test(q)) return 'transport'
-  if (/(cost|price|budget|expensive|afford)/.test(q)) return 'budgeting'
-  if (/(safety|safe|scam|fraud|risky)/.test(q)) return 'safety'
-  if (/(hi|hello|hey)/.test(q)) return 'greeting'
+  if (/(compare|budget\s*vs|luxury|premium|cheap)/.test(q)) return 'comparison'
+  if (/(weather|season|best\s*time|month\s*to\s*visit|when\s*to\s*go|when\s*to\s*visit)/.test(q)) return 'seasonality'
+  if (/(train|flight|bus|transport|route|metro|cab|taxi)/.test(q)) return 'transport'
+  if (/(cost|price|budget|expensive|afford|how\s*much)/.test(q)) return 'budgeting'
+  if (/(safety|safe|scam|fraud|risky|theft|police|emergency)/.test(q)) return 'safety'
+  if (/(packing|pack\s*list|carry|essential|wear)/.test(q)) return 'packing'
+  if (/(visa|passport|document|aadhar|aadhaar|id\s*proof)/.test(q)) return 'documents'
+
   return 'general'
+}
+
+// Friendly variation helpers — pick a random response from a bank so the
+// assistant doesn't sound like a stuck record. Stable for the same prompt
+// within a request because we use a tiny seed derived from the prompt.
+function pickVariant(arr, seed = '') {
+  if (!Array.isArray(arr) || arr.length === 0) return ''
+  let h = 0
+  for (let i = 0; i < seed.length; i += 1) h = ((h << 5) - h + seed.charCodeAt(i)) | 0
+  const idx = Math.abs(h) % arr.length
+  return arr[idx]
+}
+
+function firstName(user) {
+  const raw = String(user?.name || '').trim()
+  if (!raw) return ''
+  return raw.split(/\s+/)[0]
+}
+
+function timeOfDayGreeting() {
+  const h = new Date().getHours()
+  if (h < 5)  return 'late night'
+  if (h < 12) return 'morning'
+  if (h < 17) return 'afternoon'
+  if (h < 21) return 'evening'
+  return 'night'
 }
 
 // Words that are NEVER a city — used to reject false captures like
@@ -142,6 +238,36 @@ function extractLanguage(text) {
 }
 
 function buildFollowUps(intent, entities) {
+  if (intent === 'greeting' || intent === 'identity' || intent === 'help' || intent === 'affirm' || intent === 'compliment') {
+    return [
+      'Plan a 3-day trip to Goa',
+      'Compare Delhi → Manali by train vs flight',
+      'Famous food in Hyderabad',
+      'Best time to visit Kashmir',
+    ]
+  }
+  if (intent === 'farewell' || intent === 'thanks') {
+    return [
+      'Save this chat for later',
+      'Plan another trip',
+      'Browse popular routes',
+    ]
+  }
+  if (intent === 'joke') {
+    return [
+      'Tell me another one',
+      'Suggest a fun weekend trip',
+      'What\'s a hidden gem in India?',
+    ]
+  }
+  if (intent === 'inspiration') {
+    return [
+      'Surprise me with a 5-day plan',
+      'Suggest an offbeat hill station',
+      'Best beaches in India under ₹15k',
+      'Where to go in monsoon?',
+    ]
+  }
   if (intent === 'food') {
     const city = entities.toCity || entities.knownCities[0] || 'this place'
     return [
@@ -171,6 +297,20 @@ function buildFollowUps(intent, entities) {
       'Suggest best nearby alternatives',
     ]
   }
+  if (intent === 'safety') {
+    return [
+      'Solo female travel tips for India',
+      'Common scams to avoid',
+      'Emergency numbers I should save',
+    ]
+  }
+  if (intent === 'packing') {
+    return [
+      'Pack list for a hill station trip',
+      'Beach trip essentials',
+      'Monsoon travel must-haves',
+    ]
+  }
   if (entities.toCity) {
     return [
       `Plan a 3-day trip to ${entities.toCity}`,
@@ -182,6 +322,7 @@ function buildFollowUps(intent, entities) {
     'Plan a budget trip for me',
     'Compare train vs flight for my route',
     'Give a weekend travel suggestion',
+    'What\'s the best food city in India?',
   ]
 }
 
@@ -208,6 +349,96 @@ function buildUserMessage({ prompt, user, nlp, realtimeContext }) {
   ].join('\n')
 }
 
+// Conversational reply banks. Each bank holds 3-5 variants so the assistant
+// doesn't sound robotic across a session.
+const SMALLTALK = {
+  greeting: (n, tod) => [
+    `Hey${n ? ' ' + n : ''}! 👋  Good ${tod}. Where are we travelling today — beaches, mountains, or a city break?`,
+    `Hi${n ? ' ' + n : ''}! Lovely to see you. Tell me where you're thinking and I'll plan it out for you. 🌴`,
+    `Hello${n ? ' ' + n : ''}! ✈️ Ready to plan your next trip? Drop a city, a budget, or just a vibe and I'll take it from there.`,
+    `Namaste${n ? ' ' + n : ''}! Whether it's a quick weekend or a long getaway, I've got you covered. What's on your mind?`,
+  ],
+  farewell: (n) => [
+    `Take care${n ? ', ' + n : ''}! Safe travels whenever you head out. ✈️`,
+    `Bye${n ? ' ' + n : ''}! Come back anytime — your chat history sticks around so we can pick up where we left off.`,
+    `See you soon${n ? ', ' + n : ''}! Until next time, may all your trips be smooth and your snacks plentiful. 🍛`,
+  ],
+  thanks: (n) => [
+    `Anytime${n ? ', ' + n : ''}! Want me to suggest something else?`,
+    `You're very welcome! Glad it helped. 🌟`,
+    `My pleasure${n ? ', ' + n : ''}! Ready when you need the next plan.`,
+  ],
+  affirm: () => [
+    `Cool — what would you like to do next?`,
+    `Got it. Want me to dig deeper, or move to the next thing?`,
+    `Great. Should I plan an itinerary, compare options, or suggest food spots?`,
+  ],
+  negate: () => [
+    `No worries — try something different and I'll adapt.`,
+    `Okay! Want me to suggest a few alternatives instead?`,
+  ],
+  identity: (n) => [
+    `I'm **JourneyMate AI** — your travel co-pilot for India. I plan trips, compare budget vs luxury, suggest food, weather, transport, packing lists, and more.${n ? ` Nice to meet you, ${n}!` : ''}`,
+    `JourneyMate AI here ✈️ — I help travellers plan smarter trips across India with real prices, real food picks, and honest tradeoffs. What can I help you with${n ? ', ' + n : ''}?`,
+  ],
+  help: () => [
+    [
+      'Here\'s what I can do:',
+      '',
+      '🗺️  **Plan trips** — "Plan a 5-day trip to Kerala in December under ₹25k"',
+      '⚖️  **Compare options** — "Train vs flight from Mumbai to Goa"',
+      '🍛  **Find food** — "Famous food in Hyderabad" or "Where to eat in Old Delhi"',
+      '🌦️  **Best time to visit** — "When should I go to Ladakh?"',
+      '💰  **Budget tips** — "Goa under ₹15k for 3 days"',
+      '🛡️  **Safety & packing** — "Solo female travel tips" / "What to pack for Manali in January"',
+      '',
+      'Just type naturally — typos are fine, Hindi or Hinglish is fine, and you can always follow up.',
+    ].join('\n'),
+  ],
+  joke: () => [
+    'Why did the tourist bring a ladder to India? They heard the food scene was off the charts. 🍛',
+    'I asked a sadhu for the meaning of life. He said: "First, eat the chole bhature. Then talk." ✨',
+    'Why don\'t mountains ever get tired? Because they Manali-fy their workouts. 🏔️',
+    'Tried to plan a budget trip to Goa. The shacks said "₹15k", the sunsets said "priceless". 🌅',
+  ],
+  compliment: (n) => [
+    `Thank you${n ? ', ' + n : ''}! That genuinely made my circuits smile. 😄  What's next on your travel list?`,
+    `That means a lot${n ? ', ' + n : ''}! Let's plan something amazing. Where to?`,
+  ],
+  time: () => {
+    const now = new Date()
+    const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    return [`It's ${time} (IST) right now. Planning something for today, tomorrow, or further out?`]
+  },
+  date: () => {
+    const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    return [`Today is **${today}**. Want me to plan something for the weekend?`]
+  },
+}
+
+function speak(intent, prompt, user) {
+  const variants = SMALLTALK[intent]?.(firstName(user), timeOfDayGreeting()) || []
+  return pickVariant(variants, prompt) || ''
+}
+
+function localFallbackReply({ prompt, nlp, realtime, user }) {
+  const intent = nlp.intent
+  const entities = nlp.entities
+  const city = entities.toCity || entities.knownCities[0] || ''
+  const cityLabel = city ? titleCase(city) : 'your destination'
+  const n = firstName(user)
+
+  // 1) Pure conversational intents — always answer warmly.
+  if (intent === 'greeting' || intent === 'farewell' || intent === 'thanks'
+   || intent === 'affirm'  || intent === 'negate'   || intent === 'identity'
+   || intent === 'help'    || intent === 'joke'     || intent === 'compliment'
+   || intent === 'time'    || intent === 'date') {
+    return speak(intent, prompt, user) ||
+      `I'm here${n ? ', ' + n : ''}! Tell me what you're thinking and I'll help.`
+  }
+
+  // 2) Inspiration — open-ended "where should I go?"
+  if (intent === 'inspiration') {
 function localFallbackReply({ prompt, nlp, realtime }) {
   const city = nlp.entities.toCity || nlp.entities.knownCities[0] || 'your destination'
 
@@ -231,22 +462,149 @@ function localFallbackReply({ prompt, nlp, realtime }) {
 
   if (nlp.intent === 'comparison') {
     return [
-      `Here is a quick budget vs luxury comparison for ${city}:`,
-      '- Budget: public transport + 2/3 star stay + local meals + shared activities.',
-      '- Luxury: flights/cabs + premium stay + curated experiences + private transfers.',
-      '- Best value tip: spend more on location and safety, save on daily commute costs.',
+      `Some great ideas for you${n ? ', ' + n : ''}:`,
+      '',
+      '🏔️  **Hill escape** — Spiti or Kasol (May–Oct), Munnar or Coorg (Oct–Mar)',
+      '🏖️  **Beach reset** — Goa shoulder-season, Gokarna for chill, Andaman for stunning water',
+      '🏰  **Heritage trail** — Jaipur → Udaipur → Jodhpur (Nov–Feb is gorgeous)',
+      '🛕  **Spiritual + culture** — Varanasi + Bodhgaya, or Hampi for ruins & sunsets',
+      '🌿  **Offbeat gem** — Majuli (river island, Assam), Ziro (Arunachal), Tirthan Valley (Himachal)',
+      '',
+      'Tell me your dates, budget and vibe (relax / adventure / culture / food) and I\'ll narrow it down.',
     ].join('\n')
   }
-  if (nlp.intent === 'itinerary') {
-    const days = nlp.entities.days || 3
+
+  // 3) Domain travel intents — keep them informative even without an LLM.
+  if (intent === 'food') {
+    const sf = realtime?.streetFood
+    if (sf && sf.items?.length > 0) {
+      const lines = [
+        `Top ${Math.min(6, sf.items.length)} must-try foods in **${titleCase(sf.city)}**:`,
+        '',
+        ...sf.items.slice(0, 6).map((it) => {
+          const tag = it.tier === 'fine' ? ' _(fine-dining)_' : ''
+          const where = it.where ? ` — try at ${it.where}` : ''
+          return `• **${it.name}**${tag}: ${it.description}${where}`
+        }),
+        '',
+        '💡 Tip: street stalls peak 7–10 PM. Pick spots with high local turnover.',
+      ]
+      return lines.join('\n')
+    }
+    return `Tell me which city${n ? ', ' + n : ''} and I'll list the must-try local dishes — e.g. "Famous food in Lucknow" or "Where to eat in ${cityLabel}".`
+  }
+
+  if (intent === 'comparison') {
     return [
-      `Quick ${days}-day sample itinerary for ${city}:`,
-      '- Day 1: arrival, local landmark walk, evening market/food trail.',
-      '- Day 2: key attractions + activity block + sunset viewpoint.',
-      '- Day 3: half-day cultural spot + shopping + return with time buffer.',
+      `Quick **budget vs luxury** comparison for ${cityLabel}:`,
+      '',
+      '🟢  **Budget (Silver)** — public transport, 2–3★ stay, local meals, shared activities',
+      '🟡  **Luxury (Gold)** — flights/private cabs, 4–5★ stay, curated experiences, private transfers',
+      '',
+      '💡 Best-value rule of thumb: splurge on **location & safety**, save on daily commute and meals.',
+      'Want me to put real numbers against this for a specific route?',
     ].join('\n')
   }
-  return `I can help with itinerary, budget comparison, timing, and route ideas. Try: "Plan a 3-day budget trip from Delhi to Goa in November under 20000 INR".`
+
+  if (intent === 'itinerary') {
+    const days = entities.days || 3
+    return [
+      `Sample **${days}-day itinerary** for ${cityLabel}:`,
+      '',
+      '**Day 1** — Arrival, settle in, local landmark walk, evening street-food trail',
+      '**Day 2** — Top 2 attractions + an activity block + sunset viewpoint',
+      days >= 3 ? '**Day 3** — Half-day cultural site + shopping + departure with buffer' : '',
+      days >= 4 ? '**Day 4** — Day trip to a nearby spot + slow evening' : '',
+      days >= 5 ? '**Day 5** — Hidden-gem walk + cafe afternoon + return' : '',
+      '',
+      `Tell me your origin city and budget and I'll turn this into a real plan with prices.`,
+    ].filter(Boolean).join('\n')
+  }
+
+  if (intent === 'seasonality') {
+    return [
+      city
+        ? `**Best time for ${cityLabel}:** depends on the experience you want.`
+        : `**Picking the right month** in India makes or breaks the trip.`,
+      '',
+      '☀️  **Oct – Mar** — peak season for beaches, deserts, heritage trails (Goa, Rajasthan, Kerala backwaters)',
+      '🌸  **Mar – Jun** — best for high-altitude (Ladakh, Spiti, Kashmir, Sikkim)',
+      '🌧️  **Jul – Sep** — monsoon magic for Western Ghats (Munnar, Coorg, Lonavala) — but check landslide risk',
+      '',
+      'Tell me the destination and I\'ll narrow it to a specific window.',
+    ].join('\n')
+  }
+
+  if (intent === 'transport') {
+    return [
+      `**Transport in India 101**:`,
+      '',
+      '🚆  **Train** — most economical for long distances. Book on IRCTC; Tatkal opens 24h before.',
+      '✈️  **Flight** — best for >1000 km or tight schedules. Tue/Wed are cheapest, book 4–6 weeks out.',
+      '🚌  **Bus** — Volvo overnight buses save a hotel night; redbus and AbhiBus are reliable.',
+      '🚖  **Cab/Taxi** — Ola/Uber in cities; for hill stations, prefer pre-booked operators (avoid hailing).',
+      '',
+      'Tell me your route and I\'ll compare options with rough costs.',
+    ].join('\n')
+  }
+
+  if (intent === 'budgeting') {
+    return [
+      `**Rough daily budget** in India (per person):`,
+      '',
+      '💸 Backpacker — ₹1,500–2,500 (hostels, local food, public transport)',
+      '🎒 Mid-range — ₹3,500–6,000 (3★ stay, mix of cabs, decent restaurants)',
+      '✨ Premium — ₹8,000–15,000+ (4–5★ stay, private cab, fine-dining)',
+      '',
+      `Tell me ${city ? `your dates for ${cityLabel}` : 'a destination'} and I\'ll build a real cost estimate.`,
+    ].join('\n')
+  }
+
+  if (intent === 'safety') {
+    return [
+      `**Travel safety basics in India**:`,
+      '',
+      '📞 **Emergency**: 112 (all-in-one), 100 (police), 102 (ambulance)',
+      '👜 Keep digital copies of ID/visa/insurance; share live location with family at night',
+      '💳 Use UPI/credit card for most things; avoid keeping all cash in one pocket',
+      '🚖 Prefer pre-booked cabs (Ola/Uber/hotel cabs) over hailing at stations late at night',
+      '☕ Watch your drinks; eat at busy stalls (high turnover = fresher food)',
+      '',
+      `Want destination-specific safety notes? Just tell me where.`,
+    ].join('\n')
+  }
+
+  if (intent === 'packing') {
+    return [
+      `**Smart pack list (universal India edition)**:`,
+      '',
+      '🆔 ID + photocopies, eSIM/SIM, power bank, universal adapter',
+      '👕 Modest layers (temples + religious sites); breathable cotton in summer',
+      '🧴 Sunscreen, hand sanitizer, wet wipes, electrolyte sachets, basic meds',
+      '🎒 Small daypack, lock for hostel lockers, reusable water bottle',
+      '🌧️ Compact rain jacket if travelling Jun–Sep',
+      '',
+      `Tell me the destination + month and I\'ll tailor it.`,
+    ].join('\n')
+  }
+
+  if (intent === 'documents') {
+    return [
+      `**Common India travel documents**:`,
+      '',
+      '🪪 **Domestic** — Aadhaar, PAN, voter ID or driving licence are usually enough at hotels & airports',
+      '🛂 **International tourists** — passport + valid visa (e-Visa is the easiest for many countries)',
+      '📄 Hotels in some states ask for ID at check-in; carry digital + physical copies',
+      '',
+      'Tell me your nationality + destination if you want specific document help.',
+    ].join('\n')
+  }
+
+  // 4) Catch-all — friendly, non-robotic, redirects gently.
+  if (n) {
+    return `${n}, I can help with travel plans, food, weather, budgets, safety, packing — basically anything for a trip across India. Try something like "Plan a weekend from Mumbai to Lonavala" and watch me work. ✈️`
+  }
+  return `Happy to help! I'm best at travel — try "Plan a 3-day trip to Goa", "Famous food in Jaipur", or just say hi and I'll guide you. ✨`
 }
 
 function titleCase(v) {
@@ -492,6 +850,7 @@ async function chat({ message, history, user }) {
 
   if (!env.AI_API_KEY) {
     const fallback = {
+      reply: localFallbackReply({ prompt, nlp, realtime, user }),
       reply: localFallbackReply({ prompt, nlp, realtime }),
       model: 'rnlp-fallback',
       usage: null,
@@ -557,6 +916,7 @@ async function chat({ message, history, user }) {
     return result
   } catch (err) {
     const fallbackResult = {
+      reply: localFallbackReply({ prompt, nlp, realtime, user }),
       reply: localFallbackReply({ prompt, nlp, realtime }),
       model: 'rnlp-fallback',
       usage: null,

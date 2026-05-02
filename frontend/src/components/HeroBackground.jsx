@@ -1,19 +1,47 @@
 import React, { useEffect, useState } from 'react'
 
+/**
+ * Hero rotation — six curated landscapes covering very different moods so
+ * the carousel never feels repetitive:
+ *   1. Western Ghats monsoon (Maharashtra)
+ *   2. Himalayan hilltop monastery with prayer flags
+ *   3. Araku Valley sunrise terraces (Andhra Pradesh)
+ *   4. Konkan / tropical-coast sunset with palms & fishing boats
+ *   5. Pakhal Lake sunset (Telangana)
+ *   6. Himalayan valley at dawn with prayer flags strung over the viewpoint
+ *
+ * The order alternates green ↔ warm ↔ blue tones so adjacent crossfades
+ * always shift the dominant colour of the frame.
+ */
 const DEFAULT_SLIDES = [
   {
-    src: '/photos/hero-himalaya.png',
-    alt: 'Himalayan peaks at sunset with Tibetan prayer flags fluttering across the valley',
+    src: '/destinations/state-maharashtra.png',
+    alt: 'Western Ghats in Maharashtra during monsoon — emerald cliffs draped in waterfalls and rolling clouds',
     focal: 'object-center',
   },
   {
-    src: '/photos/hero-kerala.png',
-    alt: 'Traditional houseboat drifting through Kerala backwaters at golden hour',
+    src: '/photos/Generated_image11.png',
+    alt: 'Himalayan hilltop monastery with golden roofs, snow peaks behind and prayer flags strung across the ridge',
     focal: 'object-center',
   },
   {
-    src: '/photos/hero-goa.png',
-    alt: 'Goan beach with palm trees silhouetted against an orange sunset',
+    src: '/destinations/state-andhra.png',
+    alt: 'Araku Valley terraces in Andhra Pradesh at sunrise — rice terraces, mist between hills and a winding road',
+    focal: 'object-center',
+  },
+  {
+    src: '/photos/Generated_image2.png',
+    alt: 'Tropical Indian coast at sunset — palm trees framing fishing boats silhouetted against an orange sky',
+    focal: 'object-center',
+  },
+  {
+    src: '/destinations/state-telangana.png',
+    alt: 'Pakhal Lake in Telangana at sunset — calm water reflecting orange sky with sailboats and egrets',
+    focal: 'object-center',
+  },
+  {
+    src: '/photos/Generated_image.png',
+    alt: 'Himalayan valley viewpoint at dawn — prayer flags fluttering over forested slopes with snow peaks lit pink',
     focal: 'object-center',
   },
 ]
