@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { ShareExperienceProvider, useShareExperience } from './context/ShareExperienceContext'
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 
 /* ------------------------------------------------------------------ */
 /*  Refresh-safe session storage for the home view                     */
