@@ -1,19 +1,83 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Menu, X, LogOut, ShieldCheck } from 'lucide-react'
-import { Link, NavLink } from 'react-router-dom'
+import {
+  Menu,
+  X,
+  LogOut,
+  ShieldCheck,
+  Workflow,
+  MapPin,
+  BookOpen,
+  Info,
+  ChevronRight,
+  Crown,
+  Mail,
+  Sparkles,
+} from 'lucide-react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import ThemeToggle from './ThemeToggle'
 
 const BASE_NAV_LINKS = [
   { to: '/how-it-works', label: 'How it Works' },
   { to: '/popular-routes', label: 'Popular Routes' },
   { to: '/blog', label: 'Blog' },
-  { to: '/share-experience', label: 'Share a trip' },
   { to: '/about', label: 'About' },
 ]
 const ADMIN_LINK = { to: '/admin', label: 'Admin', adminOnly: true }
 
+// Drawer sections (mobile only) — icon, description and a tinted gradient
+// per item give the menu real visual hierarchy.
+const DISCOVER_LINKS = [
+  {
+    to: '/how-it-works',
+    label: 'How it Works',
+    desc: 'Silver vs Gold in 30 seconds',
+    Icon: Workflow,
+    tint: 'from-sky-500/25 to-cyan-500/15 text-sky-300 ring-sky-400/30',
+  },
+  {
+    to: '/popular-routes',
+    label: 'Popular Routes',
+    desc: 'Top picks across India',
+    Icon: MapPin,
+    tint: 'from-emerald-500/25 to-green-500/15 text-emerald-300 ring-emerald-400/30',
+  },
+  {
+    to: '/blog',
+    label: 'Blog',
+    desc: 'Stories, tips & guides',
+    Icon: BookOpen,
+    tint: 'from-amber-500/25 to-orange-500/15 text-amber-300 ring-amber-400/30',
+  },
+  {
+    to: '/about',
+    label: 'About',
+    desc: 'The team behind JourneyMate',
+    Icon: Info,
+    tint: 'from-indigo-500/25 to-blue-500/15 text-indigo-300 ring-indigo-400/30',
+  },
+]
+
+const MORE_LINKS = [
+  {
+    to: '/pricing',
+    label: 'Pricing',
+    desc: 'Free forever for travellers',
+    Icon: Crown,
+    tint: 'from-yellow-500/25 to-amber-500/15 text-yellow-300 ring-yellow-400/30',
+  },
+  {
+    to: '/contact',
+    label: 'Contact',
+    desc: 'Talk to a real human',
+    Icon: Mail,
+    tint: 'from-rose-500/25 to-pink-500/15 text-rose-300 ring-rose-400/30',
+  },
+]
+
 export default function Navbar() {
   const { user, logout } = useAuth()
+  const location = useLocation()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -22,18 +86,45 @@ export default function Navbar() {
     [user?.isAdmin]
   )
 
+  const firstName = useMemo(() => {
+    const raw = user?.name || user?.email || ''
+    if (!raw) return 'Traveler'
+    return String(raw).split(/[\s@]/)[0] || 'Traveler'
+  }, [user?.name, user?.email])
+
+  const initial = useMemo(
+    () => (user?.name || user?.email || 'T').trim().charAt(0).toUpperCase() || 'T',
+    [user?.name, user?.email]
+  )
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Close mobile menu on resize to desktop
+  // Close mobile menu on resize to desktop.
   useEffect(() => {
     const onResize = () => { if (window.innerWidth >= 768) setMenuOpen(false) }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
+
+  // Close drawer when route changes (e.g. user taps a link).
+  useEffect(() => { setMenuOpen(false) }, [location.pathname])
+
+  // Lock background scroll while the drawer is open and close on Escape.
+  useEffect(() => {
+    if (!menuOpen) return undefined
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
 
   return (
     <nav
@@ -105,6 +196,9 @@ export default function Navbar() {
             </div>
           )}
 
+          {/* Theme toggle (desktop) */}
+          <ThemeToggle className="hidden sm:flex" />
+
           <button
             type="button"
             onClick={() => { logout(); setMenuOpen(false) }}
@@ -130,58 +224,183 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile drawer — backdrop + slide-in panel */}
       <div
-        className={`md:hidden overflow-hidden transition-all duration-300 ease-out ${
-          menuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        className={`md:hidden fixed inset-0 z-[60] transition-opacity duration-300 ${
+          menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
+        aria-hidden={!menuOpen}
       >
-        <div className="mx-3 sm:mx-4 mt-2 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-3 flex flex-col gap-1">
-          {navLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              onClick={() => setMenuOpen(false)}
-              className={({ isActive }) =>
-                `text-sm py-3 px-4 rounded-xl transition-all font-medium inline-flex items-center gap-2 ${
-                  link.adminOnly
-                    ? isActive
-                      ? 'text-white bg-gradient-to-r from-violet-500/20 to-cyan-500/15 border border-violet-500/30'
-                      : 'text-violet-300 hover:text-white hover:bg-violet-500/10 border border-violet-500/20'
-                    : isActive
-                      ? 'text-white bg-gradient-to-r from-green-500/15 to-emerald-500/10 border border-green-500/20'
-                      : 'text-slate-300 hover:text-white hover:bg-white/6 border border-transparent'
-                }`
-              }
-            >
-              {link.adminOnly && <ShieldCheck size={14} />}
-              {link.label}
-            </NavLink>
-          ))}
+        {/* Dim backdrop */}
+        <button
+          type="button"
+          aria-label="Close menu"
+          onClick={() => setMenuOpen(false)}
+          className="absolute inset-0 bg-slate-950/70 backdrop-blur-md"
+        />
 
-          <div className="border-t border-white/8 pt-2 mt-1 space-y-1">
+        {/* Sliding panel */}
+        <aside
+          role="dialog"
+          aria-modal="true"
+          aria-label="Main menu"
+          className={`absolute top-0 right-0 h-full w-[88vw] max-w-[400px] bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 border-l border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.6)] flex flex-col transform transition-transform duration-300 ease-out ${
+            menuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          {/* Ambient brand glow */}
+          <div className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full bg-emerald-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-amber-500/10 blur-3xl" />
+
+          {/* Header */}
+          <div className="relative flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/8">
+            <Link
+              to="/"
+              className="flex items-center gap-2.5"
+              onClick={() => setMenuOpen(false)}
+            >
+              <img src="/logo.svg" alt="" className="w-9 h-9 rounded-xl shadow-lg shadow-green-500/20" />
+              <div>
+                <div className="font-display font-bold text-white leading-tight">JourneyMate</div>
+                <div className="text-[10px] text-slate-500 leading-none mt-0.5">Smart Travel Comparison</div>
+              </div>
+            </Link>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(false)}
+              className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all"
+              aria-label="Close menu"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Scrollable body */}
+          <div className="relative flex-1 overflow-y-auto overscroll-contain px-4 py-5 space-y-6">
+            {/* Greeting card */}
             {user && (
-              <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/4">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-green-500 to-amber-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                  {(user.name || user.email || 'T')[0].toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-medium text-white truncate">{user.name || 'Traveler'}</div>
-                  <div className="text-[10px] text-slate-500 truncate">{user.email}</div>
+              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 via-slate-900/40 to-amber-500/10 p-4">
+                <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-amber-500/20 blur-2xl" />
+                <div className="relative flex items-center gap-3">
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-amber-500 flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-emerald-500/30">
+                      {initial}
+                    </div>
+                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-400 border-2 border-slate-950" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] uppercase tracking-wider text-emerald-300/80 font-semibold flex items-center gap-1">
+                      <Sparkles size={11} />
+                      Welcome back
+                    </div>
+                    <div className="text-base font-bold text-white truncate">Hi, {firstName}</div>
+                    <div className="text-[11px] text-slate-400 truncate">{user.email}</div>
+                  </div>
                 </div>
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => { logout(); setMenuOpen(false) }}
-              className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all"
-            >
-              <LogOut size={16} />
-              Log out
-            </button>
+
+            {/* Discover */}
+            <DrawerSection title="Discover">
+              {DISCOVER_LINKS.map((item) => (
+                <DrawerItem key={item.to || item.label} item={item} />
+              ))}
+            </DrawerSection>
+
+            {/* More */}
+            <DrawerSection title="More">
+              {MORE_LINKS.map((item) => (
+                <DrawerItem key={item.to || item.label} item={item} />
+              ))}
+
+              {user?.isAdmin && (
+                <DrawerItem
+                  item={{
+                    to: '/admin',
+                    label: 'Admin Console',
+                    desc: 'Backstage controls',
+                    Icon: ShieldCheck,
+                    tint: 'from-violet-500/25 to-fuchsia-500/15 text-violet-300 ring-violet-400/30',
+                  }}
+                />
+              )}
+            </DrawerSection>
           </div>
-        </div>
+
+          {/* Footer */}
+          <div className="relative px-4 py-4 border-t border-white/8 bg-slate-950/50 backdrop-blur-md space-y-3">
+            {/* Theme picker (mobile drawer) */}
+            <div className="flex items-center justify-between gap-3 px-1">
+              <span className="text-[11px] uppercase tracking-[0.18em] text-slate-500 font-bold">Appearance</span>
+              <ThemeToggle variant="segment" />
+            </div>
+
+            {user ? (
+              <button
+                type="button"
+                onClick={() => { logout(); setMenuOpen(false) }}
+                className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-xl bg-white/5 hover:bg-rose-500/10 border border-white/10 hover:border-rose-500/30 text-slate-300 hover:text-rose-300 transition-all"
+              >
+                <LogOut size={15} />
+                Sign out
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                onClick={() => setMenuOpen(false)}
+                className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-amber-500 text-slate-950 hover:brightness-110 transition-all"
+              >
+                Sign in
+              </Link>
+            )}
+            <div className="text-center text-[10px] text-slate-600 tracking-wide">
+              v1.0 · Made with ♥ in India
+            </div>
+          </div>
+        </aside>
       </div>
     </nav>
+  )
+}
+
+function DrawerSection({ title, children }) {
+  return (
+    <div>
+      <div className="px-2 mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+        {title}
+      </div>
+      <div className="space-y-1.5">{children}</div>
+    </div>
+  )
+}
+
+function DrawerItem({ item }) {
+  const { to, label, desc, Icon, tint } = item
+  return (
+    <NavLink
+      to={to}
+      end={to === '/'}
+      className={({ isActive }) =>
+        `group flex items-center gap-3 px-2.5 py-2.5 rounded-xl border transition-all ${
+          isActive
+            ? 'bg-white/5 border-white/12'
+            : 'bg-transparent border-transparent hover:bg-white/5 hover:border-white/10'
+        }`
+      }
+    >
+      <div
+        className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${tint?.split(' ').filter((c) => c.startsWith('from-') || c.startsWith('to-')).join(' ')} ring-1 ${tint?.split(' ').find((c) => c.startsWith('ring-')) || 'ring-white/10'} flex items-center justify-center`}
+      >
+        <Icon
+          size={18}
+          className={tint?.split(' ').find((c) => c.startsWith('text-')) || 'text-white'}
+        />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold text-white leading-tight truncate">{label}</div>
+        <div className="text-[11px] text-slate-500 leading-tight truncate mt-0.5">{desc}</div>
+      </div>
+      <ChevronRight size={16} className="text-slate-600 group-hover:text-slate-400 group-hover:translate-x-0.5 transition-all" />
+    </NavLink>
   )
 }

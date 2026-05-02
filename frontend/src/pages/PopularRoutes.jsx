@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { MapPin, ChevronRight, Zap, TrendingUp, Clock, Loader2, RefreshCw, Train, Plane } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/client'
+import PageHero from '../components/PageHero'
+import { getStatePhoto } from '../utils/getStatePhoto'
+import PhotoLightbox from '../components/PhotoLightbox'
 
 const TAG_COLORS = {
   Beach:      'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
@@ -64,23 +67,20 @@ export default function PopularRoutes() {
   }
 
   return (
-    <div className="min-h-[100dvh] page-bg-cyan pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-[100dvh] page-bg-cyan">
+      <PageHero
+        image="/photos/hero-himalaya.png"
+        imagePos="center 30%"
+        accent="cyan"
+        size="compact"
+        eyebrow="Live from our route database"
+        eyebrowIcon={<TrendingUp size={14} className="text-cyan-400" />}
+        title="Popular"
+        highlight="Routes"
+        subtitle="Hand-researched journeys across India — real prices, real transport, day-by-day itineraries."
+      />
 
-        {/* Header */}
-        <div className="text-center mb-10 sm:mb-14">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-cyan-500/30 mb-6">
-            <TrendingUp size={14} className="text-cyan-400" />
-            <span className="text-sm text-slate-300 font-medium">Live from our route database</span>
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-          </div>
-          <h1 className="hero-title font-display font-bold text-white mb-4 leading-tight">
-            Popular <span className="shimmer-cyan">Routes</span>
-          </h1>
-          <p className="text-slate-400 text-sm xs:text-base sm:text-lg max-w-2xl mx-auto">
-            Hand-researched routes across India — real prices, real transport options, real itineraries.
-          </p>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20 pt-6 sm:pt-8">
 
         {/* Loading */}
         {loading && (
@@ -142,11 +142,43 @@ export default function PopularRoutes() {
                 const savings = route.goldPrice - route.silverPrice
                 const tagColor = TAG_COLORS[route.tag] || TAG_COLORS.Explore
                 const emoji = TAG_EMOJIS[route.tag] || '🗺️'
+                const photo = getStatePhoto({
+                  stateCode: route.toStateCode,
+                  city: route.to,
+                })
                 return (
                   <div
                     key={`${route.from}-${route.to}`}
                     className="glass rounded-3xl overflow-hidden border border-white/8 hover:border-white/15 group hover:scale-[1.01] transition-all duration-300 flex flex-col"
                   >
+                    {/* Destination state landscape — Ken-Burns on hover,
+                        click to expand into a full-size lightbox. */}
+                    {photo?.file && (
+                      <div className="relative h-36 sm:h-40 overflow-hidden">
+                        <PhotoLightbox
+                          src={photo.file}
+                          alt={`${photo.spot} — ${photo.name}`}
+                          caption={photo.spot}
+                          subcaption={photo.name}
+                          badge={photo.biome}
+                          wrapperClassName="absolute inset-0"
+                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
+                        >
+                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
+                          <div className="pointer-events-none absolute bottom-2 left-3 right-3 flex items-end justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="text-[9px] sm:text-[10px] uppercase tracking-[0.18em] font-bold text-cyan-300/95">
+                                {photo.name}
+                              </div>
+                              <div className="text-xs sm:text-sm font-bold text-white truncate drop-shadow">
+                                {photo.spot}
+                              </div>
+                            </div>
+                          </div>
+                        </PhotoLightbox>
+                      </div>
+                    )}
+
                     {/* Card header */}
                     <div className="bg-gradient-to-br from-white/5 to-transparent p-5 sm:p-6 border-b border-white/6">
                       <div className="flex items-start justify-between gap-3 mb-4">

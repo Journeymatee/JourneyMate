@@ -12,6 +12,8 @@ import WeatherPanel from './WeatherPanel'
 import { TripTypePicker, VibeChips } from './TripVibePicker'
 import { findTripType, VIBES_BY_TYPE } from '../data/tripVibes'
 import { getPlaceArticle } from '../services/travelService'
+import { getStatePhoto } from '../utils/getStatePhoto'
+import PhotoLightbox from './PhotoLightbox'
 
 /* ------------------------------------------------------------------ */
 /*  Perk icon helper                                                   */
@@ -1482,9 +1484,52 @@ export default function ComparisonPage({
   const openBooking = (type) => setBookingModal({ open: true, type })
   const closeBooking = () => setBookingModal({ open: false, type: null })
 
+  const destPhoto = getStatePhoto({
+    stateCode: tripData?.destinationStateCode || tripData?.destinationState?.code,
+    city: tripData?.destination,
+  })
+
   return (
     <section className="min-h-[100dvh] mesh-bg pt-20 sm:pt-24 pb-36 sm:pb-40 px-2.5 sm:px-5 lg:px-6 overflow-x-hidden">
       <div className="max-w-7xl mx-auto w-full min-w-0">
+
+        {/* Destination state — iconic landscape banner ──────────────────────
+            Resolves the user's destination to its home state and shows the
+            curated photo (Yumthang flowers for Sikkim, Thar dunes for
+            Rajasthan, Munnar tea hills for Kerala …). Click expands to a
+            full-resolution lightbox. */}
+        {destPhoto?.file && (
+          <div
+            className="relative mb-4 sm:mb-6 rounded-2xl sm:rounded-3xl overflow-hidden border border-white/10 animate-slide-up"
+            style={{ animationDelay: '0.02s' }}
+          >
+            <PhotoLightbox
+              src={destPhoto.file}
+              alt={`${destPhoto.spot} — ${destPhoto.name}`}
+              caption={destPhoto.spot}
+              subcaption={destPhoto.name}
+              badge={destPhoto.biome}
+              className="w-full h-32 sm:h-44 lg:h-56 object-cover transition-transform duration-700 group-hover/lightbox:scale-[1.03]"
+            >
+              {/* readability gradient + caption pill (rendered above the img
+                  inside the lightbox button — they don't block the click). */}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-slate-950/85 via-slate-950/35 to-transparent" />
+              <div className="pointer-events-none absolute bottom-2.5 sm:bottom-4 left-3 sm:left-5 right-3 sm:right-5 flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] font-bold text-cyan-300/90">
+                    {destPhoto.name}
+                  </div>
+                  <div className="text-sm sm:text-lg font-bold text-white truncate drop-shadow">
+                    {destPhoto.spot}
+                  </div>
+                </div>
+                <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-slate-950/70 backdrop-blur-md px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-200 border border-white/10">
+                  {destPhoto.biome}
+                </span>
+              </div>
+            </PhotoLightbox>
+          </div>
+        )}
 
         {/* Back + Route header */}
         <div className="flex flex-col gap-3 sm:gap-4 mb-5 sm:mb-8 animate-slide-up">

@@ -11,6 +11,26 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+    <meta name="theme-color" content="#0a0a0f" />
+    <!-- Apply the saved theme before React paints to avoid a flash. -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('jm:theme-v1');
+          var sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var resolved = stored === 'light' ? 'light'
+                       : stored === 'dark' ? 'dark'
+                       : (stored === 'system' ? (sysDark ? 'dark' : 'light') : 'dark');
+          var html = document.documentElement;
+          html.setAttribute('data-theme', resolved);
+          if (resolved === 'dark') html.classList.add('dark');
+          html.style.colorScheme = resolved;
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
+import { ShareExperienceProvider, useShareExperience } from './context/ShareExperienceContext'
 
 /* ------------------------------------------------------------------ */
 /*  Refresh-safe session storage for the home view                     */
@@ -49,7 +50,7 @@ import LoginPage from './components/LoginPage'
 import HowItWorks from './pages/HowItWorks'
 import PopularRoutes from './pages/PopularRoutes'
 import Blog from './pages/Blog'
-import ShareExperience from './pages/ShareExperience'
+import BlogPost from './pages/BlogPost'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import Terms from './pages/Terms'
 import Pricing from './pages/Pricing'
@@ -58,7 +59,7 @@ import AboutOwner from './pages/AboutOwner'
 import AdminAgent from './pages/AdminAgent'
 import { AssistantWidget } from './features/ai'
 import { useAuth } from './context/AuthContext'
-import { searchTrip, tripErrorMessage, getTripPreferences } from './services/travelService'
+import { searchTrip, tripErrorMessage } from './services/travelService'
 
 function HomePage() {
   const { logout } = useAuth()
@@ -206,23 +207,11 @@ function HomePage() {
     return () => clearTimeout(handle)
   }, [tripType, vibes, view, tripData, searchParams.days, logout])
 
-  // ─── Hydrate trip-type / vibes from server on first sign-in ───
-  // Only when we don't already have a session-restored value (sessionStorage
-  // wins because it represents in-tab intent).
-  const hydratedRef = useRef(false)
-  useEffect(() => {
-    if (hydratedRef.current) return
-    if (persisted) { hydratedRef.current = true; return }
-    let cancelled = false
-    getTripPreferences().then((prefs) => {
-      if (cancelled || !prefs) return
-      if (prefs.tripType) setTripType(prefs.tripType)
-      if (Array.isArray(prefs.vibes)) setVibes(prefs.vibes)
-      hydratedRef.current = true
-    })
-    return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // ─── No auto-hydration of trip-type / vibes ───
+  // Loading a saved preference like "family" felt like the app was
+  // making the choice *for* the user. The home view now starts with no
+  // trip type and no vibes selected on every fresh load — only an
+  // in-tab refresh (sessionStorage, handled above) restores intent.
 
   return (
     <>
@@ -284,6 +273,16 @@ function HomePage() {
   )
 }
 
+/**
+ * Legacy redirect. The standalone /share-experience page was replaced by
+ * a global modal — old bookmarks land on /blog and pop the dialog open.
+ */
+function ShareExperienceRedirect() {
+  const { open } = useShareExperience()
+  useEffect(() => { open() }, [open])
+  return <Navigate to="/blog" replace />
+}
+
 function AppShell() {
   return (
     <div className="min-h-screen noise">
@@ -293,7 +292,8 @@ function AppShell() {
         <Route path="/how-it-works" element={<HowItWorks />} />
         <Route path="/popular-routes" element={<PopularRoutes />} />
         <Route path="/blog" element={<Blog />} />
-        <Route path="/share-experience" element={<ShareExperience />} />
+        <Route path="/blog/:slug" element={<BlogPost />} />
+        <Route path="/share-experience" element={<ShareExperienceRedirect />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/pricing" element={<Pricing />} />
@@ -324,7 +324,9 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <AppShell />
+      <ShareExperienceProvider>
+        <AppShell />
+      </ShareExperienceProvider>
     </BrowserRouter>
   )
 }

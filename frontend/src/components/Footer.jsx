@@ -3,10 +3,9 @@ import { Link } from 'react-router-dom'
 import { Twitter, Instagram, Linkedin, Mail, MapPin } from 'lucide-react'
 
 const COMPANY_LINKS = [
-  { label: 'How it Works', to: '/how-it-works' },
-  { label: 'Popular Routes', to: '/popular-routes' },
-  { label: 'Blog', to: '/blog' },
-  { label: 'Share a trip (new members)', to: '/share-experience' },
+  { label: 'How it Works',      to: '/how-it-works' },
+  { label: 'Popular Routes',    to: '/popular-routes' },
+  { label: 'Blog',              to: '/blog' },
   { label: 'About the Creator', to: '/about' },
 ]
 

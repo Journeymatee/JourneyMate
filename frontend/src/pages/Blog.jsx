@@ -1,18 +1,36 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Clock, Tag, ArrowRight, BookOpen, TrendingUp, User, Sparkles, ChevronRight } from 'lucide-react'
+import {
+  Clock,
+  Tag,
+  ArrowRight,
+  BookOpen,
+  TrendingUp,
+  User,
+  Sparkles,
+  ChevronRight,
+  Users,
+} from 'lucide-react'
 import api, { API_BASE_URL } from '../api/client'
+import PageHero from '../components/PageHero'
+import BlogExperienceCard from '../components/BlogExperienceCard'
+import { useAuth } from '../context/AuthContext'
+import { useExperienceClientId } from '../hooks/useExperienceClientId'
+import {
+  useShareExperience,
+  useShareExperienceSubscription,
+} from '../context/ShareExperienceContext'
 
 function categoryStyle(category) {
   const c = String(category || '')
   const map = {
-    Comparison: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-    Destination: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
-    Guide: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
-    Luxury: 'text-amber-300 bg-amber-500/10 border-amber-500/20',
-    Lifestyle: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
+    Comparison:  'text-blue-300 bg-blue-500/10 border-blue-500/30',
+    Destination: 'text-purple-300 bg-purple-500/10 border-purple-500/30',
+    Guide:       'text-amber-300 bg-amber-500/10 border-amber-500/30',
+    Luxury:      'text-amber-300 bg-amber-500/10 border-amber-500/30',
+    Lifestyle:   'text-rose-300 bg-rose-500/10 border-rose-500/30',
   }
-  return map[c] || 'text-cyan-300 bg-cyan-500/10 border-cyan-500/20'
+  return map[c] || 'text-cyan-300 bg-cyan-500/10 border-cyan-500/30'
 }
 
 function formatDate(iso) {
@@ -40,11 +58,54 @@ function mapPost(p) {
 }
 
 export default function Blog() {
+  const { user } = useAuth()
+  const clientId = useExperienceClientId()
+  const { open: openShareModal } = useShareExperience()
+
   const [activeCategory, setActiveCategory] = useState('All')
   const [hoveredId, setHoveredId] = useState(null)
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [posts, setPosts] = useState([])
+
+  const [experiences, setExperiences] = useState([])
+  const [expLoading, setExpLoading] = useState(true)
+
+  /**
+   * Silent re-fetch: pulls fresh experiences from the server WITHOUT
+   * flipping `expLoading`, so the cards stay mounted and the page does
+   * not jump after a like / emoji / comment. The list updates in place;
+   * because each card has a stable `key={exp.id}`, React reuses the
+   * existing DOM nodes and only the changed counts/comments re-render.
+   */
+  const refreshExperiences = useCallback(async () => {
+    try {
+      const q = clientId ? `?client_id=${encodeURIComponent(clientId)}` : ''
+      const { data } = await api.get(`/blog/experiences${q}`)
+      setExperiences(Array.isArray(data?.experiences) ? data.experiences : [])
+    } catch {
+      // silent refresh: keep the previous list visible on transient errors
+    }
+  }, [clientId])
+
+  /** First load only — shows skeletons until we have something to show. */
+  const loadInitialExperiences = useCallback(async () => {
+    setExpLoading(true)
+    try {
+      const q = clientId ? `?client_id=${encodeURIComponent(clientId)}` : ''
+      const { data } = await api.get(`/blog/experiences${q}`)
+      setExperiences(Array.isArray(data?.experiences) ? data.experiences : [])
+    } catch {
+      setExperiences([])
+    } finally {
+      setExpLoading(false)
+    }
+  }, [clientId])
+
+  // Refresh the community feed when someone publishes a new story via the
+  // global modal — silent, so the page does not flash skeletons.
+  useShareExperienceSubscription(refreshExperiences)
 
   useEffect(() => {
     let active = true
@@ -84,6 +145,10 @@ export default function Blog() {
     }
   }, [])
 
+  useEffect(() => {
+    loadInitialExperiences()
+  }, [loadInitialExperiences, user])
+
   const categories = useMemo(() => {
     const set = new Set()
     for (const p of posts) {
@@ -100,35 +165,19 @@ export default function Blog() {
   const featured = useMemo(() => posts.filter((p) => p.featured), [posts])
 
   return (
-    <div className="min-h-[100dvh] page-bg-purple pt-20 sm:pt-24 px-4 sm:px-6 pb-16 sm:pb-20">
-      <div className="max-w-7xl mx-auto pb-6 sm:pb-10">
+    <div className="min-h-[100dvh] page-bg-purple">
+      <PageHero
+        image="/destinations/dest-varanasi.webp"
+        imagePos="center 40%"
+        accent="purple"
+        eyebrow="Stories, guides & travel wisdom"
+        eyebrowIcon={<BookOpen size={14} className="text-purple-300" />}
+        title="Travel"
+        highlight="Stories"
+        subtitle="Real insights, honest comparisons and practical tips from travellers who have actually been there."
+      />
 
-        {/* Header */}
-        <div className="text-center mb-8 sm:mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-purple-500/30 mb-6">
-            <BookOpen size={14} className="text-purple-400" />
-            <span className="text-sm text-slate-300 font-medium">Stories, guides & travel wisdom</span>
-          </div>
-          <h1 className="font-display font-bold text-4xl sm:text-5xl lg:text-6xl text-white mb-4 leading-tight">
-            Travel <span className="shimmer-purple">Stories</span>
-          </h1>
-          <p className="text-slate-400 text-lg max-w-2xl mx-auto mb-6">
-            Real insights, honest comparisons, and practical tips — powered by your JourneyMate content system.
-          </p>
-          <Link
-            to="/share-experience"
-            className="group inline-flex items-center gap-2 sm:gap-3 rounded-2xl border border-cyan-500/35 bg-gradient-to-r from-cyan-500/10 to-violet-500/10 px-4 sm:px-5 py-3 sm:py-3.5 text-left max-w-xl mx-auto w-full sm:w-auto transition-all hover:border-cyan-400/50 hover:from-cyan-500/15"
-          >
-            <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-400/30 shrink-0">
-              <Sparkles size={18} className="text-amber-200" />
-            </div>
-            <div className="flex-1 min-w-0 text-left">
-              <p className="text-sm font-semibold text-white">Add your real experience for new members</p>
-              <p className="text-xs text-slate-500 mt-0.5">Best months to visit, field notes, likes & comments — on a dedicated page</p>
-            </div>
-            <ChevronRight size={20} className="text-cyan-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
-          </Link>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20 pt-2 sm:pt-4">
 
         {error && (
           <div className="max-w-2xl mx-auto mb-8 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100 text-center">
@@ -145,9 +194,10 @@ export default function Blog() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
               {featured.map((post) => (
-                <div
+                <Link
                   key={post.id}
-                  className="glass rounded-3xl overflow-hidden border border-white/10 hover:border-white/20 group cursor-pointer transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl flex flex-col"
+                  to={`/blog/${post.slug}`}
+                  className="glass rounded-3xl overflow-hidden border border-white/10 hover:border-white/25 group cursor-pointer transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl flex flex-col"
                   onMouseEnter={() => setHoveredId(post.id)}
                   onMouseLeave={() => setHoveredId(null)}
                 >
@@ -178,7 +228,7 @@ export default function Blog() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -220,9 +270,10 @@ export default function Blog() {
                 </div>
               ))
             : filtered.map((post) => (
-                <div
+                <Link
                   key={post.id}
-                  className="glass rounded-3xl overflow-hidden border border-white/8 hover:border-white/15 group cursor-pointer transition-all duration-300 hover:scale-[1.01] flex flex-col"
+                  to={`/blog/${post.slug}`}
+                  className="glass rounded-3xl overflow-hidden border border-white/8 hover:border-white/25 group cursor-pointer transition-all duration-300 hover:scale-[1.01] flex flex-col"
                 >
                   <div className="p-5 sm:p-6 border-b border-white/6 flex items-center gap-3">
                     <div className="w-11 h-11 rounded-xl glass border border-white/10 flex items-center justify-center text-2xl shrink-0">
@@ -259,9 +310,94 @@ export default function Blog() {
                       <span>{post.date}</span>
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
         </div>
+
+        {/* From the community */}
+        <section className="mt-16 sm:mt-20">
+          <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Users size={18} className="text-cyan-300" />
+                <span className="text-[11px] uppercase tracking-wider font-semibold text-cyan-300/90">
+                  From the community
+                </span>
+              </div>
+              <h2 className="font-display font-bold text-xl sm:text-2xl text-white">
+                Travel notes from real members
+              </h2>
+              <p className="text-sm text-slate-400 mt-1">
+                Like, react, and comment on any note below. Add your own to help the next traveller.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={openShareModal}
+              className="inline-flex items-center gap-1.5 rounded-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-bold px-4 py-2 transition-colors"
+            >
+              <Sparkles size={14} />
+              Share yours
+            </button>
+          </div>
+
+          {expLoading ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="glass rounded-2xl border border-white/10 p-5 sm:p-6 space-y-3"
+                >
+                  <div className="h-5 w-1/2 bg-white/5 rounded animate-pulse" />
+                  <div className="h-3 w-full bg-white/5 rounded animate-pulse" />
+                  <div className="h-3 w-5/6 bg-white/5 rounded animate-pulse" />
+                  <div className="h-3 w-4/6 bg-white/5 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : experiences.length === 0 ? (
+            <div className="glass rounded-2xl border border-white/10 p-6 sm:p-8 text-center">
+              <p className="text-sm text-slate-400 max-w-md mx-auto">
+                No community notes yet. Be the first — drop a destination, the
+                month you would pick again, and an honest one-paragraph take.
+              </p>
+              <button
+                type="button"
+                onClick={openShareModal}
+                className="inline-flex items-center gap-1.5 mt-4 rounded-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-bold px-5 py-2.5 transition-colors"
+              >
+                Share your experience
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          ) : (
+            <ul className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 list-none p-0">
+              {experiences.slice(0, 6).map((exp) => (
+                <BlogExperienceCard
+                  key={exp.id}
+                  exp={exp}
+                  clientId={clientId}
+                  user={user}
+                  onRefresh={refreshExperiences}
+                  formatDate={formatDate}
+                />
+              ))}
+            </ul>
+          )}
+
+          {experiences.length > 6 && (
+            <div className="text-center mt-6">
+              <button
+                type="button"
+                onClick={openShareModal}
+                className="inline-flex items-center gap-1.5 text-sm text-cyan-300 hover:text-cyan-200"
+              >
+                Share another story
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   )

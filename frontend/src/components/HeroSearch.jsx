@@ -306,7 +306,7 @@ export default function HeroSearch({ onSearch, loading, initialTripType = null, 
 
         {/* Single search block — inputs first, then trip-type chips that act as Compare */}
         <div
-          className="glass rounded-3xl border border-white/10 p-3 sm:p-4 shadow-2xl shadow-black/30 animate-slide-up text-left"
+          className="hero-search-card glass rounded-3xl border border-white/10 p-3 sm:p-4 shadow-2xl shadow-black/30 animate-slide-up text-left"
           style={{ animationDelay: '0.3s' }}
         >
           {/* From / To inputs */}

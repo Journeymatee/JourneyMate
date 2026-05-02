@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt')
 const { pool } = require('../config/db')
 const logger = require('../lib/logger')
 const { rowsForInsert } = require('../data/indian-cities')
+const { BLOG_ARTICLE_BODIES } = require('../data/blog-articles')
 const { migrate } = require('./migrate')
 
 const DEMO_USERS = [
@@ -152,14 +153,16 @@ const BLOG_SEED = [
 async function seedBlog() {
   logger.info({ msg: 'upserting blog posts', count: BLOG_SEED.length })
   for (const p of BLOG_SEED) {
+    const body = (BLOG_ARTICLE_BODIES[p.slug] || '').trim() || null
     await pool.query(
       `
       INSERT INTO blog_posts (
         slug, title, excerpt, body, category, read_time_mins, author, emoji, tags, is_featured, is_published, published_at, updated_at
-      ) VALUES ($1, $2, $3, NULL, $4, $5, $6, $7, $8::text[], $9, true, NOW(), NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::text[], $10, true, NOW(), NOW())
       ON CONFLICT (slug) DO UPDATE SET
         title = EXCLUDED.title,
         excerpt = EXCLUDED.excerpt,
+        body = EXCLUDED.body,
         category = EXCLUDED.category,
         read_time_mins = EXCLUDED.read_time_mins,
         author = EXCLUDED.author,
@@ -173,6 +176,7 @@ async function seedBlog() {
         p.slug,
         p.title,
         p.excerpt,
+        body,
         p.category,
         p.readTimeMins,
         p.author,
@@ -180,6 +184,89 @@ async function seedBlog() {
         p.tags,
         p.isFeatured,
       ]
+    )
+  }
+}
+
+/**
+ * Seed a handful of approved community travel stories so the public Blog
+ * page never looks empty before real users contribute. Idempotent — only
+ * runs when the table is empty.
+ */
+const COMMUNITY_EXPERIENCES_SEED = [
+  {
+    displayName: 'Aditi R.',
+    title: 'A first-timer\'s sunrise on the Ganga',
+    body:
+      'I was nervous about Varanasi being overwhelming, and yes, the lanes are intense. But the moment we pushed off in the boat at 5:30 a.m. and the sky turned pink behind the ghats, every doubt evaporated. The boatman shared chai from a flask. We watched two men do their morning yoga on the steps. The whole city felt like it was breathing in slow motion.\n\nGo with someone you can be quiet with. Don\'t over-pack the day. Eat at Kashi Chaat Bhandar.',
+    destination: 'Varanasi',
+    visitMonths: 'October–February',
+  },
+  {
+    displayName: 'Karthik S.',
+    title: 'South Goa surprised me more than the north',
+    body:
+      'I\'d been to Goa twice before, both times to Baga and Calangute, both times left feeling like I\'d been to a slightly noisier version of any other beach town. Last December we drove south — Palolem, Patnem, Agonda. Different country.\n\nThe shacks close earlier (10 p.m.), the music is gentler, and you can actually hear the sea. Stay at Cuba Patnem if you can — clean rooms 200 metres from the water for ₹1,800.',
+    destination: 'Goa',
+    visitMonths: 'November–February',
+  },
+  {
+    displayName: 'Meera V.',
+    title: 'Kerala houseboat: yes, do the one night',
+    body:
+      'We dithered about whether the houseboat was worth it. It is — but only for the one night, not two. By morning of day two I was ready for solid ground and a real shower.\n\nWhat surprised me was how *quiet* the backwaters get after sunset. No wifi, no engine after dark, just the sound of water on the hull. Bring a book you\'ve actually been wanting to read.',
+    destination: 'Alleppey',
+    visitMonths: 'September–March',
+  },
+  {
+    displayName: 'Rohan B.',
+    title: 'Manali in late June was perfect',
+    body:
+      'Skipped peak July monsoon and went the last week of June. Atal Tunnel was open, Sissu was green and quiet, and prices were already dropping for off-season. Got a Vashisht stay with mountain view for ₹1,400/night that would\'ve been ₹3,000 in May.\n\nOne tip: keep a buffer day. We needed it on day three when fog closed Rohtang for half a day. Used it to do a riverside cafe walk in Old Manali instead.',
+    destination: 'Manali',
+    visitMonths: 'Late June, early September',
+  },
+  {
+    displayName: 'Sneha P.',
+    title: 'Hampi blew me away — and almost no one was there',
+    body:
+      'Visited Hampi in late January on a long weekend. Felt like having a UNESCO site to myself — just goats, boulders, and 600-year-old temples in golden light.\n\nStayed across the river at Mowgli Riverside (₹1,200/night), rented a cycle, and lost a whole day at Hippie Island. Best ₹4,500 I\'ve spent on a weekend.',
+    destination: 'Hampi',
+    visitMonths: 'November–February',
+  },
+  {
+    displayName: 'Yash D.',
+    title: 'Vande Bharat from Hyderabad to Bangalore is the move',
+    body:
+      'Took the Hyderabad–Bangalore Vande Bharat last month for ₹1,750. 8 hours, station to station, with onboard food and decent legroom. Compared to a 1.5h flight (after airport time, security, traffic) it ended up costing my day about the same — and I worked from the seat.\n\nIf you\'re between two big cities and the train option is a Vande Bharat or Tejas, take it. The flight is a different mode of stress.',
+    destination: 'Hyderabad → Bangalore',
+    visitMonths: 'Year-round',
+  },
+]
+
+async function seedExperiences() {
+  const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM blog_experiences')
+  if (rows[0].n > 0) {
+    logger.info({ msg: 'community experiences already present', count: rows[0].n })
+    return
+  }
+  logger.info({
+    msg: 'seeding community experiences',
+    count: COMMUNITY_EXPERIENCES_SEED.length,
+  })
+  // Stagger created_at backwards so the list looks lived-in (newest first).
+  const now = Date.now()
+  const oneDayMs = 24 * 60 * 60 * 1000
+  for (let i = 0; i < COMMUNITY_EXPERIENCES_SEED.length; i += 1) {
+    const e = COMMUNITY_EXPERIENCES_SEED[i]
+    const created = new Date(now - (i + 1) * oneDayMs * 6)
+    await pool.query(
+      `
+      INSERT INTO blog_experiences
+        (display_name, title, body, destination, visit_months, is_approved, created_at)
+      VALUES ($1, $2, $3, $4, $5, true, $6)
+    `,
+      [e.displayName, e.title, e.body, e.destination, e.visitMonths, created]
     )
   }
 }
@@ -246,10 +333,18 @@ async function runAll() {
   await seedUsers()
   await seedCities()
   await seedBlog()
+  await seedExperiences()
   await seedStreetFood()
 }
 
-module.exports = { seedUsers, seedCities, seedBlog, seedStreetFood, runAll }
+module.exports = {
+  seedUsers,
+  seedCities,
+  seedBlog,
+  seedExperiences,
+  seedStreetFood,
+  runAll,
+}
 
 if (require.main === module) {
   runAll()
