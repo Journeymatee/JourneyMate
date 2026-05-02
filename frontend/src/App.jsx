@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { ShareExperienceProvider, useShareExperience } from './context/ShareExperienceContext'
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 
 /* ------------------------------------------------------------------ */
 /*  Refresh-safe session storage for the home view                     */
@@ -59,7 +60,7 @@ import AboutOwner from './pages/AboutOwner'
 import AdminAgent from './pages/AdminAgent'
 import { AssistantWidget } from './features/ai'
 import { useAuth } from './context/AuthContext'
-import { searchTrip, tripErrorMessage } from './services/travelService'
+import { searchTrip, tripErrorMessage, getTripPreferences } from './services/travelService'
 
 function HomePage() {
   const { logout } = useAuth()
@@ -212,6 +213,23 @@ function HomePage() {
   // making the choice *for* the user. The home view now starts with no
   // trip type and no vibes selected on every fresh load — only an
   // in-tab refresh (sessionStorage, handled above) restores intent.
+  // ─── Hydrate trip-type / vibes from server on first sign-in ───
+  // Only when we don't already have a session-restored value (sessionStorage
+  // wins because it represents in-tab intent).
+  const hydratedRef = useRef(false)
+  useEffect(() => {
+    if (hydratedRef.current) return
+    if (persisted) { hydratedRef.current = true; return }
+    let cancelled = false
+    getTripPreferences().then((prefs) => {
+      if (cancelled || !prefs) return
+      if (prefs.tripType) setTripType(prefs.tripType)
+      if (Array.isArray(prefs.vibes)) setVibes(prefs.vibes)
+      hydratedRef.current = true
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <>

@@ -345,6 +345,10 @@ module.exports = {
   seedStreetFood,
   runAll,
 }
+  await seedStreetFood()
+}
+
+module.exports = { seedUsers, seedCities, seedBlog, seedStreetFood, runAll }
 
 if (require.main === module) {
   runAll()
