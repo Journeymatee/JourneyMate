@@ -29,12 +29,6 @@ const SYSTEM_PROMPT = [
   '- Never invent specific prices, schedules, weather forecasts, or hotel names — clearly say "verify before booking" if you must guess.',
   '- If you do not know, say so honestly and offer the next best step.',
 ].join('\n')
-const SYSTEM_PROMPT =
-  'You are JourneyMate AI, an advanced India travel planner using LLM reasoning + real-time data + extracted entities. ' +
-  'Use provided realtime context whenever available and clearly mention when data is unavailable. ' +
-  'Keep responses concise, practical, and highly actionable. ' +
-  'If user asks itinerary/comparison, use structured headings with bullet points. ' +
-  'Avoid hallucinated prices, schedules, weather, or guarantees.'
 
 const MAX_HISTORY_MESSAGES = 10
 const DEFAULT_LIVE_TIMEOUT_MS = env.AI_LIVE_TIMEOUT_MS || 8000
@@ -67,12 +61,6 @@ const COMMON_CITIES = [
   'andaman', 'lakshadweep', 'gujarat', 'maharashtra', 'karnataka', 'goa',
   // misc
   'dehradun', 'chandigarh', 'trivandrum', 'thiruvananthapuram',
-  'ahmedabad', 'jaipur', 'goa', 'manali', 'shimla', 'agra', 'varanasi', 'udaipur', 'kochi',
-  'amritsar', 'rishikesh', 'darjeeling', 'srinagar', 'leh', 'dehradun', 'lucknow', 'patna',
-  'mysore', 'ooty', 'munnar', 'coorg', 'pondicherry', 'puducherry', 'alleppey', 'kashmir',
-  'spiti', 'indore', 'bhopal', 'surat', 'nagpur', 'guwahati', 'kanyakumari', 'puri',
-  'bhubaneswar', 'gangtok', 'jodhpur', 'mangalore', 'vadodara', 'madurai', 'shillong',
-  'bikaner', 'trivandrum', 'thiruvananthapuram', 'kolhapur', 'chandigarh',
 ]
 
 function sanitizeHistory(history) {
@@ -113,8 +101,6 @@ function detectIntent(text) {
 
   // Domain travel intents (order matters: food before generic plan).
   if (/(famous|street).*(food|eat|dish)|what.*(eat|food|dishes)|local\s*food|must[-\s]?try.*(food|dish)|where.*eat|cuisine|breakfast|dinner|biryani|kebab|dosa|chaat|sweets?\b/.test(q)) return 'food'
-  const q = text.toLowerCase()
-  if (/(famous|street).*(food|eat|dish)|what.*(eat|food|dishes)|local food|must[-\s]?try.*(food|dish)|where.*eat|cuisine|breakfast|dinner|biryani|kebab|dosa|chaat|sweets?\b/.test(q)) return 'food'
   if (/(itinerary|plan|day[-\s]?wise|schedule)/.test(q)) return 'itinerary'
   if (/(compare|budget\s*vs|luxury|premium|cheap)/.test(q)) return 'comparison'
   if (/(weather|season|best\s*time|month\s*to\s*visit|when\s*to\s*go|when\s*to\s*visit)/.test(q)) return 'seasonality'
@@ -439,28 +425,6 @@ function localFallbackReply({ prompt, nlp, realtime, user }) {
 
   // 2) Inspiration — open-ended "where should I go?"
   if (intent === 'inspiration') {
-function localFallbackReply({ prompt, nlp, realtime }) {
-  const city = nlp.entities.toCity || nlp.entities.knownCities[0] || 'your destination'
-
-  if (nlp.intent === 'food') {
-    const sf = realtime?.streetFood
-    if (sf && sf.items?.length > 0) {
-      const lines = [
-        `Top ${Math.min(6, sf.items.length)} must-try foods in ${sf.city}:`,
-        ...sf.items.slice(0, 6).map((it) => {
-          const tag = it.tier === 'fine' ? ' (fine-dining)' : ''
-          const where = it.where ? ` — try at ${it.where}` : ''
-          return `- ${it.name}${tag}: ${it.description}${where}`
-        }),
-        '',
-        'Tip: street stalls peak 7–10 PM. Pick spots with high local turnover.',
-      ]
-      return lines.join('\n')
-    }
-    return `I can suggest local food once you tell me the city. Try: "Famous food in ${city}".`
-  }
-
-  if (nlp.intent === 'comparison') {
     return [
       `Some great ideas for you${n ? ', ' + n : ''}:`,
       '',
@@ -851,7 +815,6 @@ async function chat({ message, history, user }) {
   if (!env.AI_API_KEY) {
     const fallback = {
       reply: localFallbackReply({ prompt, nlp, realtime, user }),
-      reply: localFallbackReply({ prompt, nlp, realtime }),
       model: 'rnlp-fallback',
       usage: null,
       nlp,
@@ -917,7 +880,6 @@ async function chat({ message, history, user }) {
   } catch (err) {
     const fallbackResult = {
       reply: localFallbackReply({ prompt, nlp, realtime, user }),
-      reply: localFallbackReply({ prompt, nlp, realtime }),
       model: 'rnlp-fallback',
       usage: null,
       nlp,

@@ -14,8 +14,6 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { Menu, X, LogOut, ShieldCheck } from 'lucide-react'
-import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ThemeToggle from './ThemeToggle'
 
@@ -265,39 +263,6 @@ export default function Navbar() {
               <div>
                 <div className="font-display font-bold text-white leading-tight">JourneyMate</div>
                 <div className="text-[10px] text-slate-500 leading-none mt-0.5">Smart Travel Comparison</div>
-        <div className="mx-3 sm:mx-4 mt-2 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-white/10 shadow-2xl p-3 flex flex-col gap-1">
-          {navLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              onClick={() => setMenuOpen(false)}
-              className={({ isActive }) =>
-                `text-sm py-3 px-4 rounded-xl transition-all font-medium inline-flex items-center gap-2 ${
-                  link.adminOnly
-                    ? isActive
-                      ? 'text-white bg-gradient-to-r from-violet-500/20 to-cyan-500/15 border border-violet-500/30'
-                      : 'text-violet-300 hover:text-white hover:bg-violet-500/10 border border-violet-500/20'
-                    : isActive
-                      ? 'text-white bg-gradient-to-r from-green-500/15 to-emerald-500/10 border border-green-500/20'
-                      : 'text-slate-300 hover:text-white hover:bg-white/6 border border-transparent'
-                }`
-              }
-            >
-              {link.adminOnly && <ShieldCheck size={14} />}
-              {link.label}
-            </NavLink>
-          ))}
-
-          <div className="border-t border-white/8 pt-2 mt-1 space-y-1">
-            {user && (
-              <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/4">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-green-500 to-amber-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                  {(user.name || user.email || 'T')[0].toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-medium text-white truncate">{user.name || 'Traveler'}</div>
-                  <div className="text-[10px] text-slate-500 truncate">{user.email}</div>
-                </div>
               </div>
             </Link>
             <button
