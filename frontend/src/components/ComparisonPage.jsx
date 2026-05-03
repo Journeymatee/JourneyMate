@@ -15,6 +15,11 @@ import { getPlaceArticle } from '../services/travelService'
 import { getStatePhoto } from '../utils/getStatePhoto'
 import PhotoLightbox from './PhotoLightbox'
 import SaveTripButton from './SaveTripButton'
+import {
+  readOverrides,
+  setNote as setNoteOverride,
+  withOverrides,
+} from '../utils/dayOverrides'
 
 /* ------------------------------------------------------------------ */
 /*  Perk icon helper                                                   */
@@ -865,8 +870,21 @@ function StreetFoodModal({ open, onClose, streetFood, destination }) {
 /* ------------------------------------------------------------------ */
 /*  Itinerary day accordion                                            */
 /* ------------------------------------------------------------------ */
-function ItineraryDay({ day, isGold, expanded, onToggle, onHistoryForActivity, destinationName }) {
+const NOTE_MAX = 600
+function ItineraryDay({
+  day,
+  isGold,
+  expanded,
+  onToggle,
+  onHistoryForActivity,
+  destinationName,
+  note = '',
+  onNoteChange,
+  readOnly = false,
+}) {
   const accent = isGold ? 'amber' : 'green'
+  const hasNote = String(note || '').trim().length > 0
+  const canEditNote = !readOnly && typeof onNoteChange === 'function'
   return (
     <div className={`rounded-xl border transition-all duration-300 overflow-hidden ${
       isGold
@@ -884,6 +902,16 @@ function ItineraryDay({ day, isGold, expanded, onToggle, onHistoryForActivity, d
           isGold ? 'bg-amber-500/20 text-amber-400' : 'bg-green-500/20 text-green-400'
         }`}>D{day.day}</div>
         <span className="font-semibold text-sm text-white leading-snug flex-1 min-w-0">{day.title}</span>
+        {hasNote && (
+          <span
+            className={`hidden xs:inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full ${
+              isGold ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+            }`}
+            title={note}
+          >
+            Note
+          </span>
+        )}
         <ChevronDown size={16} className={`shrink-0 text-slate-500 transition-transform duration-300 ${expanded ? 'rotate-180' : ''} group-hover:text-slate-300`} />
       </button>
 
@@ -924,6 +952,43 @@ function ItineraryDay({ day, isGold, expanded, onToggle, onHistoryForActivity, d
                 </div>
               )}
             </div>
+
+            {/* Personal note — read-only display when viewing a shared trip
+                or when the parent didn't pass an onNoteChange handler. */}
+            {(canEditNote || hasNote) && (
+              <div className={`mt-3 rounded-lg border p-3 ${
+                isGold ? 'bg-amber-500/5 border-amber-500/20' : 'bg-emerald-500/5 border-emerald-500/20'
+              }`}>
+                <div className={`text-[10px] uppercase tracking-wider font-semibold mb-1.5 flex items-center gap-1.5 ${
+                  isGold ? 'text-amber-300' : 'text-emerald-300'
+                }`}>
+                  <ChefHat size={10} />
+                  Personal note
+                </div>
+                {canEditNote ? (
+                  <textarea
+                    value={note}
+                    onChange={(e) => onNoteChange(e.target.value)}
+                    maxLength={NOTE_MAX}
+                    rows={2}
+                    placeholder="What you want to remember about this day…"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-white/25 resize-y leading-snug"
+                  />
+                ) : (
+                  <p className="text-xs sm:text-sm text-slate-200 whitespace-pre-line leading-snug">{note}</p>
+                )}
+                {canEditNote && (
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-[10px] text-slate-500">
+                      Saved with this trip when you "Save trip"
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      {String(note || '').length}/{NOTE_MAX}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1105,7 +1170,7 @@ function TravellersModal({ open, onClose, tripType, vibes, onTripType, onVibes }
 /* ------------------------------------------------------------------ */
 /*  Plan card                                                          */
 /* ------------------------------------------------------------------ */
-function PlanCard({ plan, type, tripData, onBook, onHistoryForActivity, onOpenFood, tripType = null, vibes = [] }) {
+function PlanCard({ plan, type, tripData, onBook, onHistoryForActivity, onOpenFood, tripType = null, vibes = [], notes = {}, onNoteChange, readOnly = false }) {
   const isGold = type === 'gold'
   const [activeTab, setActiveTab] = useState('overview')
   const [openDay, setOpenDay] = useState(1)
@@ -1283,6 +1348,9 @@ function PlanCard({ plan, type, tripData, onBook, onHistoryForActivity, onOpenFo
                   onToggle={() => setOpenDay(openDay === day.day ? 0 : day.day)}
                   onHistoryForActivity={onHistoryForActivity}
                   destinationName={tripData.destination}
+                  note={notes[String(day.day)] || ''}
+                  onNoteChange={onNoteChange ? (v) => onNoteChange(day.day, v) : undefined}
+                  readOnly={readOnly}
                 />
               ))}
             </div>
@@ -1457,6 +1525,25 @@ export default function ComparisonPage({
     if (!Number.isFinite(n)) return 5
     return Math.min(5, Math.max(1, n))
   })()
+
+  /* ── Per-day personal notes (lightweight itinerary editor MVP) ──
+     Held at the page level so notes survive plan-view toggles and the
+     occasional re-render when vibes change. Hydrated from the trip payload
+     for shared/saved trips, reset on a new origin/destination. */
+  const tripIdentity = `${tripData?.origin || ''}|${tripData?.destination || ''}|${tripData?.requestedDays || ''}`
+  const [overrides, setOverrides] = useState(() => readOverrides(tripData))
+  useEffect(() => {
+    setOverrides(readOverrides(tripData))
+    // Identity-string is enough; we deliberately don't watch tripData itself
+    // because vibes/tripType refetches mutate the object every time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripIdentity])
+
+  const isReadOnly = Boolean(tripData?.__readOnly)
+  const handleNoteChange = (tier) => (dayKey, value) => {
+    setOverrides((cur) => setNoteOverride(cur, tier, dayKey, value))
+  }
+  const payloadForSave = withOverrides(tripData, overrides)
   const savings = tripData.gold.price - tripData.silver.price
   const savingsPct = Math.round((savings / tripData.gold.price) * 100)
   const [showCta, setShowCta] = useState(false)
@@ -1553,7 +1640,7 @@ export default function ComparisonPage({
                 <span className="text-slate-500 text-xs sm:text-sm w-full sm:w-auto sm:ml-1">• {tripData.duration}</span>
               </div>
             </div>
-            <SaveTripButton tripData={tripData} className="mt-1" />
+            <SaveTripButton tripData={tripData} payload={payloadForSave} className="mt-1" />
           </div>
 
         </div>
@@ -1770,6 +1857,9 @@ export default function ComparisonPage({
                 onOpenFood={openFood}
                 tripType={activeTripType}
                 vibes={activeVibes}
+                notes={overrides.notes.silver}
+                onNoteChange={isReadOnly ? undefined : handleNoteChange('silver')}
+                readOnly={isReadOnly}
               />
             </div>
           )}
@@ -1792,6 +1882,9 @@ export default function ComparisonPage({
                 onOpenFood={openFood}
                 tripType={activeTripType}
                 vibes={activeVibes}
+                notes={overrides.notes.gold}
+                onNoteChange={isReadOnly ? undefined : handleNoteChange('gold')}
+                readOnly={isReadOnly}
               />
             </div>
           )}

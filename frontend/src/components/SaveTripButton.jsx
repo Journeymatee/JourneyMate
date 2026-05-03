@@ -13,7 +13,10 @@ import { createSavedTrip, shareUrl } from '../services/savedTripsService'
  * The control is visually compact so it can sit next to the existing Back
  * button without crowding the route header on small screens.
  */
-export default function SaveTripButton({ tripData, className = '' }) {
+export default function SaveTripButton({ tripData, payload, className = '' }) {
+  // The parent can pass an already-merged `payload` (e.g. trip + per-day
+  // notes) — fall back to `tripData` so older call-sites still work.
+  const payloadToSave = payload || tripData
   const [saving, setSaving] = useState(false)
   const [saved, setSaved]   = useState(null)   // SavedTrip | null
   const [error, setError]   = useState('')
@@ -38,11 +41,11 @@ export default function SaveTripButton({ tripData, className = '' }) {
   }, [])
 
   const handleSave = async () => {
-    if (!tripData || saving) return
+    if (!payloadToSave || saving) return
     setSaving(true)
     setError('')
     try {
-      const item = await createSavedTrip({ payload: tripData })
+      const item = await createSavedTrip({ payload: payloadToSave })
       setSaved(item)
     } catch (err) {
       const msg = err?.response?.data?.error?.message
