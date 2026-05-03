@@ -100,6 +100,17 @@ export default function Navbar() {
     [user?.name, user?.email]
   )
 
+  const firstName = useMemo(() => {
+    const raw = user?.name || user?.email || ''
+    if (!raw) return 'Traveler'
+    return String(raw).split(/[\s@]/)[0] || 'Traveler'
+  }, [user?.name, user?.email])
+
+  const initial = useMemo(
+    () => (user?.name || user?.email || 'T').trim().charAt(0).toUpperCase() || 'T',
+    [user?.name, user?.email]
+  )
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', handleScroll, { passive: true })

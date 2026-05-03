@@ -14,12 +14,6 @@ import { findTripType, VIBES_BY_TYPE } from '../data/tripVibes'
 import { getPlaceArticle } from '../services/travelService'
 import { getStatePhoto } from '../utils/getStatePhoto'
 import PhotoLightbox from './PhotoLightbox'
-import SaveTripButton from './SaveTripButton'
-import {
-  readOverrides,
-  setNote as setNoteOverride,
-  withOverrides,
-} from '../utils/dayOverrides'
 
 /* ------------------------------------------------------------------ */
 /*  Perk icon helper                                                   */

@@ -358,7 +358,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ShareExperienceProvider>
-        {user ? <AppShell /> : <PublicShell />}
+        <AppShell />
       </ShareExperienceProvider>
     </BrowserRouter>
   )
