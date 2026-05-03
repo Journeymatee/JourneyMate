@@ -110,6 +110,11 @@ function HomePage() {
     // 'loading' is ephemeral — leave whatever is already persisted alone.
   }, [view, tripData, searchParams, tripType, vibes])
 
+  // AbortController for the in-flight search so the loader's "Cancel" button
+  // can actually stop the network request (otherwise axios would resolve in
+  // the background and silently switch the view to 'comparison').
+  const searchAbortRef = useRef(null)
+
   const handleSearch = async (from, to, days = 5, opts = {}) => {
     const nextTripType = opts && Object.prototype.hasOwnProperty.call(opts, 'tripType')
       ? (opts.tripType ?? null)
@@ -120,20 +125,53 @@ function HomePage() {
     setSearchParams({ from, to, days })
     setSearchError('')
     setView('loading')
+
+    // Cancel any previous in-flight request before kicking off a new one.
+    if (searchAbortRef.current) searchAbortRef.current.abort()
+    const controller = new AbortController()
+    searchAbortRef.current = controller
+
     try {
-      const data = await searchTrip(from, to, { days, tripType: nextTripType, vibes: nextVibes })
+      const data = await searchTrip(from, to, {
+        days,
+        tripType: nextTripType,
+        vibes: nextVibes,
+        signal: controller.signal,
+      })
+      if (controller.signal.aborted) return
       setTripData(data)
       setView('comparison')
     } catch (error) {
+      if (controller.signal.aborted) return
+      // eslint-disable-next-line no-console
       console.error('Search failed:', error)
       if (error.response?.status === 401) {
         logout()
         return
       }
-      setSearchError(tripErrorMessage(error) || 'Search failed — is the API running?')
+      const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout')
+      const isNetwork = error.code === 'ERR_NETWORK' || (!error.response && !isTimeout)
+      let msg
+      if (isTimeout) {
+        msg = 'The server took too long to respond. Free-tier servers can be slow on first wake-up — please try again.'
+      } else if (isNetwork) {
+        msg = 'Network error — check your connection and try again.'
+      } else {
+        msg = tripErrorMessage(error) || 'Search failed. Please try again.'
+      }
+      setSearchError(msg)
       setView('home')
+    } finally {
+      if (searchAbortRef.current === controller) searchAbortRef.current = null
     }
   }
+
+  const handleCancelSearch = useCallback(() => {
+    if (searchAbortRef.current) searchAbortRef.current.abort()
+    searchAbortRef.current = null
+    setSearchError('Search cancelled. Try a different route or tap search again.')
+    setView('home')
+  }, [])
 
   const handleBack = () => {
     setView('home')
@@ -236,17 +274,15 @@ function HomePage() {
     <>
       {searchError && (view === 'home' || view === 'comparison') && (
         <div className="fixed top-20 left-0 right-0 z-50 px-4 flex justify-center pointer-events-none">
-          <div className="pointer-events-auto max-w-lg w-full rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100 text-center shadow-xl">
+          <div className="pointer-events-auto max-w-lg w-full rounded-2xl border border-red-500/30 bg-red-500/10 backdrop-blur-md px-4 py-3 text-sm text-red-100 text-center shadow-xl">
             {searchError}
-            {view === 'comparison' && (
-              <button
-                type="button"
-                onClick={() => setSearchError('')}
-                className="block w-full mt-2 text-xs text-slate-400 hover:text-white underline"
-              >
-                Dismiss
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setSearchError('')}
+              className="block w-full mt-2 text-xs text-slate-300 hover:text-white underline"
+            >
+              Dismiss
+            </button>
           </div>
         </div>
       )}
@@ -265,7 +301,11 @@ function HomePage() {
       )}
 
       {view === 'loading' && (
-        <LoadingSpinner from={searchParams.from} to={searchParams.to} />
+        <LoadingSpinner
+          from={searchParams.from}
+          to={searchParams.to}
+          onCancel={handleCancelSearch}
+        />
       )}
 
       {view === 'comparison' && tripData && (
