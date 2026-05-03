@@ -12,6 +12,34 @@ const tripVibeEngine = require('./tripVibe.engine')
 
 const INDIA_CENTER = { lat: 22.5937, lng: 78.9629 }
 
+/* ── In-memory result cache ──────────────────────────────────────
+ * Caches the *enriched* response (excluding tripType / vibes overrides,
+ * which are applied per-request after the cache hit). Big speed-up for
+ * repeat queries on common routes — TTL 10 min keeps weather fresh-ish.
+ */
+const SEARCH_CACHE = new Map() // key -> { at, response }
+const SEARCH_CACHE_TTL_MS = 10 * 60 * 1000
+const SEARCH_CACHE_MAX = 200
+
+function cacheGet(key) {
+  const hit = SEARCH_CACHE.get(key)
+  if (!hit) return null
+  if (Date.now() - hit.at > SEARCH_CACHE_TTL_MS) {
+    SEARCH_CACHE.delete(key)
+    return null
+  }
+  return hit.response
+}
+
+function cacheSet(key, response) {
+  if (SEARCH_CACHE.size >= SEARCH_CACHE_MAX) {
+    // drop oldest (Map preserves insertion order)
+    const firstKey = SEARCH_CACHE.keys().next().value
+    if (firstKey != null) SEARCH_CACHE.delete(firstKey)
+  }
+  SEARCH_CACHE.set(key, { at: Date.now(), response })
+}
+
 /* ── helpers ─────────────────────────────────────────────────── */
 
 function slugKey(from, to) {
@@ -259,32 +287,41 @@ const tripService = {
    */
   async search(fromRaw, toRaw, options = {}) {
     if (!fromRaw || !toRaw) throw ApiError.badRequest('from and to are required')
-    const [fromC, toC] = await Promise.all([resolveCoords(fromRaw), resolveCoords(toRaw)])
     const nDays = parseRequestedDays(options.days)
     const { tripType, vibes } = tripVibeEngine.normalizeSelection(options.tripType, options.vibes)
 
-    const key = slugKey(fromRaw, toRaw)
-    const isCurated = Boolean(CURATED_ROUTES[key])
-    const raw0 = CURATED_ROUTES[key] || generateGeneric(fromRaw, toRaw)
-    const raw = applyRequestedDaysToTrip(raw0, nDays, toC.label, isCurated)
-    const withMaps = attachMaps(raw, fromC, toC)
-    const emptyIntel = { osrm: null, wikipedia: null, topSights: [], weather: null, attributions: [] }
-    let placeIntel = null
-    try {
-      placeIntel = await enrichForComparison(fromC, toC)
-    } catch {
-      placeIntel = emptyIntel
-    }
-    const streetFood = await getDestinationStreetFood(toC.label, { tier: 'all' }).catch(() => [])
+    // Cache key intentionally excludes tripType/vibes (applied below) but
+    // includes nDays since itinerary shape depends on it.
+    const cacheKey = `${slugKey(fromRaw, toRaw)}|d=${nDays}`
+    let base = cacheGet(cacheKey)
 
-    // Apply trip type & vibe overrides last so they affect the final price
-    // shown to the user (after curated/days reshape).
-    const tuned = tripVibeEngine.applyToTrip(
-      { ...withMaps, placeIntel: placeIntel || emptyIntel, requestedDays: nDays, streetFood },
-      tripType,
-      vibes
-    )
-    return tuned
+    if (!base) {
+      const [fromC, toC] = await Promise.all([resolveCoords(fromRaw), resolveCoords(toRaw)])
+      const key = slugKey(fromRaw, toRaw)
+      const isCurated = Boolean(CURATED_ROUTES[key])
+      const raw0 = CURATED_ROUTES[key] || generateGeneric(fromRaw, toRaw)
+      const raw = applyRequestedDaysToTrip(raw0, nDays, toC.label, isCurated)
+      const withMaps = attachMaps(raw, fromC, toC)
+      const emptyIntel = { osrm: null, wikipedia: null, topSights: [], weather: null, attributions: [] }
+
+      // enrichForComparison is already bounded to ~9 s max via withSoftTimeout
+      // inside placeIntel.service. We still wrap in try/catch in case any
+      // future change throws synchronously.
+      let placeIntel = null
+      try {
+        placeIntel = await enrichForComparison(fromC, toC)
+      } catch {
+        placeIntel = emptyIntel
+      }
+      const streetFood = await getDestinationStreetFood(toC.label, { tier: 'all' })
+        .catch(() => [])
+
+      base = { ...withMaps, placeIntel: placeIntel || emptyIntel, requestedDays: nDays, streetFood }
+      cacheSet(cacheKey, base)
+    }
+
+    // Apply trip type & vibe overrides last so they affect the final price.
+    return tripVibeEngine.applyToTrip(base, tripType, vibes)
   },
 
   async placeArticle(qRaw) {

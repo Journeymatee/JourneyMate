@@ -16,11 +16,12 @@ import { X, Loader2 } from 'lucide-react'
  */
 
 const STAGES = [
-  { at:  0,    title: 'Finding Best Plans',          sub: 'Comparing Silver & Gold options…' },
-  { at:  4000, title: 'Crunching the numbers',       sub: 'Pricing transport, stays & food…'  },
-  { at: 12000, title: 'Server is warming up',        sub: 'First request after idle takes a moment.' },
-  { at: 30000, title: 'Almost there',                sub: 'Hang tight — large itineraries take longer on first load.' },
-  { at: 55000, title: 'This is unusually slow',      sub: 'Tap Cancel and try again — your data is safe.' },
+  { at:  0,     title: 'Finding Best Plans',     sub: 'Comparing Silver & Gold options…' },
+  { at:  3000,  title: 'Crunching the numbers',  sub: 'Pricing transport, stays & food…'  },
+  { at: 10000,  title: 'Server is warming up',   sub: 'First request after idle takes a moment.' },
+  { at: 25000,  title: 'Still working',          sub: 'Free-tier dynos can take 30–60 s to wake up.' },
+  { at: 50000,  title: 'Almost there',           sub: 'We\'re retrying automatically — please don\'t refresh.' },
+  { at: 90000,  title: 'This is unusually slow', sub: 'Tap Cancel and try again — your data is safe.' },
 ]
 
 function pickStage(elapsed) {

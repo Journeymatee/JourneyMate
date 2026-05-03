@@ -44,10 +44,12 @@ export const searchTrip = async (from, to, options = {}) => {
     params.vibes = options.vibes.map((v) => String(v).trim().toLowerCase()).filter(Boolean).join(',')
   }
 
-  const requestConfig = {
-    params,
+  const baseConfig = {
     headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-    timeout: 60000, // 60 s — covers Render free-tier cold starts (~30–55 s)
+    // Backend has a hard 25 s ceiling per request and an enrichment budget
+    // of ~9 s. We give 35 s here so cold-start TCP setup + a slow round-trip
+    // never falsely time out — the backend will respond (or 503) well before.
+    timeout: 35000,
     signal: options.signal,
   }
 
@@ -58,22 +60,36 @@ export const searchTrip = async (from, to, options = {}) => {
     if (err.code === 'ERR_NETWORK') return true        // dropped TCP / offline
     const status = err.response?.status
     if (status == null) return true                    // pure network error
-    return status >= 500 && status < 600               // server-side hiccup
+    if (status === 408 || status === 429) return true  // explicit retry signals
+    return status >= 500 && status < 600               // 5xx (incl. our 503 hard-timeout)
   }
 
-  try {
-    const { data } = await api.get('/trips/search', requestConfig)
-    return data
-  } catch (firstError) {
-    if (!isRetriableError(firstError)) throw firstError
-    // Brief backoff so we don't hammer a still-warming server.
-    await new Promise((r) => setTimeout(r, 1500))
-    const { data } = await api.get('/trips/search', {
-      ...requestConfig,
-      params: { ...params, _t: String(Date.now()) },
-    })
-    return data
+  // Up to 3 attempts (1 + 2 retries) with linear backoff: 0s → 2s → 4s.
+  // Each attempt gets a fresh cache-buster so any intermediary CDN can't
+  // serve us a stale 5xx.
+  const MAX_ATTEMPTS = 3
+  let lastError
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    if (options.signal?.aborted) {
+      const err = new Error('Search cancelled')
+      err.code = 'ERR_CANCELED'
+      throw err
+    }
+    try {
+      const { data } = await api.get('/trips/search', {
+        ...baseConfig,
+        params: { ...params, _t: String(Date.now()) },
+      })
+      return data
+    } catch (err) {
+      lastError = err
+      if (!isRetriableError(err) || attempt === MAX_ATTEMPTS) throw err
+      // eslint-disable-next-line no-console
+      console.warn(`[searchTrip] attempt ${attempt} failed (${err.code || err.message}); retrying…`)
+      await new Promise((r) => setTimeout(r, attempt * 2000))
+    }
   }
+  throw lastError
 }
 
 /**
