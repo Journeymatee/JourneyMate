@@ -1,4 +1,5 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { runMonkeyThemeWipe, isReducedMotion } from '../lib/themeWipe'
 
 /**
  * ThemeContext — owns the user's bright/dark preference.
@@ -33,21 +34,73 @@ function readStoredMode() {
   return 'dark'
 }
 
-function applyTheme(resolved) {
-  if (typeof document === 'undefined') return
+// Tracks the currently-running transition timer so rapid toggles
+// (light → dark → light) don't leave the body without the helper
+// class once the timeout fires for the older switch.
+let themeTransitionTimer = null
+
+/**
+ * Briefly add a `theme-transitioning` class to <html> so the global
+ * CSS rule fades background-color/color/border-color over ~220ms
+ * instead of snapping. Removed once the longest transition finishes.
+ */
+function withSmoothTransition(fn) {
+  if (typeof document === 'undefined') {
+    fn()
+    return
+  }
+  const html = document.documentElement
+  html.classList.add('theme-transitioning')
+  fn()
+  if (themeTransitionTimer) clearTimeout(themeTransitionTimer)
+  themeTransitionTimer = setTimeout(() => {
+    html.classList.remove('theme-transitioning')
+    themeTransitionTimer = null
+  }, 280) // matches the longest transition (box-shadow 240ms) + buffer
+}
+
+/* Core mutation: flip <html> attributes/classes + meta theme-color. */
+function commitTheme(resolved) {
   const html = document.documentElement
   html.setAttribute('data-theme', resolved)
   html.classList.toggle('dark', resolved === 'dark')
   html.style.colorScheme = resolved
-  // Update the <meta name="theme-color"> for nicer mobile chrome.
-  const metaSelector = 'meta[name="theme-color"]'
-  let meta = document.querySelector(metaSelector)
+  let meta = document.querySelector('meta[name="theme-color"]')
   if (!meta) {
     meta = document.createElement('meta')
     meta.setAttribute('name', 'theme-color')
     document.head.appendChild(meta)
   }
-  meta.setAttribute('content', resolved === 'dark' ? '#0a0a0f' : '#fafaf7')
+  meta.setAttribute('content', resolved === 'dark' ? '#0a0a0f' : '#f8fafc')
+}
+
+/**
+ * Public theme apply with a cartoon-monkey "poster rise" animation.
+ *
+ *   • initial: true       → no animation, just commit the theme.
+ *   • reduced-motion user → no slide, just the gentle cross-fade we
+ *                            already use elsewhere (220 ms).
+ *   • everyone else       → a cartoon monkey rides a rising poster
+ *                            from the bottom of the viewport, drops
+ *                            off the new theme, then fades.
+ *
+ * The actual choreography lives in `lib/themeWipe.js`; this function
+ * just decides which path to take and supplies the commit callback.
+ */
+function applyTheme(resolved, { initial = false } = {}) {
+  if (typeof document === 'undefined') return
+
+  if (initial) {
+    commitTheme(resolved)
+    return
+  }
+
+  if (isReducedMotion()) {
+    withSmoothTransition(() => commitTheme(resolved))
+    return
+  }
+
+  runMonkeyThemeWipe(resolved, () => commitTheme(resolved))
 }
 
 export function ThemeProvider({ children }) {
@@ -67,8 +120,21 @@ export function ThemeProvider({ children }) {
 
   const resolved = mode === 'system' ? systemTheme : mode
 
-  // Apply on mount and whenever the resolved theme changes.
-  useEffect(() => { applyTheme(resolved) }, [resolved])
+  // Track the last theme we *actually* applied. Animating when the
+  // resolved value didn't change is what causes the monkey-wipe to
+  // fire on page reloads (and on every StrictMode double-mount in
+  // dev). By comparing against the previous applied value, we only
+  // animate when the user genuinely flipped the mode.
+  //
+  // Initial value is `resolved` itself, so the first effect run sees
+  // "no change" and falls through to the silent commit path.
+  const lastAppliedRef = useRef(resolved)
+
+  useEffect(() => {
+    const changed = lastAppliedRef.current !== resolved
+    applyTheme(resolved, { initial: !changed })
+    lastAppliedRef.current = resolved
+  }, [resolved])
 
   // Persist whenever the user explicitly picks something.
   useEffect(() => {

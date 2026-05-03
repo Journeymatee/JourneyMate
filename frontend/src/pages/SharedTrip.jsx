@@ -94,8 +94,8 @@ export default function SharedTrip() {
   return (
     <div className="min-h-[100dvh]">
       {/* Public banner */}
-      <div className="px-4 sm:px-6 pt-20 sm:pt-24">
-        <div className="max-w-7xl mx-auto">
+      <div className="px-4 sm:px-6 lg:px-8 3xl:px-12 pt-20 sm:pt-24">
+        <div className="max-w-7xl 3xl:max-w-[1680px] 4xl:max-w-[2000px] mx-auto">
           <div className="glass rounded-3xl border border-emerald-500/25 px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-start sm:items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">

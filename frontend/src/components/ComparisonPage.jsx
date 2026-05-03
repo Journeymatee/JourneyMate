@@ -3,17 +3,21 @@ import {
   Train, Plane, Hotel, Building, UtensilsCrossed, Star,
   ChevronRight, ChevronDown, Check, Calendar, MapPin, ArrowLeft,
   Sparkles, Shield, Coffee, Wifi, Car, Waves, Mountain,
-  Route, X, ExternalLink, History, Clock, Ruler, Landmark, Loader2, AlertCircle,
+  X, ExternalLink, History, Clock, Ruler, Landmark, Loader2, AlertCircle,
   SlidersHorizontal, Scale, ChefHat
 } from 'lucide-react'
 import PlaceMap from './PlaceMap'
-import RouteDirectionMap from './RouteDirectionMap'
-import WeatherPanel from './WeatherPanel'
+import TripInsightsBar from './TripInsightsBar'
+import TripHeroBanner from './TripHeroBanner'
+import SaveTripButton from './SaveTripButton'
 import { TripTypePicker, VibeChips } from './TripVibePicker'
 import { findTripType, VIBES_BY_TYPE } from '../data/tripVibes'
 import { getPlaceArticle } from '../services/travelService'
-import { getStatePhoto } from '../utils/getStatePhoto'
-import PhotoLightbox from './PhotoLightbox'
+import {
+  readOverrides,
+  withOverrides,
+  setNote as setNoteOverride,
+} from '../utils/dayOverrides'
 
 /* ------------------------------------------------------------------ */
 /*  Perk icon helper                                                   */
@@ -1566,87 +1570,48 @@ export default function ComparisonPage({
   const openBooking = (type) => setBookingModal({ open: true, type })
   const closeBooking = () => setBookingModal({ open: false, type: null })
 
-  const destPhoto = getStatePhoto({
-    stateCode: tripData?.destinationStateCode || tripData?.destinationState?.code,
-    city: tripData?.destination,
-  })
-
   return (
-    <section className="min-h-[100dvh] mesh-bg pt-20 sm:pt-24 pb-36 sm:pb-40 px-2.5 sm:px-5 lg:px-6 overflow-x-hidden">
-      <div className="max-w-7xl mx-auto w-full min-w-0">
+    <section className="min-h-[100dvh] mesh-bg pt-20 sm:pt-24 3xl:pt-28 pb-36 sm:pb-40 px-2.5 sm:px-5 lg:px-6 3xl:px-10 overflow-x-hidden">
+      <div className="max-w-7xl 3xl:max-w-[1680px] 4xl:max-w-[2000px] mx-auto w-full min-w-0">
 
-        {/* Destination state — iconic landscape banner ──────────────────────
-            Resolves the user's destination to its home state and shows the
-            curated photo (Yumthang flowers for Sikkim, Thar dunes for
-            Rajasthan, Munnar tea hills for Kerala …). Click expands to a
-            full-resolution lightbox. */}
-        {destPhoto?.file && (
-          <div
-            className="relative mb-4 sm:mb-6 rounded-2xl sm:rounded-3xl overflow-hidden border border-white/10 animate-slide-up"
-            style={{ animationDelay: '0.02s' }}
-          >
-            <PhotoLightbox
-              src={destPhoto.file}
-              alt={`${destPhoto.spot} — ${destPhoto.name}`}
-              caption={destPhoto.spot}
-              subcaption={destPhoto.name}
-              badge={destPhoto.biome}
-              className="w-full h-32 sm:h-44 lg:h-56 object-cover transition-transform duration-700 group-hover/lightbox:scale-[1.03]"
-            >
-              {/* readability gradient + caption pill (rendered above the img
-                  inside the lightbox button — they don't block the click). */}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-slate-950/85 via-slate-950/35 to-transparent" />
-              <div className="pointer-events-none absolute bottom-2.5 sm:bottom-4 left-3 sm:left-5 right-3 sm:right-5 flex items-end justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] font-bold text-cyan-300/90">
-                    {destPhoto.name}
-                  </div>
-                  <div className="text-sm sm:text-lg font-bold text-white truncate drop-shadow">
-                    {destPhoto.spot}
-                  </div>
-                </div>
-                <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-slate-950/70 backdrop-blur-md px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-200 border border-white/10">
-                  {destPhoto.biome}
-                </span>
-              </div>
-            </PhotoLightbox>
-          </div>
-        )}
-
-        {/* Back + Route header */}
-        <div className="flex flex-col gap-3 sm:gap-4 mb-5 sm:mb-8 animate-slide-up">
-          <div className="flex flex-col gap-2 sm:gap-3 min-w-0 w-full">
-            <div className="flex flex-col xs:flex-row xs:items-center gap-2 sm:gap-3 min-w-0">
-              <button
-                type="button"
-                onClick={onBack}
-                className="inline-flex items-center justify-center sm:justify-start gap-2 text-sm text-slate-400 hover:text-white transition-colors glass px-3.5 sm:px-4 py-2.5 rounded-xl border border-white/10 hover:border-white/20 w-full xs:w-auto shrink-0"
-              >
-                <ArrowLeft size={16} /> Back
-              </button>
-              <div className="flex flex-wrap items-baseline gap-x-1.5 sm:gap-x-2 gap-y-1 text-white min-w-0 text-sm sm:text-base">
-                <MapPin size={16} className="text-green-400 shrink-0" />
-                <span className="font-semibold break-words min-w-0 max-w-full">{tripData.origin}</span>
-                <ChevronRight size={14} className="text-slate-500 shrink-0 hidden sm:block" />
-                <span className="text-slate-500 sm:hidden" aria-hidden>·</span>
-                <MapPin size={16} className="text-amber-400 shrink-0" />
-                <span className="font-semibold break-words min-w-0 max-w-full">{tripData.destination}</span>
-                <span className="text-slate-500 text-xs sm:text-sm w-full sm:w-auto sm:ml-1">• {tripData.duration}</span>
-              </div>
-            </div>
-            <SaveTripButton tripData={tripData} payload={payloadForSave} className="mt-1" />
-          </div>
-
-        </div>
+        {/* ── Cinematic hero banner ─────────────────────────────────────
+             Replaces the old separate photo block + text header. The banner
+             merges them into one premium element: tall destination photo,
+             gradient overlay, big route headline (Origin → Destination),
+             trip-type chip, and a floating "Smart Silver saves ₹X,XXX"
+             value badge. Sets the tone for the whole comparison page. */}
+        <TripHeroBanner
+          origin={tripData.origin}
+          destination={tripData.destination}
+          duration={tripData.duration}
+          savings={tripData.gold && tripData.silver ? tripData.gold.price - tripData.silver.price : null}
+          tripTypeMeta={activeTripTypeMeta}
+          destinationStateCode={tripData?.destinationStateCode}
+          destinationStateObj={tripData?.destinationState}
+          onBack={onBack}
+          saveSlot={<SaveTripButton tripData={tripData} payload={payloadForSave} />}
+        />
 
         {/* Section: Customize your trip ----------------------------------- */}
         <div
           className="mb-6 sm:mb-8 rounded-2xl border border-white/10 glass p-4 sm:p-5 animate-slide-up w-full min-w-0"
           style={{ animationDelay: '0.06s' }}
         >
-          <div className="mb-3 flex items-center gap-2 flex-wrap">
-            <SlidersHorizontal size={16} className="text-violet-300 shrink-0" />
-            <h3 className="text-sm font-bold tracking-wide text-white">Customize your trip</h3>
+          <div className="mb-3.5 flex items-center gap-2.5 flex-wrap">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-400 to-indigo-500 text-white shadow-lg shadow-violet-500/30 ring-1 ring-white/15">
+              <SlidersHorizontal size={16} strokeWidth={2.4} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-300/90">
+                Personalise
+              </p>
+              <h3
+                className="text-base sm:text-lg font-semibold text-white tracking-tight"
+                style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
+              >
+                Tune every detail
+              </h3>
+            </div>
             {activeTripTypeMeta && (
               <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-fuchsia-500/15 text-fuchsia-200 border border-fuchsia-400/30">
                 <span aria-hidden>{activeTripTypeMeta.icon}</span>
@@ -1654,8 +1619,8 @@ export default function ComparisonPage({
               </span>
             )}
           </div>
-          <p className="mb-4 text-xs text-slate-500">
-            Choose who you&apos;re travelling with, your room vibe, and how many days of places — every plan card updates instantly.
+          <p className="mb-4 text-xs text-slate-400 leading-relaxed">
+            Pick travellers, room vibe, and trip length — every plan card updates instantly.
           </p>
 
           <div className="w-full min-w-0 flex flex-col gap-4">
@@ -1780,31 +1745,16 @@ export default function ComparisonPage({
           </div>
         </div>
 
-        {/* Section: Route map -------------------------------------------- */}
-        {routeMaps?.origin && routeMaps?.destination && (
-          <div
-            className="mb-6 sm:mb-8 rounded-2xl border border-white/10 glass p-4 sm:p-5 animate-slide-up w-full min-w-0"
-            style={{ animationDelay: '0.08s' }}
-          >
-            <div className="mb-3 flex items-center gap-2">
-              <Route size={16} className="text-green-400 shrink-0" />
-              <h3 className="text-sm font-bold tracking-wide text-white">Route on map</h3>
-            </div>
-            <p className="mb-4 text-xs text-slate-500 break-words leading-snug">
-              {routeMaps.origin.label} → {routeMaps.destination.label}
-            </p>
-            <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-white/8">
-              <RouteDirectionMap
-                originCoords={routeMaps.origin}
-                destCoords={routeMaps.destination}
-              />
-            </div>
-          </div>
-        )}
-
-        <WeatherPanel
+        {/* Trip insights — compact tiles. Click any tile to open the full
+            panel in a centered modal. Keeps the page tight + scannable so the
+            actual content (silver vs gold plans) is what catches the eye. */}
+        <TripInsightsBar
+          destination={tripData.destination}
           weather={tripData.placeIntel?.weather}
-          destinationLabel={tripData.destination}
+          routeMaps={routeMaps}
+          osrm={tripData.placeIntel?.osrm}
+          tripType={activeTripType}
+          vibes={activeVibes}
         />
 
         <PlaceIntelSection
@@ -1814,19 +1764,33 @@ export default function ComparisonPage({
           onOpenWithPreload={openHistoryWithPreload}
         />
 
-        {/* Section header: Plan comparison -------------------------------- */}
+        {/* ── Plan comparison section header ─────────────────────────────
+             Editorial header: gradient icon, big display title, ruled-line
+             separator, savings chip on the right (when comparing both
+             plans). Reads like a magazine spread, not a CMS panel. */}
         <div
           ref={plansSectionRef}
-          className="mb-3 sm:mb-4 mt-1 flex items-center gap-2 animate-slide-up scroll-mt-24"
+          className="mb-4 sm:mb-5 mt-2 flex items-center gap-3 animate-slide-up scroll-mt-24"
           style={{ animationDelay: '0.18s' }}
         >
-          <Scale size={16} className="text-cyan-300 shrink-0" />
-          <h3 className="text-sm font-bold tracking-wide text-white">
-            {planView === 'both' ? 'Compare your plans' : planView === 'gold' ? 'Your Gold plan' : 'Your Silver plan'}
-          </h3>
-          <div className="flex-1 h-px bg-white/8 ml-2" />
-          {planView === 'both' && (
-            <span className="hidden xs:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/25">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-sky-500 text-white shadow-lg shadow-cyan-500/30 ring-1 ring-white/15">
+            <Scale size={16} strokeWidth={2.4} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-300/90">
+              Side by side
+            </p>
+            <h2
+              className="text-base sm:text-lg font-semibold text-white tracking-tight"
+              style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
+            >
+              {planView === 'both' ? 'Compare your plans' : planView === 'gold' ? 'Your Gold plan' : 'Your Silver plan'}
+            </h2>
+          </div>
+          <div className="flex-1 h-px bg-gradient-to-r from-white/10 via-white/5 to-transparent ml-1" />
+          {planView === 'both' && Number.isFinite(savings) && savings > 0 && (
+            <span className="hidden xs:inline-flex items-center gap-1.5 rounded-full border border-emerald-400/35 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-200 shadow-sm shadow-emerald-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Save ₹{savings.toLocaleString('en-IN')}
             </span>
           )}

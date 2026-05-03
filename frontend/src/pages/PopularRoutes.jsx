@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
-import { MapPin, ChevronRight, Zap, TrendingUp, Clock, Loader2, RefreshCw, Train, Plane } from 'lucide-react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { MapPin, ChevronRight, Zap, TrendingUp, Clock, Loader2, RefreshCw, Train, Plane, Compass, IndianRupee, Filter } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/client'
 import PageHero from '../components/PageHero'
+import SectionHeader from '../components/SectionHeader'
 import { getStatePhoto } from '../utils/getStatePhoto'
 import PhotoLightbox from '../components/PhotoLightbox'
 
@@ -66,6 +67,26 @@ export default function PopularRoutes() {
     navigate('/', { state: { from: route.from, to: route.to, autoSearch: true } })
   }
 
+  /**
+   * Headline stats shown as glass chips inside the hero — communicates
+   * scale at a glance without forcing the user to scroll.
+   */
+  const heroStats = useMemo(() => {
+    if (!routes.length) return null
+    const cities = new Set()
+    let avgSavings = 0
+    routes.forEach((r) => {
+      cities.add(r.from)
+      cities.add(r.to)
+      avgSavings += (r.goldPrice || 0) - (r.silverPrice || 0)
+    })
+    return {
+      routeCount: routes.length,
+      cityCount: cities.size,
+      avgSavings: Math.round(avgSavings / Math.max(routes.length, 1)),
+    }
+  }, [routes])
+
   return (
     <div className="min-h-[100dvh] page-bg-cyan">
       <PageHero
@@ -78,9 +99,28 @@ export default function PopularRoutes() {
         title="Popular"
         highlight="Routes"
         subtitle="Hand-researched journeys across India — real prices, real transport, day-by-day itineraries."
-      />
+      >
+        {heroStats && (
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 text-[11px] font-semibold text-cyan-200">
+              <Compass size={12} className="text-cyan-300" />
+              {heroStats.routeCount} curated routes
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 text-[11px] font-semibold text-emerald-200">
+              <MapPin size={12} className="text-emerald-300" />
+              {heroStats.cityCount}+ cities
+            </span>
+            {heroStats.avgSavings > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 text-[11px] font-semibold text-amber-200">
+                <IndianRupee size={12} className="text-amber-300" />
+                Avg ₹{heroStats.avgSavings.toLocaleString('en-IN')} silver savings
+              </span>
+            )}
+          </div>
+        )}
+      </PageHero>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20 pt-6 sm:pt-8">
+      <div className="max-w-7xl 3xl:max-w-[1680px] 4xl:max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 3xl:px-12 pb-16 sm:pb-20 pt-8 sm:pt-10">
 
         {/* Loading */}
         {loading && (
@@ -108,37 +148,60 @@ export default function PopularRoutes() {
 
         {!loading && !error && routes.length > 0 && (
           <>
-            {/* Category Filter */}
-            <div className="flex flex-wrap gap-2 justify-center mb-8 sm:mb-12">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setActiveTag(cat)}
-                  className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 border ${
-                    activeTag === cat
-                      ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white border-transparent shadow-lg shadow-cyan-500/20'
-                      : 'glass border-white/10 text-slate-400 hover:text-white hover:border-white/20'
-                  }`}
-                >
-                  {cat}
-                  {cat !== 'All' && (
-                    <span className="ml-1.5 opacity-60">
-                      ({routes.filter(r => r.tag === cat).length})
-                    </span>
-                  )}
-                </button>
-              ))}
+            <SectionHeader
+              icon={<Filter size={16} strokeWidth={2.4} />}
+              accent="cyan"
+              eyebrow="Filter the journeys"
+              title="Pick a vibe"
+              subtitle="Beach, mountains, heritage, weekend escapes — narrow down to the trip that fits you."
+              badge={
+                <span className="hidden xs:inline-flex items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-cyan-200">
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 animate-pulse" />
+                  {filtered.length} of {routes.length}
+                </span>
+              }
+              divider
+              className="!mb-4"
+            />
+
+            {/* Category Filter — sticky, glass-rail look */}
+            <div className="sticky top-16 sm:top-20 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 mb-8 sm:mb-10 backdrop-blur-md bg-slate-950/55 border-y border-white/5 py-3">
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map((cat) => {
+                  const isActive = activeTag === cat
+                  const count = cat === 'All' ? routes.length : routes.filter(r => r.tag === cat).length
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setActiveTag(cat)}
+                      aria-pressed={isActive}
+                      className={`group relative px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all duration-200 border ${
+                        isActive
+                          ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white border-transparent shadow-lg shadow-cyan-500/30 scale-[1.02]'
+                          : 'glass border-white/10 text-slate-300 hover:text-white hover:border-white/25 hover:bg-white/8'
+                      }`}
+                    >
+                      <span className="inline-flex items-center gap-1.5">
+                        {cat !== 'All' && (
+                          <span aria-hidden className="text-[13px] leading-none">
+                            {TAG_EMOJIS[cat] || '✨'}
+                          </span>
+                        )}
+                        {cat}
+                        <span className={`text-[10px] font-bold tabular-nums ${isActive ? 'opacity-90' : 'opacity-50'}`}>
+                          {count}
+                        </span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
-            {/* Route count */}
-            <p className="text-center text-xs text-slate-600 mb-6">
-              Showing {filtered.length} of {routes.length} routes
-            </p>
-
             {/* Route Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
-              {filtered.map((route) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 gap-4 sm:gap-5 lg:gap-6">
+              {filtered.map((route, idx) => {
                 const savings = route.goldPrice - route.silverPrice
                 const tagColor = TAG_COLORS[route.tag] || TAG_COLORS.Explore
                 const emoji = TAG_EMOJIS[route.tag] || '🗺️'
@@ -149,8 +212,11 @@ export default function PopularRoutes() {
                 return (
                   <div
                     key={`${route.from}-${route.to}`}
-                    className="glass rounded-3xl overflow-hidden border border-white/8 hover:border-white/15 group hover:scale-[1.01] transition-all duration-300 flex flex-col"
+                    className="glass rounded-3xl overflow-hidden border border-white/8 hover:border-cyan-400/30 group hover:scale-[1.01] hover:-translate-y-1 transition-all duration-300 flex flex-col relative animate-slide-up"
+                    style={{ animationDelay: `${Math.min(idx, 9) * 35}ms` }}
                   >
+                    {/* Subtle hover glow */}
+                    <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-cyan-500/5 via-transparent to-transparent" />
                     {/* Destination state landscape — Ken-Burns on hover,
                         click to expand into a full-size lightbox. */}
                     {photo?.file && (
@@ -259,15 +325,29 @@ export default function PopularRoutes() {
             </div>
 
             {filtered.length === 0 && (
-              <div className="text-center py-16">
-                <p className="text-slate-500 text-sm">No routes found for "{activeTag}" category.</p>
-                <button
-                  type="button"
-                  onClick={() => setActiveTag('All')}
-                  className="mt-4 text-cyan-400 text-sm font-semibold hover:underline"
-                >
-                  Show all routes
-                </button>
+              <div className="mt-2">
+                <div className="mx-auto max-w-md text-center glass rounded-3xl border border-white/8 px-6 py-12">
+                  <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-cyan-500/10 border border-cyan-500/20">
+                    <Compass size={22} className="text-cyan-300" />
+                  </div>
+                  <h3
+                    className="text-lg font-semibold text-white mb-1"
+                    style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
+                  >
+                    No routes for "{activeTag}" yet
+                  </h3>
+                  <p className="text-slate-500 text-sm mb-5">
+                    We're still curating this category. Try another vibe in the meantime.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTag('All')}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-teal-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-cyan-500/30 hover:-translate-y-0.5 transition-all"
+                  >
+                    Show all routes
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
               </div>
             )}
           </>

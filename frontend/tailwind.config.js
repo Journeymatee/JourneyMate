@@ -11,6 +11,8 @@ export default {
       lg:   '1024px',   // small laptops / iPad Pro
       xl:   '1280px',   // desktops
       '2xl':'1536px',   // wide screens
+      '3xl':'1920px',   // 1080p / 2K monitors & smart-TVs
+      '4xl':'2560px',   // 4K / ultra-wide displays
     },
     extend: {
       fontFamily: {
