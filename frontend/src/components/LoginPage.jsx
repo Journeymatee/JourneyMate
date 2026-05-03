@@ -37,13 +37,27 @@ function quickEmailCheck(value) {
 }
 
 /* ── Load Google Identity Services script once ─────────────── */
+// Module-level flag — survives React StrictMode's intentional dev
+// double-mount so we don't trigger the noisy
+// "google.accounts.id.initialize() is called multiple times" warning.
+let gisInitialized = false
+
 function loadGIS() {
   return new Promise((resolve) => {
     if (window.google?.accounts?.id) { resolve(); return }
+    // Reuse an existing tag if another component already requested GIS.
+    const existing = document.querySelector('script[data-jm-gis="1"]')
+    if (existing) {
+      existing.addEventListener('load', resolve, { once: true })
+      // If it already loaded before we got here, GIS will be on window.
+      if (window.google?.accounts?.id) resolve()
+      return
+    }
     const script = document.createElement('script')
     script.src = 'https://accounts.google.com/gsi/client'
     script.async = true
     script.defer = true
+    script.dataset.jmGis = '1'
     script.onload = resolve
     document.head.appendChild(script)
   })
@@ -67,36 +81,10 @@ export default function LoginPage() {
   const [resetMsg, setResetMsg] = useState('')
   const [resetting, setResetting] = useState(false)
 
-  /* Initialise Google GIS button */
-  useEffect(() => {
-    if (!GOOGLE_CONFIGURED) return
-    loadGIS().then(() => {
-      if (!window.google?.accounts?.id) return
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback:  handleGoogleCredential,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      })
-      setGoogleReady(true)
-    })
-  }, [])
-
-  /* Render the official Google button after GIS is ready */
-  useEffect(() => {
-    if (!googleReady) return
-    const el = document.getElementById('google-signin-btn')
-    if (!el) return
-    window.google.accounts.id.renderButton(el, {
-      theme: 'filled_black',
-      size: 'large',
-      width: el.offsetWidth || 360,
-      text: 'continue_with',
-      shape: 'rectangular',
-      logo_alignment: 'left',
-    })
-  }, [googleReady, mode])
-
+  // Defined BEFORE the useEffect that depends on it — `const`s in a
+  // component body live in the temporal dead zone until their declaration,
+  // so referencing this in the effect's dependency array above its own
+  // declaration would throw "Cannot access … before initialization".
   const handleGoogleCredential = useCallback(async ({ credential }) => {
     setError('')
     setSubmitting(true)
@@ -115,6 +103,58 @@ export default function LoginPage() {
     }
   }, [loginWithGoogle])
 
+  /* Initialise Google GIS button — guarded against React StrictMode's
+     double-mount (which would otherwise log
+     "google.accounts.id.initialize() is called multiple times"). The
+     module-level `gisInitialized` flag survives the dev re-mount. */
+  useEffect(() => {
+    if (!GOOGLE_CONFIGURED) return
+    let cancelled = false
+    loadGIS().then(() => {
+      if (cancelled || !window.google?.accounts?.id) return
+      if (!gisInitialized) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback:  handleGoogleCredential,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          })
+          gisInitialized = true
+        } catch (e) {
+          // Origin not authorised, network blocked, etc. — fall back to
+          // email/password silently instead of crashing the login page.
+          // eslint-disable-next-line no-console
+          console.warn('[Google Sign-In] init failed; using email/password only:', e?.message || e)
+          return
+        }
+      }
+      setGoogleReady(true)
+    })
+    return () => { cancelled = true }
+  }, [handleGoogleCredential])
+
+  /* Render the official Google button after GIS is ready */
+  useEffect(() => {
+    if (!googleReady) return
+    const el = document.getElementById('google-signin-btn')
+    if (!el) return
+    try {
+      window.google.accounts.id.renderButton(el, {
+        theme: 'filled_black',
+        size: 'large',
+        width: el.offsetWidth || 360,
+        text: 'continue_with',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+      })
+    } catch {
+      // Origin-not-allowed throws a 403 here — hide the broken button so
+      // the user falls back to email/password without a confusing error.
+      el.style.display = 'none'
+    }
+  }, [googleReady, mode])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -132,15 +172,27 @@ export default function LoginPage() {
         await register({ email: email.trim().toLowerCase(), password, name: name.trim() || 'Traveler' })
       }
     } catch (err) {
-      const api = err.response?.data?.error
-      let msg =
-        (api && typeof api === 'object' && api.message) ||
-        (typeof api === 'string' && api) ||
-        err.message ||
-        'Something went wrong. Is the API running?'
-      const details = api?.details
-      if (Array.isArray(details) && details.length) {
-        msg += ' — ' + details.map((d) => `${d.field}: ${d.msg}`).join(', ')
+      // Friendly messages for the two most-common mobile failures: cold-start
+      // timeouts and offline / dropped connections. Generic API errors still
+      // fall through to whatever the backend sent.
+      const isTimeout = err.code === 'ECONNABORTED' || /timeout/i.test(err.message || '')
+      const isNetwork = err.code === 'ERR_NETWORK' || (!err.response && !isTimeout)
+      let msg
+      if (isTimeout) {
+        msg = 'The server is taking too long to respond — it may be waking up. Please wait a moment and try again.'
+      } else if (isNetwork) {
+        msg = 'Network error. Please check your connection and try again.'
+      } else {
+        const api = err.response?.data?.error
+        msg =
+          (api && typeof api === 'object' && api.message) ||
+          (typeof api === 'string' && api) ||
+          err.message ||
+          'Something went wrong. Please try again.'
+        const details = api?.details
+        if (Array.isArray(details) && details.length) {
+          msg += ' — ' + details.map((d) => `${d.field}: ${d.msg}`).join(', ')
+        }
       }
       setError(String(msg))
     } finally {

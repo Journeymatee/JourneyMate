@@ -40,6 +40,74 @@ function clearHomeState() {
     /* ignore */
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  Stale-while-revalidate trip cache (per-route)                      */
+/* ------------------------------------------------------------------ */
+/**
+ * Persists every successful /trips/search response in localStorage keyed by
+ * route + days. On the next search of the same route the comparison page
+ * appears INSTANTLY from cache; the network request still fires in the
+ * background and silently overwrites the cached payload + on-screen data
+ * once it returns.
+ *
+ *   • TTL is intentionally generous (24 h). Prices / weather move slowly
+ *     enough that a 1-day-old number is fine for the first paint, and the
+ *     background refresh corrects it within seconds.
+ *   • We cap the entry count at 24 (LRU on access time) so the per-origin
+ *     localStorage quota (~5 MB) stays comfortable.
+ */
+const TRIP_CACHE_KEY = 'jm:trip-cache-v1'
+const TRIP_CACHE_TTL_MS = 24 * 60 * 60 * 1000
+const TRIP_CACHE_MAX = 24
+
+function tripCacheKey(from, to, days) {
+  const norm = (s) => String(s || '').trim().toLowerCase()
+  return `${norm(from)}__${norm(to)}|d=${Math.min(5, Math.max(1, Number(days) || 5))}`
+}
+
+function readTripCache() {
+  try {
+    if (typeof localStorage === 'undefined') return {}
+    const raw = localStorage.getItem(TRIP_CACHE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeTripCache(map) {
+  try {
+    if (typeof localStorage === 'undefined') return
+    localStorage.setItem(TRIP_CACHE_KEY, JSON.stringify(map))
+  } catch {
+    /* quota full / private mode — ignore */
+  }
+}
+
+function getCachedTrip(from, to, days) {
+  const map = readTripCache()
+  const hit = map[tripCacheKey(from, to, days)]
+  if (!hit) return null
+  if (Date.now() - hit.at > TRIP_CACHE_TTL_MS) return null
+  return hit.data || null
+}
+
+function setCachedTrip(from, to, days, data) {
+  const map = readTripCache()
+  map[tripCacheKey(from, to, days)] = { at: Date.now(), data }
+  // LRU trim: drop the oldest entries if we exceed the cap.
+  const keys = Object.keys(map)
+  if (keys.length > TRIP_CACHE_MAX) {
+    keys
+      .sort((a, b) => (map[a].at || 0) - (map[b].at || 0))
+      .slice(0, keys.length - TRIP_CACHE_MAX)
+      .forEach((k) => { delete map[k] })
+  }
+  writeTripCache(map)
+}
 import Navbar from './components/Navbar'
 import HeroSearch from './components/HeroSearch'
 import ComparisonPage from './components/ComparisonPage'
@@ -139,7 +207,18 @@ function HomePage() {
     setVibes(nextVibes)
     setSearchParams({ from, to, days })
     setSearchError('')
-    setView('loading')
+
+    // ── Stale-while-revalidate: paint the Compare page INSTANTLY if we've
+    //    seen this route before. The full network request still fires in
+    //    the background and silently swaps in fresh data when it lands.
+    const cached = getCachedTrip(from, to, days)
+    const haveCached = Boolean(cached)
+    if (haveCached) {
+      setTripData(cached)
+      setView('comparison')
+    } else {
+      setView('loading')
+    }
 
     // Cancel any previous in-flight request before kicking off a new one.
     if (searchAbortRef.current) searchAbortRef.current.abort()
@@ -156,6 +235,7 @@ function HomePage() {
       if (controller.signal.aborted) return
       setTripData(data)
       setView('comparison')
+      setCachedTrip(from, to, days, data)
     } catch (error) {
       if (controller.signal.aborted) return
       // eslint-disable-next-line no-console
@@ -164,6 +244,11 @@ function HomePage() {
         logout()
         return
       }
+      // If we already painted from cache, the user keeps seeing the cached
+      // result — don't yank them back to home or pop a scary error toast.
+      // Just log to console; the next successful search will refresh.
+      if (haveCached) return
+
       const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout')
       const isNetwork = error.code === 'ERR_NETWORK' || (!error.response && !isTimeout)
       let msg
@@ -206,16 +291,28 @@ function HomePage() {
       }
       setRefreshingDays(true)
       setSearchError('')
+
+      // Stale-while-revalidate for day changes too — paint instantly if we
+      // have a recent cached snapshot of this route+days, and let the
+      // network refresh it in the background.
+      const cached = getCachedTrip(from, to, n)
+      if (cached) {
+        setSearchParams((s) => ({ ...s, from, to, days: n }))
+        setTripData(cached)
+      }
+
       try {
         setSearchParams((s) => ({ ...s, from, to, days: n }))
         const data = await searchTrip(from, to, { days: n, tripType, vibes })
         setTripData(data)
+        setCachedTrip(from, to, n, data)
       } catch (error) {
         console.error('Refetch failed:', error)
         if (error.response?.status === 401) {
           logout()
           return
         }
+        if (cached) return // keep cached UI, swallow the error
         setSearchError(tripErrorMessage(error) || 'Could not update trip length')
       } finally {
         setRefreshingDays(false)
@@ -427,6 +524,11 @@ function AppShell() {
         <Route path="/admin" element={<AdminAgent />} />
         <Route path="/saved" element={<SavedTrips />} />
         <Route path="/shared/:token" element={<SharedTrip />} />
+        {/* If a logged-in user lands on /login (e.g. clicked an old link),
+            send them home instead of showing a blank "no route" screen. */}
+        <Route path="/login" element={<Navigate to="/" replace />} />
+        {/* Catch-all — anything unknown also goes home. */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <AssistantWidget />
     </div>
@@ -461,10 +563,13 @@ export default function App() {
     )
   }
 
+  // Logged-in users see the full app; logged-out users land on the
+  // PublicShell which renders LoginPage for any route except public
+  // share links (/shared/:token).
   return (
     <BrowserRouter>
       <ShareExperienceProvider>
-        <AppShell />
+        {user ? <AppShell /> : <PublicShell />}
       </ShareExperienceProvider>
     </BrowserRouter>
   )
