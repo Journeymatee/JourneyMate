@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Loader2, AlertCircle, Compass, Sparkles, Bookmark } from 'lucide-react'
 import ComparisonPage from '../components/ComparisonPage'
+import TripCollabPanel from '../components/TripCollabPanel'
 import { getSharedTrip } from '../services/savedTripsService'
 import { useAuth } from '../context/AuthContext'
 
@@ -141,6 +142,8 @@ export default function SharedTrip() {
         tripType={payload.tripType || null}
         vibes={Array.isArray(payload.vibes) ? payload.vibes : []}
       />
+
+      <TripCollabPanel token={token} name={item.name || 'this trip'} />
     </div>
   )
 }

@@ -52,3 +52,33 @@ export function shareUrl(token) {
   if (typeof window === 'undefined' || !token) return ''
   return `${window.location.origin}/shared/${encodeURIComponent(token)}`
 }
+
+/* ───────────────── Collaboration: comments + votes ───────────────── */
+
+function tokenPath(token) {
+  return `/saved-trips/share/${encodeURIComponent(String(token || '').trim())}`
+}
+
+export function listComments(token) {
+  return unwrap(api.get(`${tokenPath(token)}/comments`)).then((d) => d?.items || [])
+}
+
+export function postComment(token, body) {
+  return unwrap(api.post(`${tokenPath(token)}/comments`, { body })).then((d) => d?.item || null)
+}
+
+export function deleteComment(token, id) {
+  return api.delete(`${tokenPath(token)}/comments/${id}`).then(() => true)
+}
+
+export function getVotes(token) {
+  return unwrap(api.get(`${tokenPath(token)}/votes`)).then((d) => d?.summary || { silver: 0, gold: 0, total: 0, mine: null })
+}
+
+export function castVote(token, choice) {
+  return unwrap(api.post(`${tokenPath(token)}/vote`, { choice })).then((d) => d?.summary || null)
+}
+
+export function clearVote(token) {
+  return api.delete(`${tokenPath(token)}/vote`).then((r) => r?.data?.summary || null)
+}
