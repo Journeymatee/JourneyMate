@@ -14,6 +14,8 @@ import {
   Loader2,
   AlertCircle,
   Compass,
+  Heart,
+  Layers,
 } from 'lucide-react'
 import {
   listSavedTrips,
@@ -23,6 +25,8 @@ import {
 } from '../services/savedTripsService'
 import { findTripType } from '../data/tripVibes'
 import { getStatePhoto, onPhotoError } from '../utils/getStatePhoto'
+import PageHero from '../components/PageHero'
+import SectionHeader from '../components/SectionHeader'
 
 /**
  * "Saved trips & wishlist" page — list of every trip the user has bookmarked.
@@ -95,28 +99,53 @@ export default function SavedTrips() {
 
   const totalSaved = items.length
 
-  return (
-    <div className="min-h-[100dvh] page-bg-blue pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 sm:px-6">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-10 sm:mb-14">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-emerald-500/30 mb-5">
-            <Bookmark size={14} className="text-emerald-300" />
-            <span className="text-xs sm:text-sm text-slate-300 font-medium uppercase tracking-widest">Wishlist</span>
-          </div>
-          <h1 className="font-display font-bold text-4xl sm:text-5xl text-white mb-4 leading-tight">
-            Your <span className="shimmer-blue">saved trips</span>
-          </h1>
-          <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
-            Every plan you've bookmarked lives here. Pick up where you left off, share a private link with whoever you're travelling with, or kick off a fresh comparison.
-          </p>
-          {totalSaved > 0 && (
-            <p className="text-slate-500 text-xs sm:text-sm mt-3">
-              {totalSaved} trip{totalSaved === 1 ? '' : 's'} saved
-            </p>
-          )}
-        </div>
+  // Aggregate stats shown in the hero — gives the page a sense of personal scale.
+  const stats = useMemo(() => {
+    if (!items.length) return null
+    const cities = new Set()
+    let totalDays = 0
+    items.forEach((it) => {
+      if (it.origin) cities.add(it.origin)
+      if (it.destination) cities.add(it.destination)
+      totalDays += Number(it.days) || 0
+    })
+    return { cities: cities.size, totalDays }
+  }, [items])
 
+  return (
+    <div className="min-h-[100dvh] page-bg-blue">
+      <PageHero
+        image="/photos/hero-prayer-flags.png"
+        imagePos="center 35%"
+        accent="emerald"
+        size="compact"
+        eyebrow="Your private wishlist"
+        eyebrowIcon={<Bookmark size={14} className="text-emerald-300" />}
+        title="Saved"
+        highlight="Trips"
+        subtitle="Every plan you've bookmarked lives here. Pick up where you left off, share a private link, or run a fresh comparison."
+      >
+        {stats && (
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 text-[11px] font-semibold text-emerald-200">
+              <Heart size={12} className="text-emerald-300" />
+              {totalSaved} saved
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 text-[11px] font-semibold text-cyan-200">
+              <MapPin size={12} className="text-cyan-300" />
+              {stats.cities} unique places
+            </span>
+            {stats.totalDays > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 text-[11px] font-semibold text-amber-200">
+                <Calendar size={12} className="text-amber-300" />
+                {stats.totalDays} day-trips planned
+              </span>
+            )}
+          </div>
+        )}
+      </PageHero>
+
+      <div className="max-w-5xl 2xl:max-w-6xl 3xl:max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 3xl:px-12 pb-16 sm:pb-20 pt-8 sm:pt-10">
         {/* Error banner */}
         {error && !loading && (
           <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100 flex items-start gap-2">
@@ -131,17 +160,39 @@ export default function SavedTrips() {
         ) : items.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-            {items.map((item) => (
-              <SavedTripCard
-                key={item.id}
-                item={item}
-                onDelete={handleDelete}
-                onRename={handleRename}
-                onResearch={handleResearch}
-              />
-            ))}
-          </div>
+          <>
+            <SectionHeader
+              icon={<Layers size={16} strokeWidth={2.4} />}
+              accent="emerald"
+              eyebrow="Your collection"
+              title="Trips you've saved"
+              subtitle="Tap any card to open the read-only plan, copy a private share link, or rename it for yourself."
+              badge={
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-200">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                  {totalSaved} trip{totalSaved === 1 ? '' : 's'}
+                </span>
+              }
+              divider
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
+              {items.map((item, idx) => (
+                <div
+                  key={item.id}
+                  className="animate-slide-up"
+                  style={{ animationDelay: `${Math.min(idx, 8) * 40}ms` }}
+                >
+                  <SavedTripCard
+                    item={item}
+                    onDelete={handleDelete}
+                    onRename={handleRename}
+                    onResearch={handleResearch}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -214,30 +265,42 @@ function SavedTripCard({ item, onDelete, onRename, onResearch }) {
   const created = formatDate(item.createdAt)
 
   return (
-    <article className="glass rounded-3xl border border-white/10 overflow-hidden flex flex-col hover:border-white/20 transition-colors">
+    <article className="group glass rounded-3xl border border-white/10 overflow-hidden flex flex-col hover:border-emerald-400/30 hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-300 relative">
       {/* Hero strip */}
-      <div className="relative h-32 sm:h-36 overflow-hidden bg-slate-900">
+      <div className="relative h-36 sm:h-40 overflow-hidden bg-slate-900">
         {photo?.file && (
           <img
             src={photo.file}
             alt={photo.spot ? `${photo.spot} — ${photo.name}` : item.destination}
             onError={onPhotoError}
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-[1.04]"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
             loading="lazy"
             decoding="async"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/40 to-transparent" />
-        <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-emerald-200 px-2 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30">
-          <BookmarkCheck size={12} />
-          Saved
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-slate-950/10" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
+
+        {/* Top-row chips */}
+        <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-200 px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 backdrop-blur-md">
+            <BookmarkCheck size={11} />
+            Saved
+          </span>
+          {photo?.spot && (
+            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-semibold tracking-wider text-white/80 px-2 py-1 rounded-full bg-slate-950/60 border border-white/10 backdrop-blur-md truncate max-w-[55%]">
+              {photo.spot}
+            </span>
+          )}
         </div>
+
+        {/* Origin → Destination */}
         <div className="absolute bottom-3 left-3 right-3 text-white">
-          <div className="flex items-baseline gap-1.5 text-sm font-semibold flex-wrap">
-            <MapPin size={14} className="text-green-300" />
+          <div className="flex items-baseline gap-1.5 text-sm sm:text-base font-bold flex-wrap drop-shadow-[0_1px_8px_rgba(0,0,0,0.6)]">
+            <MapPin size={13} className="text-green-300 shrink-0" />
             <span className="truncate max-w-[40%]">{item.origin}</span>
-            <span className="text-slate-300">→</span>
-            <MapPin size={14} className="text-amber-300" />
+            <span className="text-emerald-300/80">→</span>
+            <MapPin size={13} className="text-amber-300 shrink-0" />
             <span className="truncate max-w-[40%]">{item.destination}</span>
           </div>
         </div>
@@ -387,20 +450,34 @@ function formatDate(iso) {
 
 function EmptyState() {
   return (
-    <div className="glass rounded-3xl border border-white/10 p-8 sm:p-12 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-5">
-        <Bookmark size={26} className="text-emerald-300" />
+    <div className="relative glass rounded-3xl border border-white/10 p-8 sm:p-14 text-center overflow-hidden">
+      {/* Decorative background glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full opacity-50 blur-3xl"
+        style={{ background: 'radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%)' }}
+      />
+      <div className="relative">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/30 flex items-center justify-center mx-auto mb-5 ring-1 ring-white/15">
+          <Bookmark size={26} className="text-white" />
+        </div>
+        <h2
+          className="font-bold text-xl sm:text-2xl text-white mb-2 tracking-tight"
+          style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
+        >
+          No saved trips yet
+        </h2>
+        <p className="text-slate-400 text-sm sm:text-base max-w-md mx-auto mb-6 leading-relaxed">
+          Compare a route, then hit <span className="text-emerald-300 font-semibold">"Save trip"</span> on any plan you like — it'll live here so you can come back to it or share with whoever is travelling with you.
+        </p>
+        <Link
+          to="/"
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-sm font-bold shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-0.5"
+        >
+          <Compass size={15} />
+          Start a comparison
+        </Link>
       </div>
-      <h2 className="font-display font-bold text-xl sm:text-2xl text-white mb-2">No saved trips yet</h2>
-      <p className="text-slate-400 text-sm sm:text-base max-w-md mx-auto mb-6">
-        Compare a route, then hit "Save trip" on any plan you like — it'll live here so you can come back to it or share with whoever is travelling with you.
-      </p>
-      <Link
-        to="/"
-        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition-colors"
-      >
-        Start a comparison
-      </Link>
     </div>
   )
 }

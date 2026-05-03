@@ -25,7 +25,7 @@ const SOCIAL = [
 export default function Footer() {
   return (
     <footer className="border-t border-white/8 bg-slate-950/40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <div className="max-w-7xl 3xl:max-w-[1680px] 4xl:max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 3xl:px-12">
 
         {/* Main grid */}
         <div className="py-10 sm:py-14 lg:py-16 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-12">

@@ -36,6 +36,9 @@ export const API_BASE_URL = BASE_URL
 const api = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
+  // Fail fast (15s) instead of hanging forever when the backend is unreachable.
+  // Long LLM/streaming endpoints opt-out by passing their own `timeout` per request.
+  timeout: 15000,
 })
 
 api.interceptors.request.use((config) => {

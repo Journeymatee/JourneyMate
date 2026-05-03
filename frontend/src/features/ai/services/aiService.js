@@ -1,7 +1,9 @@
 import api, { API_BASE_URL } from '../../../api/client'
 
 export async function chatWithAi(message, history = []) {
-  const { data } = await api.post('/ai/chat', { message, history })
+  // Backend AI_TIMEOUT_MS defaults to 20s — give the client a touch more so the
+  // server's own timeout is what surfaces on slow LLMs, not the axios global 15s.
+  const { data } = await api.post('/ai/chat', { message, history }, { timeout: 25000 })
   return data
 }
 

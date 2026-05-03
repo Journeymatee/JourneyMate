@@ -17,17 +17,22 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ThemeToggle from './ThemeToggle'
 
-const BASE_NAV_LINKS = [
+// Order shown to logged-out users: How it Works → Popular Routes → Blog → About.
+// Logged-in users see "Saved" inserted just before "About" so the user-only link
+// sits next to the personal "About" link, keeping the public-first → personal
+// reading flow on the right side of the bar.
+const PUBLIC_NAV_LINKS = [
   { to: '/how-it-works', label: 'How it Works' },
   { to: '/popular-routes', label: 'Popular Routes' },
   { to: '/blog', label: 'Blog' },
-  { to: '/about', label: 'About' },
 ]
 const SAVED_LINK = { to: '/saved', label: 'Saved' }
+const ABOUT_LINK = { to: '/about', label: 'About' }
 const ADMIN_LINK = { to: '/admin', label: 'Admin', adminOnly: true }
 
 // Drawer sections (mobile only) — icon, description and a tinted gradient
-// per item give the menu real visual hierarchy.
+// per item give the menu real visual hierarchy. Order matches the desktop
+// header so users see the same mental model on every screen size.
 const DISCOVER_LINKS = [
   {
     to: '/how-it-works',
@@ -50,14 +55,23 @@ const DISCOVER_LINKS = [
     Icon: BookOpen,
     tint: 'from-amber-500/25 to-orange-500/15 text-amber-300 ring-amber-400/30',
   },
-  {
-    to: '/about',
-    label: 'About',
-    desc: 'The team behind JourneyMate',
-    Icon: Info,
-    tint: 'from-indigo-500/25 to-blue-500/15 text-indigo-300 ring-indigo-400/30',
-  },
 ]
+
+const ABOUT_DRAWER_ITEM = {
+  to: '/about',
+  label: 'About',
+  desc: 'The team behind JourneyMate',
+  Icon: Info,
+  tint: 'from-indigo-500/25 to-blue-500/15 text-indigo-300 ring-indigo-400/30',
+}
+
+const SAVED_DRAWER_ITEM = {
+  to: '/saved',
+  label: 'Saved trips',
+  desc: 'Your private wishlist',
+  Icon: Sparkles,
+  tint: 'from-emerald-500/25 to-teal-500/15 text-emerald-300 ring-emerald-400/30',
+}
 
 const MORE_LINKS = [
   {
@@ -82,9 +96,14 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
+  // Final link order:
+  //   How it Works → Popular Routes → Blog → (Saved)? → About → (Admin)?
+  // i.e. About is intentionally *after* the user-only "Saved" link so the bar
+  // reads "public pages → personal pages → about/credits" left-to-right.
   const navLinks = useMemo(() => {
-    const links = [...BASE_NAV_LINKS]
+    const links = [...PUBLIC_NAV_LINKS]
     if (user) links.push(SAVED_LINK)
+    links.push(ABOUT_LINK)
     if (user?.isAdmin) links.push(ADMIN_LINK)
     return links
   }, [user?.id, user?.isAdmin])
@@ -106,9 +125,10 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Close mobile menu on resize to desktop.
+  // Close mobile menu when the viewport widens past the `lg` breakpoint
+  // (1024px) — at that size the inline nav rail takes over.
   useEffect(() => {
-    const onResize = () => { if (window.innerWidth >= 768) setMenuOpen(false) }
+    const onResize = () => { if (window.innerWidth >= 1024) setMenuOpen(false) }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
@@ -137,39 +157,39 @@ export default function Navbar() {
           : 'py-4 sm:py-5'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4">
+      <div className="max-w-7xl 3xl:max-w-[1680px] 4xl:max-w-[2000px] mx-auto px-3 sm:px-6 3xl:px-10 flex items-center justify-between gap-2 sm:gap-4">
 
         {/* Logo */}
         <Link
           to="/"
-          className="flex items-center gap-2.5 shrink-0 group"
+          className="flex items-center gap-2.5 shrink-0 group min-w-0"
           onClick={() => setMenuOpen(false)}
         >
-          <div className="relative">
+          <div className="relative shrink-0">
             <img
               src="/logo.svg"
               alt="JourneyMate"
-              className="w-9 h-9 rounded-xl shadow-lg shadow-green-500/20 group-hover:scale-105 transition-transform duration-200"
+              className="w-8 h-8 sm:w-9 sm:h-9 3xl:w-10 3xl:h-10 rounded-xl shadow-lg shadow-green-500/20 group-hover:scale-105 transition-transform duration-200"
             />
             {/* Glow ring on hover */}
             <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-green-500/0 to-amber-500/0 group-hover:from-green-500/20 group-hover:to-amber-500/20 transition-all duration-300" />
           </div>
-          <div>
-            <span className="font-display font-bold text-base sm:text-lg tracking-tight text-white block leading-tight">
+          <div className="min-w-0">
+            <span className="font-display font-bold text-sm 2xs:text-base sm:text-lg 3xl:text-xl tracking-tight text-white block leading-tight truncate">
               JourneyMate
             </span>
-            <span className="text-[10px] text-slate-500 leading-none hidden sm:block">Smart Travel Comparison</span>
+            <span className="text-[10px] 3xl:text-[11px] text-slate-500 leading-none hidden sm:block">Smart Travel Comparison</span>
           </div>
         </Link>
 
-        {/* Desktop nav links */}
-        <div className="hidden md:flex items-center gap-1">
+        {/* Desktop nav links — show from `lg` so 5–6 links never overflow on tablets */}
+        <div className="hidden lg:flex items-center gap-1 3xl:gap-2 min-w-0">
           {navLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
               className={({ isActive }) =>
-                `px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap inline-flex items-center gap-1.5 ${
+                `px-3 xl:px-4 py-2 rounded-xl text-sm 3xl:text-base font-medium transition-all duration-200 whitespace-nowrap inline-flex items-center gap-1.5 ${
                   link.adminOnly
                     ? isActive
                       ? 'text-white bg-gradient-to-r from-violet-500/20 to-cyan-500/15 border border-violet-500/30'
@@ -187,9 +207,9 @@ export default function Navbar() {
         </div>
 
         {/* Right actions */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 shrink-0">
           {user && (
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/8">
+            <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/8">
               <div className="w-6 h-6 rounded-full bg-gradient-to-br from-green-500 to-amber-500 flex items-center justify-center text-white text-[10px] font-bold">
                 {(user.name || user.email || 'T')[0].toUpperCase()}
               </div>
@@ -199,23 +219,23 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* Theme toggle (desktop) */}
+          {/* Theme toggle — visible from `sm` upward */}
           <ThemeToggle className="hidden sm:flex" />
 
           <button
             type="button"
             onClick={() => { logout(); setMenuOpen(false) }}
-            className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl bg-white/6 hover:bg-red-500/15 border border-white/10 hover:border-red-500/30 text-slate-300 hover:text-red-400 transition-all duration-200"
+            className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-3 lg:px-4 py-2 rounded-xl bg-white/6 hover:bg-red-500/15 border border-white/10 hover:border-red-500/30 text-slate-300 hover:text-red-400 transition-all duration-200"
             title="Log out"
           >
             <LogOut size={15} />
-            <span className="hidden md:inline text-xs">Log out</span>
+            <span className="hidden lg:inline text-xs">Log out</span>
           </button>
 
-          {/* Hamburger */}
+          {/* Hamburger — used on phones AND tablets (anything below `lg`) */}
           <button
             type="button"
-            className="md:hidden w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+            className="lg:hidden w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-expanded={menuOpen}
             aria-label="Toggle menu"
@@ -227,9 +247,10 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile drawer — backdrop + slide-in panel */}
+      {/* Mobile + tablet drawer — backdrop + slide-in panel.
+          Hidden from `lg` upward where the inline nav takes over. */}
       <div
-        className={`md:hidden fixed inset-0 z-[60] transition-opacity duration-300 ${
+        className={`lg:hidden fixed inset-0 z-[60] transition-opacity duration-300 ${
           menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         aria-hidden={!menuOpen}
@@ -303,11 +324,13 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* Discover */}
+            {/* Discover — order mirrors the desktop header exactly */}
             <DrawerSection title="Discover">
               {DISCOVER_LINKS.map((item) => (
                 <DrawerItem key={item.to || item.label} item={item} />
               ))}
+              {user && <DrawerItem item={SAVED_DRAWER_ITEM} />}
+              <DrawerItem item={ABOUT_DRAWER_ITEM} />
             </DrawerSection>
 
             {/* More */}

@@ -31,4 +31,20 @@ router.get('/preferences', requireAuth, controller.preferences)
 
 router.get('/popular', controller.popular)
 
+router.get(
+  '/music',
+  query('place').isString().trim().isLength({ min: 2, max: 80 }).withMessage('place required'),
+  query('tripType').optional().isString().trim().isLength({ max: 24 }),
+  query('vibe').optional().isString().trim().isLength({ max: 48 }),
+  validate,
+  controller.music
+)
+
+router.get(
+  '/shopping',
+  query('place').isString().trim().isLength({ min: 2, max: 80 }).withMessage('place required'),
+  validate,
+  controller.shopping
+)
+
 module.exports = router

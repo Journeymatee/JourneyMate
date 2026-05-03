@@ -42,8 +42,15 @@ export const searchTrip = async (from, to, options = {}) => {
   return data
 }
 
-/** Returns the logged-in user's last picker selection or null. */
+/**
+ * Returns the logged-in user's last picker selection or null.
+ * Skips the request entirely when there's no auth token — avoids a noisy 401
+ * in DevTools for guests while still working transparently for logged-in users.
+ */
 export const getTripPreferences = async () => {
+  if (typeof window !== 'undefined' && !window.localStorage?.getItem('jm_token')) {
+    return null
+  }
   try {
     const { data } = await api.get('/trips/preferences')
     return data?.preferences || null

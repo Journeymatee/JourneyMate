@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import api, { API_BASE_URL } from '../api/client'
 import PageHero from '../components/PageHero'
+import SectionHeader from '../components/SectionHeader'
 import BlogExperienceCard from '../components/BlogExperienceCard'
 import { useAuth } from '../context/AuthContext'
 import { useExperienceClientId } from '../hooks/useExperienceClientId'
@@ -177,7 +178,7 @@ export default function Blog() {
         subtitle="Real insights, honest comparisons and practical tips from travellers who have actually been there."
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20 pt-2 sm:pt-4">
+      <div className="max-w-7xl 3xl:max-w-[1680px] 4xl:max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 3xl:px-12 pb-16 sm:pb-20 pt-6 sm:pt-8">
 
         {error && (
           <div className="max-w-2xl mx-auto mb-8 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100 text-center">
@@ -188,10 +189,14 @@ export default function Blog() {
         {/* Featured posts */}
         {!loading && activeCategory === 'All' && featured.length > 0 && (
           <div className="mb-12 sm:mb-16">
-            <div className="flex items-center gap-3 mb-6">
-              <TrendingUp size={18} className="text-amber-400" />
-              <h2 className="font-display font-bold text-xl text-white">Featured</h2>
-            </div>
+            <SectionHeader
+              icon={<TrendingUp size={16} strokeWidth={2.4} />}
+              accent="amber"
+              eyebrow="Editor's picks"
+              title="Featured stories"
+              subtitle="Hand-picked deep-dives our team thinks every traveller should read first."
+              divider
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
               {featured.map((post) => (
                 <Link
@@ -234,30 +239,60 @@ export default function Blog() {
           </div>
         )}
 
-        {/* Category filter */}
-        <div className="flex flex-wrap gap-2 mb-8 sm:mb-10">
-          {loading ? (
-            <div className="h-9 w-64 rounded-full bg-white/5 border border-white/10 animate-pulse" />
-          ) : (
-            categories.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 border ${
-                  activeCategory === cat
-                    ? 'bg-gradient-to-r from-purple-500 to-violet-600 text-white border-transparent shadow-lg shadow-purple-500/20'
-                    : 'glass border-white/10 text-slate-400 hover:text-white hover:border-white/20'
-                }`}
-              >
-                {cat}
-              </button>
-            ))
-          )}
+        <SectionHeader
+          icon={<BookOpen size={16} strokeWidth={2.4} />}
+          accent="purple"
+          eyebrow="The full library"
+          title="All stories"
+          subtitle="Filter by what you're researching — comparisons, destinations, guides, lifestyle."
+          badge={
+            !loading && (
+              <span className="hidden xs:inline-flex items-center gap-1.5 rounded-full border border-purple-400/30 bg-purple-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-purple-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-purple-300 animate-pulse" />
+                {filtered.length} stor{filtered.length === 1 ? 'y' : 'ies'}
+              </span>
+            )
+          }
+          divider
+          className="!mb-4"
+        />
+
+        {/* Category filter — sticky pill rail */}
+        <div className="sticky top-16 sm:top-20 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 mb-8 sm:mb-10 backdrop-blur-md bg-slate-950/55 border-y border-white/5 py-3">
+          <div className="flex flex-wrap gap-2">
+            {loading ? (
+              <div className="h-8 w-64 rounded-full bg-white/5 border border-white/10 animate-pulse" />
+            ) : (
+              categories.map((cat) => {
+                const isActive = activeCategory === cat
+                const count = cat === 'All' ? posts.length : posts.filter((p) => p.category === cat).length
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setActiveCategory(cat)}
+                    aria-pressed={isActive}
+                    className={`px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all duration-200 border ${
+                      isActive
+                        ? 'bg-gradient-to-r from-purple-500 to-violet-600 text-white border-transparent shadow-lg shadow-purple-500/30 scale-[1.02]'
+                        : 'glass border-white/10 text-slate-300 hover:text-white hover:border-white/25 hover:bg-white/8'
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      {cat}
+                      <span className={`text-[10px] font-bold tabular-nums ${isActive ? 'opacity-90' : 'opacity-50'}`}>
+                        {count}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })
+            )}
+          </div>
         </div>
 
         {/* All posts grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 gap-4 sm:gap-5 lg:gap-6">
           {loading
             ? Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="glass rounded-3xl border border-white/8 overflow-hidden">
@@ -316,30 +351,24 @@ export default function Blog() {
 
         {/* From the community */}
         <section className="mt-16 sm:mt-20">
-          <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Users size={18} className="text-cyan-300" />
-                <span className="text-[11px] uppercase tracking-wider font-semibold text-cyan-300/90">
-                  From the community
-                </span>
-              </div>
-              <h2 className="font-display font-bold text-xl sm:text-2xl text-white">
-                Travel notes from real members
-              </h2>
-              <p className="text-sm text-slate-400 mt-1">
-                Like, react, and comment on any note below. Add your own to help the next traveller.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={openShareModal}
-              className="inline-flex items-center gap-1.5 rounded-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-bold px-4 py-2 transition-colors"
-            >
-              <Sparkles size={14} />
-              Share yours
-            </button>
-          </div>
+          <SectionHeader
+            icon={<Users size={16} strokeWidth={2.4} />}
+            accent="cyan"
+            eyebrow="From the community"
+            title="Travel notes from real members"
+            subtitle="Like, react, and comment on any note below. Add your own to help the next traveller."
+            badge={
+              <button
+                type="button"
+                onClick={openShareModal}
+                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 text-sm font-bold px-4 py-2 shadow-lg shadow-cyan-500/30 transition-all hover:-translate-y-0.5"
+              >
+                <Sparkles size={14} />
+                Share yours
+              </button>
+            }
+            divider
+          />
 
           {expLoading ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

@@ -28,6 +28,7 @@ import {
   Sparkles,
   Twitter,
 } from 'lucide-react'
+import SectionHeader from '../components/SectionHeader'
 
 /* ──────────────────────────────────────────────────────────────────
  *  Custom hooks
@@ -678,17 +679,16 @@ export default function AboutOwner() {
 
         {/* ── Story / Timeline ───────────────────────────────────── */}
         <section className="mb-20" aria-labelledby="about-journey">
-          <div className="flex items-center gap-3 mb-8">
-            <span className="grid place-items-center w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30">
-              <Calendar size={15} className="text-emerald-300" aria-hidden />
-            </span>
-            <h2
-              id="about-journey"
-              className="text-xl sm:text-2xl font-display font-bold text-white"
-            >
-              The journey so far
-            </h2>
-          </div>
+          <SectionHeader
+            id="about-journey"
+            icon={<Calendar size={16} strokeWidth={2.4} />}
+            accent="emerald"
+            eyebrow="My timeline"
+            title="The journey so far"
+            subtitle="From the lecture halls of NIT Agartala to shipping JourneyMate."
+            divider
+            className="!mb-8"
+          />
 
           <ol className="relative">
             <span
@@ -703,17 +703,15 @@ export default function AboutOwner() {
 
         {/* ── Why I built JourneyMate ────────────────────────────── */}
         <section className="mb-20" aria-labelledby="about-why">
-          <div className="flex items-center gap-3 mb-3">
-            <span className="grid place-items-center w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30">
-              <Lightbulb size={15} className="text-amber-300" aria-hidden />
-            </span>
-            <h2
-              id="about-why"
-              className="text-xl sm:text-2xl font-display font-bold text-white"
-            >
-              Why I built JourneyMate
-            </h2>
-          </div>
+          <SectionHeader
+            id="about-why"
+            icon={<Lightbulb size={16} strokeWidth={2.4} />}
+            accent="amber"
+            eyebrow="The motivation"
+            title="Why I built JourneyMate"
+            divider
+            className="!mb-3"
+          />
           <p className="text-sm sm:text-base text-slate-400 max-w-2xl mb-8 leading-relaxed">
             Four reasons this app exists — what nudged me from
             <span className="text-slate-200">{' '}&ldquo;someone should make this&rdquo;{' '}</span>
@@ -752,17 +750,16 @@ export default function AboutOwner() {
 
         {/* ── Connect ────────────────────────────────────────────── */}
         <section className="mb-12" aria-labelledby="about-connect">
-          <div className="flex items-center gap-3 mb-8">
-            <span className="grid place-items-center w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30">
-              <Send size={15} className="text-rose-300" aria-hidden />
-            </span>
-            <h2
-              id="about-connect"
-              className="text-xl sm:text-2xl font-display font-bold text-white"
-            >
-              Let&apos;s chat
-            </h2>
-          </div>
+          <SectionHeader
+            id="about-connect"
+            icon={<Send size={16} strokeWidth={2.4} />}
+            accent="rose"
+            eyebrow="Get in touch"
+            title="Let's chat"
+            subtitle="Pick the channel that suits you — I read every DM, comment, and email."
+            divider
+            className="!mb-8"
+          />
 
           <div className="grid sm:grid-cols-2 gap-3">
             {SOCIALS.map((s) => (
