@@ -18,6 +18,14 @@ function tripErrorMessage(err) {
  * `tripType` and `vibes` (comma-joined) feed the server-side vibe engine —
  * unknown values are normalised away on the backend so old/new clients are safe.
  * Cache-buster avoids proxy/CDN returning a stale response.
+ *
+ * Free-tier hosts (Render / Fly / Railway) put idle services to sleep, and the
+ * very first request after that takes 30–60 s to wake the dyno. We give the
+ * search a generous 60 s timeout AND auto-retry once on network/timeout/5xx
+ * errors so the user never sees a spurious failure on a cold boot.
+ *
+ * `signal` (AbortSignal) lets the UI cancel an in-flight request when the
+ * user navigates away or hits "Cancel" on the loader.
  */
 export const searchTrip = async (from, to, options = {}) => {
   let days = 5
@@ -35,11 +43,37 @@ export const searchTrip = async (from, to, options = {}) => {
   if (Array.isArray(options.vibes) && options.vibes.length > 0) {
     params.vibes = options.vibes.map((v) => String(v).trim().toLowerCase()).filter(Boolean).join(',')
   }
-  const { data } = await api.get('/trips/search', {
+
+  const requestConfig = {
     params,
     headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-  })
-  return data
+    timeout: 60000, // 60 s — covers Render free-tier cold starts (~30–55 s)
+    signal: options.signal,
+  }
+
+  const isRetriableError = (err) => {
+    if (!err) return false
+    if (err.code === 'ERR_CANCELED' || err.name === 'CanceledError') return false
+    if (err.code === 'ECONNABORTED') return true       // axios timeout
+    if (err.code === 'ERR_NETWORK') return true        // dropped TCP / offline
+    const status = err.response?.status
+    if (status == null) return true                    // pure network error
+    return status >= 500 && status < 600               // server-side hiccup
+  }
+
+  try {
+    const { data } = await api.get('/trips/search', requestConfig)
+    return data
+  } catch (firstError) {
+    if (!isRetriableError(firstError)) throw firstError
+    // Brief backoff so we don't hammer a still-warming server.
+    await new Promise((r) => setTimeout(r, 1500))
+    const { data } = await api.get('/trips/search', {
+      ...requestConfig,
+      params: { ...params, _t: String(Date.now()) },
+    })
+    return data
+  }
 }
 
 /**

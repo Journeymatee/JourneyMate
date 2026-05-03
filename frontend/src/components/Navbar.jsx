@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Menu,
   X,
@@ -137,14 +138,45 @@ export default function Navbar() {
   useEffect(() => { setMenuOpen(false) }, [location.pathname])
 
   // Lock background scroll while the drawer is open and close on Escape.
+  // We freeze the `body` in place using `position: fixed` so iOS Safari can't
+  // bounce-scroll the page underneath, and restore scroll position on close.
   useEffect(() => {
     if (!menuOpen) return undefined
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const scrollY = window.scrollY || window.pageYOffset || 0
+    const body = document.body
+    const html = document.documentElement
+    const prev = {
+      bodyPosition:    body.style.position,
+      bodyTop:         body.style.top,
+      bodyLeft:        body.style.left,
+      bodyRight:       body.style.right,
+      bodyWidth:       body.style.width,
+      bodyOverflow:    body.style.overflow,
+      htmlOverflow:    html.style.overflow,
+      htmlOverscroll:  html.style.overscrollBehavior,
+    }
+    body.style.position = 'fixed'
+    body.style.top = `-${scrollY}px`
+    body.style.left = '0'
+    body.style.right = '0'
+    body.style.width = '100%'
+    body.style.overflow = 'hidden'
+    html.style.overflow = 'hidden'
+    html.style.overscrollBehavior = 'contain'
+
     const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false) }
     window.addEventListener('keydown', onKey)
+
     return () => {
-      document.body.style.overflow = prev
+      body.style.position    = prev.bodyPosition
+      body.style.top         = prev.bodyTop
+      body.style.left        = prev.bodyLeft
+      body.style.right       = prev.bodyRight
+      body.style.width       = prev.bodyWidth
+      body.style.overflow    = prev.bodyOverflow
+      html.style.overflow    = prev.htmlOverflow
+      html.style.overscrollBehavior = prev.htmlOverscroll
+      window.scrollTo(0, scrollY)
       window.removeEventListener('keydown', onKey)
     }
   }, [menuOpen])
@@ -219,8 +251,8 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* Theme toggle — visible from `sm` upward */}
-          <ThemeToggle className="hidden sm:flex" />
+          {/* Theme toggle — desktop only (lg+) */}
+          <ThemeToggle className="hidden lg:flex" />
 
           <button
             type="button"
@@ -232,161 +264,190 @@ export default function Navbar() {
             <span className="hidden lg:inline text-xs">Log out</span>
           </button>
 
-          {/* Hamburger — used on phones AND tablets (anything below `lg`) */}
-          <button
-            type="button"
-            className="lg:hidden w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-expanded={menuOpen}
-            aria-label="Toggle menu"
-          >
-            <div className={`transition-transform duration-200 ${menuOpen ? 'rotate-90' : 'rotate-0'}`}>
-              {menuOpen ? <X size={20} /> : <Menu size={20} />}
-            </div>
-          </button>
+          {/* Theme toggle + Hamburger — side-by-side on mobile/tablet (<lg) */}
+          <div className="lg:hidden flex items-center gap-1.5">
+            <ThemeToggle />
+            <button
+              type="button"
+              className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-expanded={menuOpen}
+              aria-label="Toggle menu"
+            >
+              <div className={`transition-transform duration-200 ${menuOpen ? 'rotate-90' : 'rotate-0'}`}>
+                {menuOpen ? <X size={20} /> : <Menu size={20} />}
+              </div>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Mobile + tablet drawer — backdrop + slide-in panel.
-          Hidden from `lg` upward where the inline nav takes over. */}
-      <div
-        className={`lg:hidden fixed inset-0 z-[60] transition-opacity duration-300 ${
-          menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-        aria-hidden={!menuOpen}
-      >
-        {/* Dim backdrop */}
-        <button
-          type="button"
-          aria-label="Close menu"
-          onClick={() => setMenuOpen(false)}
-          className="absolute inset-0 bg-slate-950/70 backdrop-blur-md"
-        />
-
-        {/* Sliding panel */}
-        <aside
-          role="dialog"
-          aria-modal="true"
-          aria-label="Main menu"
-          className={`absolute top-0 right-0 h-full w-[88vw] max-w-[400px] bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 border-l border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.6)] flex flex-col transform transition-transform duration-300 ease-out ${
-            menuOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        >
-          {/* Ambient brand glow */}
-          <div className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full bg-emerald-500/10 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-amber-500/10 blur-3xl" />
-
-          {/* Header */}
-          <div className="relative flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/8">
-            <Link
-              to="/"
-              className="flex items-center gap-2.5"
-              onClick={() => setMenuOpen(false)}
-            >
-              <img src="/logo.svg" alt="" className="w-9 h-9 rounded-xl shadow-lg shadow-green-500/20" />
-              <div>
-                <div className="font-display font-bold text-white leading-tight">JourneyMate</div>
-                <div className="text-[10px] text-slate-500 leading-none mt-0.5">Smart Travel Comparison</div>
-              </div>
-            </Link>
-            <button
-              type="button"
-              onClick={() => setMenuOpen(false)}
-              className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all"
-              aria-label="Close menu"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* Scrollable body */}
-          <div className="relative flex-1 overflow-y-auto overscroll-contain px-4 py-5 space-y-6">
-            {/* Greeting card */}
-            {user && (
-              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 via-slate-900/40 to-amber-500/10 p-4">
-                <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-amber-500/20 blur-2xl" />
-                <div className="relative flex items-center gap-3">
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-amber-500 flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-emerald-500/30">
-                      {initial}
-                    </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-400 border-2 border-slate-950" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[11px] uppercase tracking-wider text-emerald-300/80 font-semibold flex items-center gap-1">
-                      <Sparkles size={11} />
-                      Welcome back
-                    </div>
-                    <div className="text-base font-bold text-white truncate">Hi, {firstName}</div>
-                    <div className="text-[11px] text-slate-400 truncate">{user.email}</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Discover — order mirrors the desktop header exactly */}
-            <DrawerSection title="Discover">
-              {DISCOVER_LINKS.map((item) => (
-                <DrawerItem key={item.to || item.label} item={item} />
-              ))}
-              {user && <DrawerItem item={SAVED_DRAWER_ITEM} />}
-              <DrawerItem item={ABOUT_DRAWER_ITEM} />
-            </DrawerSection>
-
-            {/* More */}
-            <DrawerSection title="More">
-              {MORE_LINKS.map((item) => (
-                <DrawerItem key={item.to || item.label} item={item} />
-              ))}
-
-              {user?.isAdmin && (
-                <DrawerItem
-                  item={{
-                    to: '/admin',
-                    label: 'Admin Console',
-                    desc: 'Backstage controls',
-                    Icon: ShieldCheck,
-                    tint: 'from-violet-500/25 to-fuchsia-500/15 text-violet-300 ring-violet-400/30',
-                  }}
-                />
-              )}
-            </DrawerSection>
-          </div>
-
-          {/* Footer */}
-          <div className="relative px-4 py-4 border-t border-white/8 bg-slate-950/50 backdrop-blur-md space-y-3">
-            {/* Theme picker (mobile drawer) */}
-            <div className="flex items-center justify-between gap-3 px-1">
-              <span className="text-[11px] uppercase tracking-[0.18em] text-slate-500 font-bold">Appearance</span>
-              <ThemeToggle variant="segment" />
-            </div>
-
-            {user ? (
-              <button
-                type="button"
-                onClick={() => { logout(); setMenuOpen(false) }}
-                className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-xl bg-white/5 hover:bg-rose-500/10 border border-white/10 hover:border-rose-500/30 text-slate-300 hover:text-rose-300 transition-all"
-              >
-                <LogOut size={15} />
-                Sign out
-              </button>
-            ) : (
-              <Link
-                to="/login"
-                onClick={() => setMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-amber-500 text-slate-950 hover:brightness-110 transition-all"
-              >
-                Sign in
-              </Link>
-            )}
-            <div className="text-center text-[10px] text-slate-600 tracking-wide">
-              v1.0 · Made with ♥ in India
-            </div>
-          </div>
-        </aside>
-      </div>
+      {/* Mobile + tablet drawer is rendered via a portal so no ancestor's
+          stacking/transform context can clip it. Hidden from `lg` upward. */}
+      <MobileDrawer
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        user={user}
+        logout={logout}
+        firstName={firstName}
+        initial={initial}
+      />
     </nav>
   )
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * MobileDrawer — portal-rendered, locked to viewport using 100dvh, designed
+ * to never overlap or be overlapped by anything else on the page.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+function MobileDrawer({ open, onClose, user, logout, firstName, initial }) {
+  // Render only in the browser; bail during SSR.
+  if (typeof document === 'undefined') return null
+
+  const overlay = (
+    <div
+      className="lg:hidden fixed inset-0"
+      style={{
+        // 100dvh follows the dynamic viewport on mobile (excludes browser UI),
+        // so the drawer never gets cut off by the address bar or home indicator.
+        height: '100dvh',
+        zIndex: 2147483646,
+        pointerEvents: open ? 'auto' : 'none',
+      }}
+      aria-hidden={!open}
+    >
+      {/* Dim, blurred backdrop covering the *entire* viewport */}
+      <button
+        type="button"
+        aria-label="Close menu"
+        onClick={onClose}
+        className={`absolute inset-0 bg-slate-950/80 backdrop-blur-md transition-opacity duration-300 ${
+          open ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+
+      {/* Sliding panel */}
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label="Main menu"
+        className={`absolute top-0 right-0 w-[88vw] max-w-[400px] bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 border-l border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.6)] flex flex-col transform transition-transform duration-300 ease-out ${
+          open ? 'translate-x-0' : 'translate-x-full'
+        }`}
+        style={{ height: '100dvh' }}
+      >
+        {/* Ambient brand glow */}
+        <div className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-amber-500/10 blur-3xl" />
+
+        {/* Header */}
+        <div className="relative flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/8 shrink-0">
+          <Link to="/" className="flex items-center gap-2.5" onClick={onClose}>
+            <img src="/logo.svg" alt="" className="w-9 h-9 rounded-xl shadow-lg shadow-green-500/20" />
+            <div>
+              <div className="font-display font-bold text-white leading-tight">JourneyMate</div>
+              <div className="text-[10px] text-slate-500 leading-none mt-0.5">Smart Travel Comparison</div>
+            </div>
+          </Link>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all"
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-5 space-y-6">
+          {/* Greeting card */}
+          {user && (
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 via-slate-900/40 to-amber-500/10 p-4">
+              <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-amber-500/20 blur-2xl" />
+              <div className="relative flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-amber-500 flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-emerald-500/30">
+                    {initial}
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-400 border-2 border-slate-950" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[11px] uppercase tracking-wider text-emerald-300/80 font-semibold flex items-center gap-1">
+                    <Sparkles size={11} />
+                    Welcome back
+                  </div>
+                  <div className="text-base font-bold text-white truncate">Hi, {firstName}</div>
+                  <div className="text-[11px] text-slate-400 truncate">{user.email}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DrawerSection title="Discover">
+            {DISCOVER_LINKS.map((item) => (
+              <DrawerItem key={item.to || item.label} item={item} />
+            ))}
+            {user && <DrawerItem item={SAVED_DRAWER_ITEM} />}
+            <DrawerItem item={ABOUT_DRAWER_ITEM} />
+          </DrawerSection>
+
+          <DrawerSection title="More">
+            {MORE_LINKS.map((item) => (
+              <DrawerItem key={item.to || item.label} item={item} />
+            ))}
+
+            {user?.isAdmin && (
+              <DrawerItem
+                item={{
+                  to: '/admin',
+                  label: 'Admin Console',
+                  desc: 'Backstage controls',
+                  Icon: ShieldCheck,
+                  tint: 'from-violet-500/25 to-fuchsia-500/15 text-violet-300 ring-violet-400/30',
+                }}
+              />
+            )}
+          </DrawerSection>
+        </div>
+
+        {/* Footer — pinned, never overflows; safe-area aware on iOS */}
+        <div
+          className="relative shrink-0 px-4 pt-3 pb-4 border-t border-white/8 bg-slate-950/70 backdrop-blur-xl space-y-2.5"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+
+          {/* Sign in / Sign out */}
+          {user ? (
+            <button
+              type="button"
+              onClick={() => { logout(); onClose() }}
+              className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-2xl bg-white/5 hover:bg-rose-500/10 border border-white/8 hover:border-rose-500/30 text-slate-300 hover:text-rose-300 transition-all duration-200 group"
+            >
+              <LogOut size={15} className="group-hover:-translate-x-0.5 transition-transform duration-200" />
+              Sign out
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              onClick={onClose}
+              className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-amber-500 text-slate-950 hover:brightness-110 transition-all duration-200 shadow-lg shadow-emerald-500/20"
+            >
+              Sign in
+            </Link>
+          )}
+
+          <p className="text-center text-[10px] text-slate-600 tracking-wide">
+            v1.0 · Made with ♥ in India
+          </p>
+        </div>
+      </aside>
+    </div>
+  )
+
+  return createPortal(overlay, document.body)
 }
 
 function DrawerSection({ title, children }) {
