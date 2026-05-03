@@ -97,17 +97,36 @@ function wikipediaRelevant(candidateQuery, pageTitle, opts) {
   if (first === w) return true
   return false
 }
+/**
+ * Fetch with a hard per-request timeout. Without this, a slow upstream
+ * (OSRM / Overpass / Wikipedia / Open-Meteo) can hang the entire `/trips/search`
+ * response. We default to 6 s — short enough to never block the user, long
+ * enough for a real round-trip from a Render dyno → Europe-hosted API.
+ *
+ * Returns null on any failure (timeout, non-2xx, parse error) so callers
+ * can degrade gracefully via Promise.allSettled / try-catch.
+ */
 async function fetchJson(url, opts = {}) {
-  const res = await fetch(url, {
-    ...opts,
-    headers: {
-      'User-Agent': USER_AGENT,
-      Accept: 'application/json',
-      ...opts.headers,
-    },
-  })
-  if (!res.ok) return null
-  return res.json()
+  const { timeoutMs = 6000, ...rest } = opts
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, {
+      ...rest,
+      signal: controller.signal,
+      headers: {
+        'User-Agent': USER_AGENT,
+        Accept: 'application/json',
+        ...rest.headers,
+      },
+    })
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /** Strip emoji / noise so Wikipedia search is less likely to match nothing. */
@@ -419,21 +438,35 @@ async function getTopSightsNear(lat, lon) {
   const la = Number(lat)
   const lo = Number(lon)
   if (Number.isNaN(la) || Number.isNaN(lo)) return []
+  // Reduced overpass server-side timeout from 20 → 8 s and tightened
+  // client-side abort to 9 s so a slow upstream never holds the search.
   const q = `
-[out:json][timeout:20];
+[out:json][timeout:8];
 (
   nwr["tourism"="attraction"](around:35000,${la},${lo});
   nwr["tourism"="museum"](around:25000,${la},${lo});
 );
 out center 12;
 `
-  const res = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain', 'User-Agent': USER_AGENT, Accept: 'application/json' },
-    body: q,
-  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 9000)
+  let res
+  try {
+    res = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain', 'User-Agent': USER_AGENT, Accept: 'application/json' },
+      body: q,
+      signal: controller.signal,
+    })
+  } catch {
+    clearTimeout(timer)
+    return []
+  } finally {
+    clearTimeout(timer)
+  }
   if (!res.ok) return []
-  const data = await res.json()
+  const data = await res.json().catch(() => null)
+  if (!data) return []
   const elements = data?.elements || []
   const out = []
   for (const el of elements) {
@@ -454,28 +487,59 @@ out center 12;
 }
 
 /**
+ * Wraps a promise with an overall hard timeout. Whichever side wins,
+ * the promise resolves — never throws — so callers can keep going.
+ */
+function withSoftTimeout(promise, timeoutMs, fallback = null) {
+  return new Promise((resolve) => {
+    let done = false
+    const timer = setTimeout(() => {
+      if (done) return
+      done = true
+      resolve(fallback)
+    }, timeoutMs)
+    promise.then(
+      (v) => { if (done) return; done = true; clearTimeout(timer); resolve(v) },
+      () => { if (done) return; done = true; clearTimeout(timer); resolve(fallback) },
+    )
+  })
+}
+
+/**
  * Enrich a trip with OSRM, Wikipedia (destination), and local OSM sights.
+ *
+ * Every external call gets:
+ *   • per-fetch timeout (inside fetchJson / Overpass call)
+ *   • per-call soft-timeout wrapper here (extra safety against unhandled hangs)
+ *   • Wikipedia is fired in parallel with the others (was sequential — saves ~3 s)
+ *   • whole enrichment cannot exceed 9 s; partial data is shipped anyway
  */
 async function enrichForComparison(fromC, toC) {
-  const [osrm, sights, originWx, destWx] = await Promise.allSettled([
-    getOsrmRoute(fromC.lng, fromC.lat, toC.lng, toC.lat),
-    getTopSightsNear(toC.lat, toC.lng),
-    getCityWeather(fromC.label, fromC.lat, fromC.lng),
-    getCityWeather(toC.label, toC.lat, toC.lng),
+  const PER_CALL_MS = 7000
+  const TOTAL_BUDGET_MS = 9000
+
+  const all = Promise.allSettled([
+    withSoftTimeout(getOsrmRoute(fromC.lng, fromC.lat, toC.lng, toC.lat), PER_CALL_MS, null),
+    withSoftTimeout(getTopSightsNear(toC.lat, toC.lng),                   PER_CALL_MS, []),
+    withSoftTimeout(getCityWeather(fromC.label, fromC.lat, fromC.lng),    PER_CALL_MS, null),
+    withSoftTimeout(getCityWeather(toC.label, toC.lat, toC.lng),          PER_CALL_MS, null),
+    withSoftTimeout(
+      (async () => (await getWikipediaSummary(`${toC.label} India`)) || (await getWikipediaSummary(toC.label)))(),
+      PER_CALL_MS,
+      null,
+    ),
   ])
 
-  let w = null
-  try {
-    w = await getWikipediaSummary(`${toC.label} India`)
-    if (!w) w = await getWikipediaSummary(toC.label)
-  } catch {
-    w = null
-  }
+  const settled = await withSoftTimeout(all, TOTAL_BUDGET_MS, [])
 
-  const o = osrm.status === 'fulfilled' ? osrm.value : null
-  const s = sights.status === 'fulfilled' ? sights.value : []
-  const oWx = originWx.status === 'fulfilled' ? originWx.value : null
-  const dWx = destWx.status === 'fulfilled' ? destWx.value : null
+  const get = (i, fb) =>
+    settled?.[i]?.status === 'fulfilled' ? (settled[i].value ?? fb) : fb
+
+  const o   = get(0, null)
+  const s   = get(1, [])
+  const oWx = get(2, null)
+  const dWx = get(3, null)
+  const w   = get(4, null)
 
   const attributions = [
     'Route time & distance: OSRM (OpenStreetMap data, ODbL).',

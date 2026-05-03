@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { Twitter, Instagram, Linkedin, Mail, MapPin } from 'lucide-react'
+import { APP_BUILD } from '../api/client'
 
 const COMPANY_LINKS = [
   { label: 'How it Works',      to: '/how-it-works' },
@@ -133,10 +134,15 @@ export default function Footer() {
         <div className="border-t border-white/6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-slate-600 text-center sm:text-left">
             © 2026 JourneyMate. All rights reserved by Harsh.
+            <span className="hidden sm:inline text-slate-700"> · build {APP_BUILD}</span>
           </p>
           <p className="text-xs text-slate-700 text-center sm:text-right">
             Prices are indicative and subject to availability.
           </p>
+        </div>
+        {/* Mobile-only build chip — easy to read aloud / screenshot for support */}
+        <div className="sm:hidden text-center pb-3">
+          <span className="text-[10px] text-slate-700 font-mono">build {APP_BUILD}</span>
         </div>
       </div>
     </footer>

@@ -1,0 +1,33 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Render Static Site — HTTP cache headers
+#
+# index.html and the SPA fallback MUST NEVER be cached, otherwise mobile
+# browsers (Android Chrome, iOS Safari) will keep serving an old shell that
+# references obsolete /assets/index-XXXX.js bundles, and any new code we
+# ship (timeouts, retries, wake-up, bug fixes) won't reach the user.
+#
+# Hashed assets under /assets/ are content-addressed by Vite, so they ARE
+# safe to cache aggressively (immutable, 1-year).
+# ─────────────────────────────────────────────────────────────────────────
+
+/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/photos/*
+  Cache-Control: public, max-age=2592000
+
+/destinations/*
+  Cache-Control: public, max-age=2592000
+
+/logo.svg
+  Cache-Control: public, max-age=86400

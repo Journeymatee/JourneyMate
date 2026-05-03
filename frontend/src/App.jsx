@@ -62,6 +62,7 @@ import SharedTrip from './pages/SharedTrip'
 import { AssistantWidget } from './features/ai'
 import { useAuth } from './context/AuthContext'
 import { searchTrip, tripErrorMessage, getTripPreferences } from './services/travelService'
+import { wakeBackend, subscribeWakeStatus } from './api/client'
 
 function HomePage() {
   const { logout } = useAuth()
@@ -82,6 +83,11 @@ function HomePage() {
   const [vibes, setVibes] = useState(() => Array.isArray(persisted?.vibes) ? persisted.vibes : [])
   const [searchError, setSearchError] = useState('')
   const [refreshingDays, setRefreshingDays] = useState(false)
+  // Backend-wake status drives a small "Server waking…" chip on the home view.
+  // Free-tier dynos (Render) sleep after idle and take 30–90 s to boot — we
+  // start pinging /health the moment the page mounts so the dyno is hot by
+  // the time the user hits search.
+  const [wakeStatus, setWakeStatus] = useState('idle')
   const routeRef = useRef({ from: '', to: '' })
   const fromResolved =
     (searchParams.from && String(searchParams.from).trim()) || (tripData?.origin && String(tripData.origin).trim()) || ''
@@ -98,6 +104,15 @@ function HomePage() {
       handleSearch(state.from, state.to, state.days ?? 5)
     }
   }, []) // eslint-disable-line
+
+  // Pre-warm the backend (free-tier cold-start mitigation). Subscribed both
+  // ways so the chip on the hero matches the global wake state and a future
+  // navigation back to '/' picks up an already-warm server immediately.
+  useEffect(() => {
+    const unsub = subscribeWakeStatus(setWakeStatus)
+    wakeBackend().catch(() => { /* the chip will reflect the failed state */ })
+    return unsub
+  }, [])
 
   // Mirror the comparison view + trip data into sessionStorage so a refresh
   // re-hydrates the same page. Only persist comparison; clear on home/loading.
@@ -289,6 +304,7 @@ function HomePage() {
 
       {view === 'home' && (
         <>
+          <WakeStatusChip status={wakeStatus} onRetry={() => wakeBackend()} />
           <HeroSearch
             onSearch={handleSearch}
             loading={false}
@@ -329,6 +345,56 @@ function HomePage() {
         </>
       )}
     </>
+  )
+}
+
+/**
+ * Small chip shown above the hero on the home view that tells the user
+ * the server is warming up. Hidden once the dyno is ready (the common
+ * case after the first ping returns), so warm visits see nothing.
+ */
+function WakeStatusChip({ status, onRetry }) {
+  if (status === 'idle' || status === 'ready') return null
+
+  const isWaking = status === 'waking'
+  const isFailed = status === 'failed'
+
+  return (
+    <div className="fixed top-[72px] left-0 right-0 z-40 px-4 flex justify-center pointer-events-none">
+      <div
+        className={`pointer-events-auto inline-flex items-center gap-2 rounded-full border backdrop-blur-md px-3.5 py-1.5 text-[11px] font-semibold shadow-lg transition-all ${
+          isWaking
+            ? 'border-amber-400/30 bg-amber-500/10 text-amber-200'
+            : 'border-rose-400/30  bg-rose-500/10  text-rose-200'
+        }`}
+      >
+        <span className="relative flex w-2 h-2">
+          <span
+            className={`absolute inset-0 rounded-full animate-ping ${
+              isWaking ? 'bg-amber-400/60' : 'bg-rose-400/60'
+            }`}
+          />
+          <span
+            className={`relative w-2 h-2 rounded-full ${
+              isWaking ? 'bg-amber-400' : 'bg-rose-400'
+            }`}
+          />
+        </span>
+        {isWaking && <span>Server is waking up — first request can take ~30s</span>}
+        {isFailed && (
+          <>
+            <span>Server unreachable</span>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="ml-1 rounded-full px-2 py-0.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-100 transition-colors"
+            >
+              Retry
+            </button>
+          </>
+        )}
+      </div>
+    </div>
   )
 }
 
