@@ -57,6 +57,8 @@ import Pricing from './pages/Pricing'
 import ContactUs from './pages/ContactUs'
 import AboutOwner from './pages/AboutOwner'
 import AdminAgent from './pages/AdminAgent'
+import SavedTrips from './pages/SavedTrips'
+import SharedTrip from './pages/SharedTrip'
 import { AssistantWidget } from './features/ai'
 import { useAuth } from './context/AuthContext'
 import { searchTrip, tripErrorMessage, getTripPreferences } from './services/travelService'
@@ -317,9 +319,25 @@ function AppShell() {
         <Route path="/contact" element={<ContactUs />} />
         <Route path="/about" element={<AboutOwner />} />
         <Route path="/admin" element={<AdminAgent />} />
+        <Route path="/saved" element={<SavedTrips />} />
+        <Route path="/shared/:token" element={<SharedTrip />} />
       </Routes>
       <AssistantWidget />
     </div>
+  )
+}
+
+/**
+ * When the user is signed out, almost everything redirects to LoginPage.
+ * The single exception is /shared/:token — public share links must work for
+ * anyone, even if they have never signed up.
+ */
+function PublicShell() {
+  return (
+    <Routes>
+      <Route path="/shared/:token" element={<SharedTrip />} />
+      <Route path="*" element={<LoginPage />} />
+    </Routes>
   )
 }
 
@@ -337,12 +355,10 @@ export default function App() {
     )
   }
 
-  if (!user) return <LoginPage />
-
   return (
     <BrowserRouter>
       <ShareExperienceProvider>
-        <AppShell />
+        {user ? <AppShell /> : <PublicShell />}
       </ShareExperienceProvider>
     </BrowserRouter>
   )

@@ -14,6 +14,7 @@ import { findTripType, VIBES_BY_TYPE } from '../data/tripVibes'
 import { getPlaceArticle } from '../services/travelService'
 import { getStatePhoto } from '../utils/getStatePhoto'
 import PhotoLightbox from './PhotoLightbox'
+import SaveTripButton from './SaveTripButton'
 
 /* ------------------------------------------------------------------ */
 /*  Perk icon helper                                                   */
@@ -1552,6 +1553,7 @@ export default function ComparisonPage({
                 <span className="text-slate-500 text-xs sm:text-sm w-full sm:w-auto sm:ml-1">• {tripData.duration}</span>
               </div>
             </div>
+            <SaveTripButton tripData={tripData} className="mt-1" />
           </div>
 
         </div>
