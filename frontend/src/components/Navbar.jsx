@@ -23,6 +23,7 @@ const BASE_NAV_LINKS = [
   { to: '/blog', label: 'Blog' },
   { to: '/about', label: 'About' },
 ]
+const SAVED_LINK = { to: '/saved', label: 'Saved' }
 const ADMIN_LINK = { to: '/admin', label: 'Admin', adminOnly: true }
 
 // Drawer sections (mobile only) — icon, description and a tinted gradient
@@ -81,9 +82,22 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
-  const navLinks = useMemo(
-    () => (user?.isAdmin ? [...BASE_NAV_LINKS, ADMIN_LINK] : BASE_NAV_LINKS),
-    [user?.isAdmin]
+  const navLinks = useMemo(() => {
+    const links = [...BASE_NAV_LINKS]
+    if (user) links.push(SAVED_LINK)
+    if (user?.isAdmin) links.push(ADMIN_LINK)
+    return links
+  }, [user?.id, user?.isAdmin])
+
+  const firstName = useMemo(() => {
+    const raw = user?.name || user?.email || ''
+    if (!raw) return 'Traveler'
+    return String(raw).split(/[\s@]/)[0] || 'Traveler'
+  }, [user?.name, user?.email])
+
+  const initial = useMemo(
+    () => (user?.name || user?.email || 'T').trim().charAt(0).toUpperCase() || 'T',
+    [user?.name, user?.email]
   )
 
   const firstName = useMemo(() => {
