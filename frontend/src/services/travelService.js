@@ -1,5 +1,6 @@
-import api from '../api/client'
+import api, { warmUpServer } from '../api/client'
 export { CITIES } from '../data/indianCities'
+export { warmUpServer }
 
 /**
  * @param {number} [options.days] Visit length in days (1–5). Backend returns itinerary + `requestedDays`.
@@ -44,12 +45,10 @@ export const searchTrip = async (from, to, options = {}) => {
     params.vibes = options.vibes.map((v) => String(v).trim().toLowerCase()).filter(Boolean).join(',')
   }
 
-  const requestConfig = {
-    params,
-    headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-    timeout: 60000, // 60 s — covers Render free-tier cold starts (~30–55 s)
-    signal: options.signal,
-  }
+  // Kick the server (cheap, fire-and-forget) before we wait on the heavy
+  // search call. If the dyno is asleep this trims minutes off the cold path
+  // because the wake-up happens in parallel with our search request.
+  warmUpServer()
 
   const isRetriableError = (err) => {
     if (!err) return false
@@ -61,19 +60,40 @@ export const searchTrip = async (from, to, options = {}) => {
     return status >= 500 && status < 600               // server-side hiccup
   }
 
-  try {
-    const { data } = await api.get('/trips/search', requestConfig)
-    return data
-  } catch (firstError) {
-    if (!isRetriableError(firstError)) throw firstError
-    // Brief backoff so we don't hammer a still-warming server.
-    await new Promise((r) => setTimeout(r, 1500))
-    const { data } = await api.get('/trips/search', {
-      ...requestConfig,
-      params: { ...params, _t: String(Date.now()) },
-    })
-    return data
+  // Up to 3 attempts with progressively longer timeouts. Each attempt is
+  // tracked through the shared AbortSignal, so the user can still cancel.
+  const ATTEMPTS = [
+    { timeout: 25_000, backoff: 1000 },
+    { timeout: 35_000, backoff: 2000 },
+    { timeout: 45_000, backoff: 0    },
+  ]
+
+  let lastError = null
+  for (let i = 0; i < ATTEMPTS.length; i += 1) {
+    if (options.signal?.aborted) {
+      const e = new Error('Search cancelled')
+      e.name = 'CanceledError'
+      e.code = 'ERR_CANCELED'
+      throw e
+    }
+    const { timeout, backoff } = ATTEMPTS[i]
+    try {
+      const { data } = await api.get('/trips/search', {
+        params: { ...params, _t: String(Date.now()) },
+        headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+        timeout,
+        signal: options.signal,
+      })
+      return data
+    } catch (err) {
+      lastError = err
+      if (!isRetriableError(err)) throw err
+      if (i < ATTEMPTS.length - 1) {
+        await new Promise((r) => setTimeout(r, backoff))
+      }
+    }
   }
+  throw lastError
 }
 
 /**

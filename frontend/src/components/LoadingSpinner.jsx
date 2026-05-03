@@ -16,11 +16,12 @@ import { X, Loader2 } from 'lucide-react'
  */
 
 const STAGES = [
-  { at:  0,    title: 'Finding Best Plans',          sub: 'Comparing Silver & Gold options…' },
-  { at:  4000, title: 'Crunching the numbers',       sub: 'Pricing transport, stays & food…'  },
-  { at: 12000, title: 'Server is warming up',        sub: 'First request after idle takes a moment.' },
-  { at: 30000, title: 'Almost there',                sub: 'Hang tight — large itineraries take longer on first load.' },
-  { at: 55000, title: 'This is unusually slow',      sub: 'Tap Cancel and try again — your data is safe.' },
+  { at:  0,    title: 'Finding Best Plans',     sub: 'Comparing Silver & Gold options…' },
+  { at:  3000, title: 'Crunching the numbers',  sub: 'Pricing transport, stays & food…'  },
+  { at:  8000, title: 'Server is warming up',   sub: 'First request after idle takes ~30 s.' },
+  { at: 20000, title: 'Still warming up',       sub: 'Free-tier server is booting — almost there.' },
+  { at: 40000, title: 'Almost done',            sub: 'Retrying with a fresh connection…' },
+  { at: 75000, title: 'Taking longer than usual', sub: 'Tap Cancel and try again — your data is safe.' },
 ]
 
 function pickStage(elapsed) {
@@ -40,7 +41,8 @@ export default function LoadingSpinner({ from, to, onCancel }) {
 
   const stage = pickStage(elapsed)
   const seconds = Math.floor(elapsed / 1000)
-  const showCancel = elapsed >= 10000 && typeof onCancel === 'function'
+  // Cancel surfaces almost immediately so users are never trapped.
+  const showCancel = elapsed >= 5000 && typeof onCancel === 'function'
   const progressPct = Math.min(95, 8 + (elapsed / 600))
 
   return (

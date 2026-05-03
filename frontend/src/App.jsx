@@ -61,7 +61,7 @@ import SavedTrips from './pages/SavedTrips'
 import SharedTrip from './pages/SharedTrip'
 import { AssistantWidget } from './features/ai'
 import { useAuth } from './context/AuthContext'
-import { searchTrip, tripErrorMessage, getTripPreferences } from './services/travelService'
+import { searchTrip, tripErrorMessage, getTripPreferences, warmUpServer } from './services/travelService'
 
 function HomePage() {
   const { logout } = useAuth()
@@ -115,6 +115,23 @@ function HomePage() {
   // the background and silently switch the view to 'comparison').
   const searchAbortRef = useRef(null)
 
+  // Last attempted search args so the error toast can offer a one-tap retry.
+  const lastSearchRef = useRef(null)
+
+  // Warm the backend whenever the user lands on Home or returns from offline,
+  // so the heavy /trips/search call hits an already-awake dyno.
+  useEffect(() => {
+    warmUpServer()
+    const onOnline = () => warmUpServer()
+    const onFocus  = () => warmUpServer()
+    window.addEventListener('online', onOnline)
+    window.addEventListener('focus',  onFocus)
+    return () => {
+      window.removeEventListener('online', onOnline)
+      window.removeEventListener('focus',  onFocus)
+    }
+  }, [])
+
   const handleSearch = async (from, to, days = 5, opts = {}) => {
     const nextTripType = opts && Object.prototype.hasOwnProperty.call(opts, 'tripType')
       ? (opts.tripType ?? null)
@@ -125,6 +142,9 @@ function HomePage() {
     setSearchParams({ from, to, days })
     setSearchError('')
     setView('loading')
+
+    // Remember the last attempt so the error toast can offer a one-tap retry.
+    lastSearchRef.current = { from, to, days, tripType: nextTripType, vibes: nextVibes }
 
     // Cancel any previous in-flight request before kicking off a new one.
     if (searchAbortRef.current) searchAbortRef.current.abort()
@@ -171,6 +191,14 @@ function HomePage() {
     searchAbortRef.current = null
     setSearchError('Search cancelled. Try a different route or tap search again.')
     setView('home')
+  }, [])
+
+  const handleRetrySearch = useCallback(() => {
+    const last = lastSearchRef.current
+    if (!last) return
+    setSearchError('')
+    handleSearch(last.from, last.to, last.days, { tripType: last.tripType, vibes: last.vibes })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleBack = () => {
@@ -274,15 +302,26 @@ function HomePage() {
     <>
       {searchError && (view === 'home' || view === 'comparison') && (
         <div className="fixed top-20 left-0 right-0 z-50 px-4 flex justify-center pointer-events-none">
-          <div className="pointer-events-auto max-w-lg w-full rounded-2xl border border-red-500/30 bg-red-500/10 backdrop-blur-md px-4 py-3 text-sm text-red-100 text-center shadow-xl">
-            {searchError}
-            <button
-              type="button"
-              onClick={() => setSearchError('')}
-              className="block w-full mt-2 text-xs text-slate-300 hover:text-white underline"
-            >
-              Dismiss
-            </button>
+          <div className="pointer-events-auto max-w-lg w-full rounded-2xl border border-red-500/30 bg-red-500/15 backdrop-blur-xl px-4 py-3 text-sm text-red-100 shadow-2xl shadow-red-900/20">
+            <p className="text-center leading-snug">{searchError}</p>
+            <div className="flex gap-2 mt-3">
+              {lastSearchRef.current && view === 'home' && (
+                <button
+                  type="button"
+                  onClick={handleRetrySearch}
+                  className="flex-1 px-3 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-amber-500 text-slate-950 hover:brightness-110 transition-all shadow-md shadow-emerald-500/20"
+                >
+                  Try again
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSearchError('')}
+                className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-all"
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
         </div>
       )}
