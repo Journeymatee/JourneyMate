@@ -11,6 +11,7 @@ import {
   Disc3,
   Route,
   ShoppingBag,
+  ChefHat,
   ChevronRight,
   Clock,
   Ruler,
@@ -19,6 +20,7 @@ import InsightModal from './InsightModal'
 import WeatherPanel from './WeatherPanel'
 import MusicPanel from './MusicPanel'
 import ShoppingPanel from './ShoppingPanel'
+import StreetFoodPanel from './StreetFoodPanel'
 import RouteDirectionMap from './RouteDirectionMap'
 
 /* ------------------------------------------------------------------ *
@@ -88,6 +90,12 @@ function InsightTile({
       hoverBorder: 'group-hover:border-violet-400/40',
       hoverGlow: 'group-hover:shadow-violet-500/15',
     },
+    orange: {
+      iconBg: 'from-orange-400 to-rose-500',
+      iconShadow: 'shadow-orange-500/30',
+      hoverBorder: 'group-hover:border-orange-400/40',
+      hoverGlow: 'group-hover:shadow-orange-500/15',
+    },
   }
   const a = accentMap[accent] || accentMap.cyan
 
@@ -96,35 +104,37 @@ function InsightTile({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`group relative flex items-center gap-3 sm:gap-3.5 overflow-hidden rounded-2xl border border-white/8 bg-gradient-to-br from-white/[0.05] to-white/[0.02] px-3.5 sm:px-4 py-3 sm:py-3.5 text-left shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/[0.06] hover:shadow-xl ${a.hoverBorder} ${a.hoverGlow} disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:bg-white/[0.03]`}
+      className={`group relative flex items-center gap-3 sm:gap-3.5 overflow-hidden rounded-2xl border border-slate-900/10 dark:border-white/8 bg-white/85 dark:bg-gradient-to-br dark:from-white/[0.05] dark:to-white/[0.02] backdrop-blur-md px-3 sm:px-4 py-3 sm:py-3.5 text-left shadow-md shadow-slate-900/5 dark:shadow-lg dark:shadow-black/20 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white dark:hover:bg-white/[0.06] hover:shadow-lg dark:hover:shadow-xl ${a.hoverBorder} ${a.hoverGlow} active:scale-[0.99] touch-manipulation disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:bg-white/85 dark:disabled:hover:bg-white/[0.03]`}
     >
-      {/* subtle inner sheen on hover */}
+      {/* Inner sheen on hover — visible only in dark, where the gradient
+          card needs the extra punch. Light mode already reads clean. */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/20"
       />
 
       <div
-        className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${a.iconBg} text-white shadow-lg ${a.iconShadow} ring-1 ring-white/15`}
+        className={`relative flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${a.iconBg} text-white shadow-md ${a.iconShadow} ring-1 ring-white/40 dark:ring-white/15`}
       >
-        <Icon size={20} strokeWidth={2.2} />
+        <Icon size={18} className="sm:hidden" strokeWidth={2.2} />
+        <Icon size={20} className="hidden sm:block" strokeWidth={2.2} />
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
           {label}
         </p>
-        <p className="mt-0.5 truncate text-sm font-semibold text-white tracking-tight">
+        <p className="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white tracking-tight">
           {primary}
         </p>
         {secondary && (
-          <p className="truncate text-[11px] text-slate-400">{secondary}</p>
+          <p className="truncate text-[11px] text-slate-600 dark:text-slate-400">{secondary}</p>
         )}
       </div>
 
       <ChevronRight
         size={16}
-        className="shrink-0 text-slate-600 transition-all duration-300 group-hover:translate-x-1 group-hover:text-white"
+        className="shrink-0 text-slate-400 dark:text-slate-600 transition-all duration-300 group-hover:translate-x-1 group-hover:text-slate-900 dark:group-hover:text-white"
       />
     </button>
   )
@@ -140,8 +150,9 @@ export default function TripInsightsBar({
   osrm,
   tripType,
   vibes,
+  streetFood,
 }) {
-  const [openId, setOpenId] = useState(null) // 'weather' | 'music' | 'route' | null
+  const [openId, setOpenId] = useState(null) // 'weather' | 'music' | 'shopping' | 'route' | 'food' | null
 
   // ── weather preview ──────────────────────────────────────────────
   const dest = weather?.destination
@@ -169,10 +180,24 @@ export default function TripInsightsBar({
     ? `${routeMaps.origin.label} → ${routeMaps.destination.label}`
     : 'Map unavailable'
 
+  // ── food preview ─────────────────────────────────────────────────
+  // Mirrors the way the other tiles show a "primary" line that reads as
+  // a quick stat and a "secondary" line that reads as descriptive copy.
+  const foodList = Array.isArray(streetFood) ? streetFood : []
+  const foodCount = foodList.length
+  const fineCount = foodList.filter((i) => i.tier === 'fine').length
+  const streetCount = foodCount - fineCount
+  const foodPrimary = foodCount > 0
+    ? `${foodCount} pick${foodCount === 1 ? '' : 's'}${fineCount > 0 ? ' · fine-dining' : ''}`
+    : 'Curated picks'
+  const foodSecondary = foodCount > 0
+    ? `${streetCount} street${fineCount > 0 ? ` · ${fineCount} fine-dining` : ''}`
+    : `Famous food in ${destination}`
+
   return (
     <>
       <div
-        className="mb-6 sm:mb-8 grid grid-cols-1 gap-2.5 xs:grid-cols-2 lg:grid-cols-4 sm:gap-3 animate-slide-up w-full min-w-0"
+        className="mb-6 sm:mb-8 grid grid-cols-1 gap-2.5 xs:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 sm:gap-3 animate-slide-up w-full min-w-0"
         style={{ animationDelay: '0.06s' }}
       >
         <InsightTile
@@ -191,6 +216,15 @@ export default function TripInsightsBar({
           secondary={`Music for ${destination}`}
           accent="fuchsia"
           onClick={() => setOpenId('music')}
+          disabled={!destination}
+        />
+        <InsightTile
+          icon={ChefHat}
+          label="Famous food"
+          primary={foodPrimary}
+          secondary={foodSecondary}
+          accent="orange"
+          onClick={() => setOpenId('food')}
           disabled={!destination}
         />
         <InsightTile
@@ -229,18 +263,18 @@ export default function TripInsightsBar({
           <WeatherPanel weather={weather} destinationLabel={destination} />
         </div>
         {weather && Number.isFinite(distanceKm) && (
-          <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-400">
-            <div className="rounded-lg border border-white/8 bg-white/[0.03] px-3 py-2">
-              <span className="flex items-center gap-1.5 text-slate-500">
+          <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-700 dark:text-slate-400">
+            <div className="rounded-lg border border-slate-900/8 dark:border-white/8 bg-white/70 dark:bg-white/[0.03] px-3 py-2">
+              <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-500">
                 <Ruler size={12} /> Distance
               </span>
-              <p className="mt-0.5 font-semibold text-white">{distanceKm} km</p>
+              <p className="mt-0.5 font-semibold text-slate-900 dark:text-white tabular-nums">{distanceKm} km</p>
             </div>
-            <div className="rounded-lg border border-white/8 bg-white/[0.03] px-3 py-2">
-              <span className="flex items-center gap-1.5 text-slate-500">
+            <div className="rounded-lg border border-slate-900/8 dark:border-white/8 bg-white/70 dark:bg-white/[0.03] px-3 py-2">
+              <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-500">
                 <Clock size={12} /> Drive time
               </span>
-              <p className="mt-0.5 font-semibold text-white">
+              <p className="mt-0.5 font-semibold text-slate-900 dark:text-white tabular-nums">
                 {Math.floor(durationMin / 60)}h {durationMin % 60}m
               </p>
             </div>
@@ -275,6 +309,19 @@ export default function TripInsightsBar({
       </InsightModal>
 
       <InsightModal
+        open={openId === 'food'}
+        onClose={() => setOpenId(null)}
+        title={`Famous food in ${destination}`}
+        subtitle="Local favourites — markets, dhabas, fine dining"
+        icon={ChefHat}
+        accent="orange"
+      >
+        <div className="-mt-2">
+          <StreetFoodPanel items={streetFood} destination={destination} />
+        </div>
+      </InsightModal>
+
+      <InsightModal
         open={openId === 'route'}
         onClose={() => setOpenId(null)}
         title="Route map"
@@ -284,33 +331,33 @@ export default function TripInsightsBar({
       >
         {hasRoute && (
           <>
-            <div className="mb-3 grid grid-cols-2 gap-2 text-[11px] text-slate-400">
-              <div className="rounded-lg border border-white/8 bg-white/[0.03] px-3 py-2">
-                <span className="flex items-center gap-1.5 text-slate-500">
+            <div className="mb-3 grid grid-cols-2 gap-2 text-[11px] text-slate-700 dark:text-slate-400">
+              <div className="rounded-lg border border-slate-900/8 dark:border-white/8 bg-white/70 dark:bg-white/[0.03] px-3 py-2">
+                <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-500">
                   <Ruler size={12} /> Distance
                 </span>
-                <p className="mt-0.5 font-semibold text-white">
+                <p className="mt-0.5 font-semibold text-slate-900 dark:text-white tabular-nums">
                   {Number.isFinite(distanceKm) ? `${distanceKm} km` : '—'}
                 </p>
               </div>
-              <div className="rounded-lg border border-white/8 bg-white/[0.03] px-3 py-2">
-                <span className="flex items-center gap-1.5 text-slate-500">
+              <div className="rounded-lg border border-slate-900/8 dark:border-white/8 bg-white/70 dark:bg-white/[0.03] px-3 py-2">
+                <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-500">
                   <Clock size={12} /> Drive time
                 </span>
-                <p className="mt-0.5 font-semibold text-white">
+                <p className="mt-0.5 font-semibold text-slate-900 dark:text-white tabular-nums">
                   {Number.isFinite(durationMin)
                     ? `${Math.floor(durationMin / 60)}h ${durationMin % 60}m`
                     : '—'}
                 </p>
               </div>
             </div>
-            <div className="overflow-hidden rounded-xl border border-white/8">
+            <div className="overflow-hidden rounded-xl border border-slate-900/8 dark:border-white/8">
               <RouteDirectionMap
                 originCoords={routeMaps.origin}
                 destCoords={routeMaps.destination}
               />
             </div>
-            <p className="mt-2 text-[10px] text-slate-500">
+            <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-500">
               Driving distance & time via OSRM. Powered by OpenStreetMap (ODbL).
             </p>
           </>

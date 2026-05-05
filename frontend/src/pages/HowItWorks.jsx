@@ -31,9 +31,56 @@ import {
   HelpCircle,
   Crown,
   Wallet,
+  Lock,
+  Clock,
+  Star,
+  Play,
 } from 'lucide-react'
 import PageHero from '../components/PageHero'
 import SectionHeader from '../components/SectionHeader'
+
+/* ─────────────────────────────── TOC nav ──────────────────────────────────
+ * Anchors used by the chip-strip directly under the hero. Keeping the
+ * mapping in one place means we can add / reorder sections later without
+ * hunting through JSX for ids. */
+const TOC = [
+  { id: 'steps',    label: 'The flow',  Icon: Workflow },
+  { id: 'about',    label: 'About',     Icon: Compass  },
+  { id: 'plans',    label: 'Plans',     Icon: Layers   },
+  { id: 'roadmap',  label: 'Roadmap',   Icon: Rocket   },
+  { id: 'faq',      label: 'FAQ',       Icon: HelpCircle },
+]
+
+/* ─────────────────────────── Promise strip ──────────────────────────────
+ * Sits between hero and the four-step flow. Compact, scannable proof of
+ * what the product actually guarantees — anchors expectations before
+ * users dig into the longer sections below. */
+const PROMISES = [
+  {
+    icon: Lock,
+    title: 'Zero hidden fees',
+    desc: 'Every line item in a plan is itemised. The total at compare time = the total you pay.',
+    color: 'text-emerald-500 dark:text-emerald-400',
+    bg: 'bg-emerald-100/80 dark:bg-emerald-500/10',
+    border: 'border-emerald-300/70 dark:border-emerald-500/20',
+  },
+  {
+    icon: Clock,
+    title: 'Sub-3-second compares',
+    desc: 'Silver vs Gold side-by-side, day-by-day, the moment you hit search. No spinners, no tabs.',
+    color: 'text-sky-500 dark:text-sky-400',
+    bg: 'bg-sky-100/80 dark:bg-sky-500/10',
+    border: 'border-sky-300/70 dark:border-sky-500/20',
+  },
+  {
+    icon: Star,
+    title: 'Curated, not crowdsourced',
+    desc: 'Heritage stays, fine-dining picks and signature experiences are vetted by hand — not pulled from a noisy review feed.',
+    color: 'text-amber-500 dark:text-amber-400',
+    bg: 'bg-amber-100/80 dark:bg-amber-500/10',
+    border: 'border-amber-300/70 dark:border-amber-500/20',
+  },
+]
 
 /* ─────────────────────────── Step-by-step flow ─────────────────────────── */
 const STEPS = [
@@ -118,6 +165,7 @@ const ABOUT_PILLARS = [
 const ROADMAP = [
   {
     horizon: 'Now',
+    blurb: 'Shipping over the next few sprints — already visible in beta builds.',
     badge: 'In build',
     badgeColor: 'text-emerald-300',
     badgeBg: 'bg-emerald-500/15',
@@ -125,16 +173,19 @@ const ROADMAP = [
     items: [
       {
         icon: Wand2,
+        eta: 'This sprint',
         title: 'Custom itinerary editor',
         desc: 'Drag, drop, swap and re-time any day of your plan. Replace a hotel, add a detour, lock a flight — the totals re-compute live.',
       },
       {
         icon: Bookmark,
+        eta: 'Live in beta',
         title: 'Saved trips & wishlist',
         desc: 'Pin plans you like, get back to half-finished searches, and share a private link with whoever you are travelling with.',
       },
       {
         icon: Users,
+        eta: 'Next month',
         title: 'Group collaboration',
         desc: 'Invite friends or family to a trip. Vote on stays, split costs, and resolve "who books the train?" without a single WhatsApp scroll.',
       },
@@ -142,6 +193,7 @@ const ROADMAP = [
   },
   {
     horizon: 'Next',
+    blurb: 'Designs locked, engineering kicking off after the "Now" tier ships.',
     badge: 'On deck',
     badgeColor: 'text-sky-300',
     badgeBg: 'bg-sky-500/15',
@@ -149,16 +201,19 @@ const ROADMAP = [
     items: [
       {
         icon: Plane,
+        eta: 'Q3 2026',
         title: 'Live inventory & one-tap booking',
         desc: 'Move from indicative pricing to live IRCTC, flight and hotel inventory, with seat/room selection and instant confirmation inside the app.',
       },
       {
         icon: Smartphone,
+        eta: 'Q4 2026',
         title: 'JourneyMate mobile apps',
         desc: 'Native iOS and Android apps with offline itineraries, push reminders before each leg, and a cleaner travel-day experience.',
       },
       {
         icon: Bot,
+        eta: 'Q4 2026',
         title: 'Smarter AI travel agent',
         desc: 'Tell the assistant "make it 10% cheaper" or "swap the beach day for a trek" and watch the whole plan adapt — including transport.',
       },
@@ -166,6 +221,7 @@ const ROADMAP = [
   },
   {
     horizon: 'Later',
+    blurb: 'Bigger ideas we are still exploring — shape them by sending feedback.',
     badge: 'Exploring',
     badgeColor: 'text-violet-300',
     badgeBg: 'bg-violet-500/15',
@@ -173,21 +229,25 @@ const ROADMAP = [
     items: [
       {
         icon: Globe2,
+        eta: '2027+',
         title: 'International destinations',
         desc: 'Same Silver vs Gold magic, expanded to South-East Asia, the Gulf and Europe — designed around how Indian passports and budgets actually move.',
       },
       {
         icon: Languages,
+        eta: '2027+',
         title: 'Hindi & regional languages',
         desc: 'Plan and read your full itinerary in Hindi, Tamil, Telugu, Bengali, Marathi and more — including spoken AI assistant in your language.',
       },
       {
         icon: Leaf,
+        eta: 'Researching',
         title: 'Carbon-aware travel',
         desc: 'Show the CO₂ cost of each option, and offer a "low-carbon" plan beside Silver/Gold so you can pick a greener route knowingly.',
       },
       {
         icon: Store,
+        eta: 'Researching',
         title: 'Local creator marketplace',
         desc: 'Let local guides, photographers and home-chefs publish experiences that slot directly into Gold plans — money goes to the people on the ground.',
       },
@@ -238,74 +298,128 @@ export default function HowItWorks() {
 
       <div className="max-w-5xl 2xl:max-w-6xl 3xl:max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 3xl:px-12 pb-16 sm:pb-20 pt-8 sm:pt-10">
 
-        {/* Steps */}
-        <SectionHeader
-          icon={<Workflow size={16} strokeWidth={2.4} />}
-          accent="violet"
-          eyebrow="Four steps end-to-end"
-          title="From idea to itinerary"
-          subtitle="No spreadsheets, no juggling tabs. Each step takes seconds — the whole flow takes under a minute."
-          divider
-          className="!mb-8"
-        />
-
-        <div className="relative mb-20 sm:mb-28">
-          {/* Vertical line */}
-          <div className="absolute left-6 sm:left-1/2 top-8 bottom-8 w-px bg-gradient-to-b from-indigo-500/40 via-blue-500/20 to-indigo-500/40 hidden sm:block -translate-x-1/2" />
-
-          <div className="space-y-10 sm:space-y-16">
-            {STEPS.map((s, i) => {
-              const Icon = s.icon
-              const isRight = i % 2 === 1
-              return (
-                <div
-                  key={s.step}
-                  className={`flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-12 animate-slide-up ${isRight ? 'sm:flex-row-reverse' : ''}`}
-                  style={{ animationDelay: `${i * 80}ms` }}
-                >
-                  {/* Card */}
-                  <div className={`group relative flex-1 glass rounded-3xl p-6 sm:p-8 border ${s.border} hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 overflow-hidden`}>
-                    {/* Soft accent glow on hover */}
-                    <div
-                      aria-hidden
-                      className={`pointer-events-none absolute -top-16 -right-16 w-44 h-44 rounded-full ${s.bg} blur-3xl opacity-0 group-hover:opacity-60 transition-opacity duration-500`}
-                    />
-                    <div className="relative">
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className={`w-12 h-12 rounded-2xl ${s.bg} border ${s.border} flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300`}>
-                          <Icon size={22} className={s.color} />
-                        </div>
-                        <div className="min-w-0">
-                          <div className={`text-[10px] font-bold uppercase tracking-[0.18em] ${s.color} mb-1`}>Step {s.step}</div>
-                          <h3
-                            className="font-bold text-lg sm:text-xl text-white tracking-tight"
-                            style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
-                          >
-                            {s.title}
-                          </h3>
-                        </div>
-                      </div>
-                      <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-3">{s.desc}</p>
-                      <p className="text-slate-500 text-xs sm:text-sm leading-relaxed border-t border-white/6 pt-3">{s.detail}</p>
-                    </div>
-                  </div>
-
-                  {/* Step number circle */}
-                  <div className="hidden sm:flex w-16 shrink-0 items-center justify-center">
-                    <div className={`w-14 h-14 rounded-full glass ${s.bg} border-2 ${s.border} flex items-center justify-center font-display font-bold text-sm ${s.color} shadow-lg shadow-black/30 z-10 ring-4 ring-slate-950/60`}>
-                      {s.step}
-                    </div>
-                  </div>
-
-                  <div className="flex-1 hidden sm:block" />
-                </div>
-              )
-            })}
+        {/* ── Jump-nav: scrollable chip strip linking to each major section.
+              Sticks just below the global navbar so it stays reachable while
+              users scroll the long page. */}
+        <nav
+          aria-label="Page sections"
+          className="sticky top-16 sm:top-20 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 mb-10 sm:mb-12 backdrop-blur-md bg-white/70 dark:bg-slate-950/55 border-y border-slate-900/8 dark:border-white/5 py-3"
+        >
+          <div className="flex flex-wrap gap-2">
+            {TOC.map(({ id, label, Icon }) => (
+              <a
+                key={id}
+                href={`#${id}`}
+                className="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border border-slate-900/10 dark:border-white/10 bg-white/80 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-violet-400/60 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:shadow-sm transition-all duration-200 active:scale-[0.97] touch-manipulation"
+              >
+                <Icon size={12} className="text-violet-500 dark:text-violet-300 group-hover:scale-110 transition-transform" strokeWidth={2.4} />
+                {label}
+                <ArrowRight size={11} className="opacity-0 -ml-1 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+              </a>
+            ))}
           </div>
-        </div>
+        </nav>
+
+        {/* ── Promise strip: anchors expectations before users scroll.
+              Compact, scannable, brand-tinted. Light + dark twin. */}
+        <section
+          aria-label="Our promises"
+          className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-16 sm:mb-20"
+        >
+          {PROMISES.map(({ icon: Icon, title, desc, color, bg, border }, idx) => (
+            <div
+              key={title}
+              className={`group relative glass rounded-2xl p-4 sm:p-5 border ${border} flex items-start gap-3 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 animate-slide-up`}
+              style={{ animationDelay: `${idx * 60}ms` }}
+            >
+              <div className={`shrink-0 w-10 h-10 rounded-xl ${bg} border ${border} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                <Icon size={18} className={color} strokeWidth={2.2} />
+              </div>
+              <div className="min-w-0">
+                <div className="font-bold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight leading-snug">
+                  {title}
+                </div>
+                <div className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm leading-relaxed mt-0.5">
+                  {desc}
+                </div>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* Steps */}
+        <section id="steps" className="scroll-mt-32 mb-20 sm:mb-28">
+          <SectionHeader
+            icon={<Workflow size={16} strokeWidth={2.4} />}
+            accent="violet"
+            eyebrow="Four steps end-to-end"
+            title="From idea to itinerary"
+            subtitle="No spreadsheets, no juggling tabs. Each step takes seconds — the whole flow takes under a minute."
+            divider
+            className="!mb-8"
+          />
+
+          <div className="relative">
+            {/* Vertical line — gradient threads through both modes. */}
+            <div
+              aria-hidden
+              className="absolute left-6 sm:left-1/2 top-8 bottom-8 w-px hidden sm:block -translate-x-1/2 bg-gradient-to-b from-indigo-400/60 via-violet-400/30 to-indigo-400/60 dark:from-indigo-500/40 dark:via-blue-500/20 dark:to-indigo-500/40"
+            />
+
+            <div className="space-y-10 sm:space-y-16">
+              {STEPS.map((s, i) => {
+                const Icon = s.icon
+                const isRight = i % 2 === 1
+                return (
+                  <div
+                    key={s.step}
+                    className={`flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-12 animate-slide-up ${isRight ? 'sm:flex-row-reverse' : ''}`}
+                    style={{ animationDelay: `${i * 80}ms` }}
+                  >
+                    {/* Card */}
+                    <div className={`group relative flex-1 glass rounded-3xl p-6 sm:p-8 border ${s.border} hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 overflow-hidden`}>
+                      {/* Soft accent glow on hover */}
+                      <div
+                        aria-hidden
+                        className={`pointer-events-none absolute -top-16 -right-16 w-44 h-44 rounded-full ${s.bg} blur-3xl opacity-0 group-hover:opacity-60 transition-opacity duration-500`}
+                      />
+                      <div className="relative">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className={`w-12 h-12 rounded-2xl ${s.bg} border ${s.border} flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300`}>
+                            <Icon size={22} className={s.color} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className={`text-[10px] font-bold uppercase tracking-[0.18em] ${s.color} mb-1`}>Step {s.step}</div>
+                            <h3
+                              className="font-bold text-lg sm:text-xl text-slate-900 dark:text-white tracking-tight"
+                              style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
+                            >
+                              {s.title}
+                            </h3>
+                          </div>
+                        </div>
+                        <p className="text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed mb-3">{s.desc}</p>
+                        <p className="text-slate-500 dark:text-slate-500 text-xs sm:text-sm leading-relaxed border-t border-slate-900/8 dark:border-white/6 pt-3">{s.detail}</p>
+                      </div>
+                    </div>
+
+                    {/* Step number circle — sits on top of the connector line. */}
+                    <div className="hidden sm:flex w-16 shrink-0 items-center justify-center">
+                      <div className={`relative w-14 h-14 rounded-full glass ${s.bg} border-2 ${s.border} flex items-center justify-center font-display font-bold text-sm ${s.color} shadow-lg shadow-black/10 dark:shadow-black/30 z-10 ring-4 ring-white/80 dark:ring-slate-950/60`}>
+                        {s.step}
+                      </div>
+                    </div>
+
+                    <div className="flex-1 hidden sm:block" />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
 
         {/* About JourneyMate */}
-        <section className="mb-20 sm:mb-28">
+        <section id="about" className="scroll-mt-32 mb-20 sm:mb-28">
           <SectionHeader
             icon={<Compass size={16} strokeWidth={2.4} />}
             accent="cyan"
@@ -321,14 +435,14 @@ export default function HowItWorks() {
             {ABOUT_STATS.map(({ value, label, icon: Icon, color, bg, border }, idx) => (
               <div
                 key={label}
-                className={`group glass rounded-2xl p-4 sm:p-5 border ${border} flex flex-col items-start gap-2 hover:-translate-y-0.5 hover:border-white/25 transition-all duration-300 animate-slide-up`}
+                className={`group glass rounded-2xl p-4 sm:p-5 border ${border} flex flex-col items-start gap-2 hover:-translate-y-0.5 hover:border-slate-900/15 dark:hover:border-white/25 hover:shadow-md transition-all duration-300 animate-slide-up`}
                 style={{ animationDelay: `${idx * 50}ms` }}
               >
                 <div className={`w-10 h-10 rounded-xl ${bg} border ${border} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                   <Icon size={17} className={color} />
                 </div>
                 <div className={`font-display font-bold text-2xl sm:text-3xl ${color} leading-none tabular-nums`}>{value}</div>
-                <div className="text-slate-400 text-xs sm:text-sm leading-snug">{label}</div>
+                <div className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm leading-snug">{label}</div>
               </div>
             ))}
           </div>
@@ -350,12 +464,12 @@ export default function HowItWorks() {
                     <Icon size={20} className={color} />
                   </div>
                   <h3
-                    className="font-bold text-base sm:text-lg text-white mb-2 tracking-tight"
+                    className="font-bold text-base sm:text-lg text-slate-900 dark:text-white mb-2 tracking-tight"
                     style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
                   >
                     {title}
                   </h3>
-                  <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+                  <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">{desc}</p>
                 </div>
               </div>
             ))}
@@ -363,7 +477,7 @@ export default function HowItWorks() {
         </section>
 
         {/* What's in each plan */}
-        <div className="mb-20 sm:mb-28">
+        <section id="plans" className="scroll-mt-32 mb-20 sm:mb-28">
           <SectionHeader
             icon={<Layers size={16} strokeWidth={2.4} />}
             accent="amber"
@@ -376,25 +490,30 @@ export default function HowItWorks() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Silver */}
-            <div className="group relative glass-silver rounded-3xl p-6 sm:p-8 border border-green-500/20 hover:border-green-400/40 hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-300 overflow-hidden">
+            <div className="group relative glass-silver rounded-3xl p-6 sm:p-8 border border-emerald-500/30 hover:border-emerald-500/50 hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-300 overflow-hidden">
               <div
                 aria-hidden
                 className="pointer-events-none absolute -top-16 -right-16 w-44 h-44 rounded-full bg-emerald-500/15 blur-3xl opacity-0 group-hover:opacity-80 transition-opacity duration-500"
               />
               <div className="relative">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/30 ring-1 ring-white/15 flex items-center justify-center">
-                    <Wallet size={20} className="text-white" />
-                  </div>
-                  <div>
-                    <div
-                      className="font-bold text-xl text-white tracking-tight"
-                      style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
-                    >
-                      Silver Plan
+                <div className="flex items-center justify-between gap-3 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/30 ring-1 ring-white/15 flex items-center justify-center">
+                      <Wallet size={20} className="text-white" />
                     </div>
-                    <div className="text-emerald-300/90 text-[10px] font-bold uppercase tracking-[0.16em]">Smart Budget</div>
+                    <div>
+                      <div
+                        className="font-bold text-xl text-slate-900 dark:text-white tracking-tight"
+                        style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
+                      >
+                        Silver Plan
+                      </div>
+                      <div className="text-emerald-700 dark:text-emerald-300/90 text-[10px] font-bold uppercase tracking-[0.16em]">Smart Budget</div>
+                    </div>
                   </div>
+                  <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                    <Sparkles size={10} /> Saves ~₹12.5k
+                  </span>
                 </div>
                 <ul className="space-y-3">
                   {[
@@ -405,8 +524,8 @@ export default function HowItWorks() {
                     { icon: CheckCircle, label: 'Perks: WiFi, maps, local tips' },
                     { icon: CheckCircle, label: 'Free cancellation booking' },
                   ].map(({ icon: Icon, label }) => (
-                    <li key={label} className="flex items-center gap-3 text-sm text-slate-300">
-                      <Icon size={16} className="text-emerald-400 shrink-0" />
+                    <li key={label} className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
+                      <Icon size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                       {label}
                     </li>
                   ))}
@@ -415,25 +534,30 @@ export default function HowItWorks() {
             </div>
 
             {/* Gold */}
-            <div className="group relative glass-gold rounded-3xl p-6 sm:p-8 border border-amber-500/20 hover:border-amber-400/40 hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-300 overflow-hidden">
+            <div className="group relative glass-gold rounded-3xl p-6 sm:p-8 border border-amber-500/30 hover:border-amber-500/50 hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-300 overflow-hidden">
               <div
                 aria-hidden
                 className="pointer-events-none absolute -top-16 -right-16 w-44 h-44 rounded-full bg-amber-500/15 blur-3xl opacity-0 group-hover:opacity-80 transition-opacity duration-500"
               />
               <div className="relative">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/30 ring-1 ring-white/15 flex items-center justify-center">
-                    <Crown size={20} className="text-white" />
-                  </div>
-                  <div>
-                    <div
-                      className="font-bold text-xl text-white tracking-tight"
-                      style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
-                    >
-                      Gold Plan
+                <div className="flex items-center justify-between gap-3 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/30 ring-1 ring-white/15 flex items-center justify-center">
+                      <Crown size={20} className="text-white" />
                     </div>
-                    <div className="text-amber-300/90 text-[10px] font-bold uppercase tracking-[0.16em]">Premium Luxury</div>
+                    <div>
+                      <div
+                        className="font-bold text-xl text-slate-900 dark:text-white tracking-tight"
+                        style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
+                      >
+                        Gold Plan
+                      </div>
+                      <div className="text-amber-700 dark:text-amber-300/90 text-[10px] font-bold uppercase tracking-[0.16em]">Premium Luxury</div>
+                    </div>
                   </div>
+                  <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                    <Crown size={10} /> Concierge
+                  </span>
                 </div>
                 <ul className="space-y-3">
                   {[
@@ -444,8 +568,8 @@ export default function HowItWorks() {
                     { icon: CheckCircle, label: 'Concierge + spa access' },
                     { icon: CheckCircle, label: 'Expert-guided premium experiences' },
                   ].map(({ icon: Icon, label }) => (
-                    <li key={label} className="flex items-center gap-3 text-sm text-slate-300">
-                      <Icon size={16} className="text-amber-400 shrink-0" />
+                    <li key={label} className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
+                      <Icon size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
                       {label}
                     </li>
                   ))}
@@ -453,10 +577,10 @@ export default function HowItWorks() {
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Roadmap — What's coming next */}
-        <section className="mb-20 sm:mb-28">
+        <section id="roadmap" className="scroll-mt-32 mb-20 sm:mb-28">
           <SectionHeader
             icon={<Rocket size={16} strokeWidth={2.4} />}
             accent="purple"
@@ -471,9 +595,9 @@ export default function HowItWorks() {
             {ROADMAP.map((tier, tierIdx) => (
               <div key={tier.horizon}>
                 {/* Horizon header */}
-                <div className="flex items-center gap-3 mb-5">
+                <div className="flex items-center gap-3 mb-2">
                   <div
-                    className="font-bold text-2xl sm:text-3xl text-white tracking-tight"
+                    className="font-bold text-2xl sm:text-3xl text-slate-900 dark:text-white tracking-tight"
                     style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
                   >
                     {tier.horizon}
@@ -482,15 +606,20 @@ export default function HowItWorks() {
                     {tierIdx === 0 && <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />}
                     {tier.badge}
                   </span>
-                  <div className="flex-1 h-px bg-gradient-to-r from-white/15 via-white/8 to-transparent" />
+                  <div className="flex-1 h-px bg-gradient-to-r from-slate-900/15 via-slate-900/8 to-transparent dark:from-white/15 dark:via-white/8" />
                 </div>
+                {tier.blurb && (
+                  <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-5 ml-0.5">
+                    {tier.blurb}
+                  </p>
+                )}
 
                 {/* Items */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {tier.items.map(({ icon: Icon, title, desc }, idx) => (
+                  {tier.items.map(({ icon: Icon, title, desc, eta }, idx) => (
                     <div
                       key={title}
-                      className="group relative glass rounded-2xl p-5 border border-white/8 hover:border-white/25 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex flex-col overflow-hidden animate-slide-up"
+                      className="group relative glass rounded-2xl p-5 border border-slate-900/10 dark:border-white/8 hover:border-slate-900/20 dark:hover:border-white/25 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 flex flex-col overflow-hidden animate-slide-up"
                       style={{ animationDelay: `${idx * 50}ms` }}
                     >
                       <div
@@ -498,18 +627,26 @@ export default function HowItWorks() {
                         className={`pointer-events-none absolute -top-12 -right-12 w-32 h-32 rounded-full ${tier.badgeBg} blur-3xl opacity-0 group-hover:opacity-70 transition-opacity duration-500`}
                       />
                       <div className="relative flex flex-col">
-                        <div className="flex items-center gap-3 mb-3">
+                        <div className="flex items-start gap-3 mb-3">
                           <div className={`w-10 h-10 rounded-xl ${tier.badgeBg} border ${tier.badgeBorder} flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300`}>
                             <Icon size={18} className={tier.badgeColor} />
                           </div>
-                          <h3
-                            className="font-bold text-base text-white leading-tight tracking-tight"
-                            style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
-                          >
-                            {title}
-                          </h3>
+                          <div className="min-w-0 flex-1">
+                            <h3
+                              className="font-bold text-base text-slate-900 dark:text-white leading-tight tracking-tight"
+                              style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
+                            >
+                              {title}
+                            </h3>
+                            {eta && (
+                              <span className={`mt-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] ${tier.badgeColor}`}>
+                                <Clock size={10} strokeWidth={2.4} />
+                                {eta}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+                        <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">{desc}</p>
                       </div>
                     </div>
                   ))}
@@ -519,19 +656,19 @@ export default function HowItWorks() {
           </div>
 
           {/* Footer CTA */}
-          <div className="relative mt-12 sm:mt-14 glass rounded-3xl p-6 sm:p-8 border border-purple-400/20 text-center overflow-hidden">
+          <div className="relative mt-12 sm:mt-14 glass rounded-3xl p-6 sm:p-8 border border-purple-400/30 text-center overflow-hidden">
             <div
               aria-hidden
               className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full opacity-40 blur-3xl"
               style={{ background: 'radial-gradient(circle, rgba(168,85,247,0.30) 0%, transparent 70%)' }}
             />
             <div className="relative">
-              <p className="text-slate-300 text-sm sm:text-base mb-5 max-w-xl mx-auto leading-relaxed">
-                Got a feature you wish JourneyMate had? Tell us — early ideas often jump straight into the <span className="text-emerald-300 font-semibold">"Now"</span> tier.
+              <p className="text-slate-700 dark:text-slate-300 text-sm sm:text-base mb-5 max-w-xl mx-auto leading-relaxed">
+                Got a feature you wish JourneyMate had? Tell us — early ideas often jump straight into the <span className="text-emerald-700 dark:text-emerald-300 font-semibold">"Now"</span> tier.
               </p>
               <Link
                 to="/about"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 text-white text-sm font-bold shadow-lg shadow-purple-500/30 transition-all hover:-translate-y-0.5"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 text-white text-sm font-bold shadow-lg shadow-purple-500/30 transition-all hover:-translate-y-0.5 active:scale-[0.97] touch-manipulation"
               >
                 <Sparkles size={14} />
                 Send us a request
@@ -542,7 +679,7 @@ export default function HowItWorks() {
         </section>
 
         {/* FAQ */}
-        <div>
+        <section id="faq" className="scroll-mt-32 mb-20 sm:mb-24">
           <SectionHeader
             icon={<HelpCircle size={16} strokeWidth={2.4} />}
             accent="sky"
@@ -556,7 +693,7 @@ export default function HowItWorks() {
             {FAQS.map((faq, idx) => (
               <details
                 key={faq.q}
-                className="group glass rounded-2xl border border-white/8 hover:border-sky-400/30 transition-colors overflow-hidden animate-slide-up"
+                className="group glass rounded-2xl border border-slate-900/10 dark:border-white/8 hover:border-sky-500/40 dark:hover:border-sky-400/30 transition-colors overflow-hidden animate-slide-up"
                 style={{ animationDelay: `${idx * 40}ms` }}
               >
                 <summary className="flex items-center justify-between gap-4 px-5 sm:px-6 py-4 sm:py-5 cursor-pointer select-none list-none">
@@ -564,19 +701,73 @@ export default function HowItWorks() {
                     <span className="grid place-items-center h-7 w-7 shrink-0 rounded-lg bg-gradient-to-br from-sky-400 to-blue-500 text-white shadow-md shadow-sky-500/30 ring-1 ring-white/15 text-[11px] font-bold tabular-nums">
                       {String(idx + 1).padStart(2, '0')}
                     </span>
-                    <span className="text-white font-semibold text-sm sm:text-base leading-snug">
+                    <span className="text-slate-900 dark:text-white font-semibold text-sm sm:text-base leading-snug">
                       {faq.q}
                     </span>
                   </div>
-                  <ArrowRight size={16} className="shrink-0 text-sky-300 group-open:rotate-90 transition-transform duration-300" />
+                  <ArrowRight size={16} className="shrink-0 text-sky-600 dark:text-sky-300 group-open:rotate-90 transition-transform duration-300" />
                 </summary>
-                <div className="px-5 sm:px-6 pb-5 pt-1 text-slate-400 text-sm leading-relaxed border-t border-white/6 ml-10 sm:ml-12">
+                <div className="px-5 sm:px-6 pb-5 pt-1 text-slate-600 dark:text-slate-400 text-sm leading-relaxed border-t border-slate-900/8 dark:border-white/6 ml-10 sm:ml-12">
                   <p className="pt-4">{faq.a}</p>
                 </div>
               </details>
             ))}
           </div>
-        </div>
+        </section>
+
+        {/* ── Final CTA band ─────────────────────────────────────────────
+              Closes the page with a single clear next step. Light + dark
+              twin: brand gradient backdrop, headline + two buttons. */}
+        <section
+          aria-label="Try JourneyMate"
+          className="relative rounded-3xl overflow-hidden border border-slate-900/10 dark:border-white/10 bg-gradient-to-br from-violet-500/10 via-sky-400/5 to-emerald-400/10 dark:from-violet-500/15 dark:via-sky-500/8 dark:to-emerald-500/15 p-6 sm:p-10"
+        >
+          {/* Decorative blooms — purely cosmetic. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-24 -left-24 w-72 h-72 rounded-full bg-violet-400/30 blur-3xl"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-emerald-400/30 blur-3xl"
+          />
+
+          <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="max-w-xl">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.16em] border border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-200">
+                <Sparkles size={11} /> Ready when you are
+              </span>
+              <h2
+                className="mt-3 font-bold text-2xl sm:text-3xl lg:text-4xl text-slate-900 dark:text-white tracking-tight leading-tight"
+                style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
+              >
+                Plan your first trip in under a minute.
+              </h2>
+              <p className="mt-2 text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
+                Type two cities, pick a vibe, and watch a Silver vs Gold itinerary build itself. No signup, no commitment — just a clearer view of what your trip can look like.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                to="/"
+                className="inline-flex items-center gap-2 px-5 sm:px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-sm sm:text-base font-bold shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-0.5 active:scale-[0.97] touch-manipulation"
+              >
+                <Play size={15} fill="currentColor" />
+                Try it now
+                <ArrowRight size={15} />
+              </Link>
+              <Link
+                to="/popular-routes"
+                className="inline-flex items-center gap-2 px-5 sm:px-6 py-3 rounded-full bg-white/80 dark:bg-slate-900/50 border border-slate-900/10 dark:border-white/10 text-slate-900 dark:text-white text-sm sm:text-base font-semibold backdrop-blur-md hover:border-slate-900/20 dark:hover:border-white/25 hover:bg-white dark:hover:bg-slate-900/70 transition-all active:scale-[0.97] touch-manipulation"
+              >
+                <Compass size={15} />
+                Browse routes
+              </Link>
+            </div>
+          </div>
+        </section>
+
       </div>
     </div>
   )

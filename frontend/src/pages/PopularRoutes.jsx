@@ -35,6 +35,26 @@ const TAG_EMOJIS = {
   Backwaters: '🚤',
 }
 
+/**
+ * Per-tag gradient backdrop — sits behind the destination photo so the
+ * card area is never blank, even when an image is slow to load or 404s.
+ * Each gradient is a hand-tuned twin (light + dark) of the tag's accent
+ * colour so the card visually telegraphs its category at a glance.
+ */
+const TAG_BACKDROPS = {
+  Beach:      'bg-gradient-to-br from-cyan-200 via-sky-300 to-blue-400 dark:from-cyan-700 dark:via-sky-800 dark:to-slate-900',
+  Mountains:  'bg-gradient-to-br from-blue-200 via-indigo-300 to-slate-500 dark:from-blue-800 dark:via-indigo-900 dark:to-slate-950',
+  Heritage:   'bg-gradient-to-br from-rose-200 via-amber-200 to-orange-300 dark:from-rose-800 dark:via-amber-900 dark:to-slate-950',
+  Adventure:  'bg-gradient-to-br from-orange-200 via-amber-300 to-rose-400 dark:from-orange-700 dark:via-rose-800 dark:to-slate-950',
+  Hills:      'bg-gradient-to-br from-lime-200 via-emerald-300 to-teal-400 dark:from-lime-800 dark:via-emerald-900 dark:to-slate-950',
+  Spiritual:  'bg-gradient-to-br from-purple-200 via-fuchsia-300 to-amber-300 dark:from-purple-800 dark:via-fuchsia-900 dark:to-slate-950',
+  Weekend:    'bg-gradient-to-br from-teal-200 via-cyan-300 to-sky-400 dark:from-teal-800 dark:via-cyan-900 dark:to-slate-950',
+  Scenic:     'bg-gradient-to-br from-emerald-200 via-green-300 to-teal-400 dark:from-emerald-800 dark:via-green-900 dark:to-slate-950',
+  Royal:      'bg-gradient-to-br from-amber-200 via-yellow-300 to-orange-400 dark:from-amber-800 dark:via-yellow-900 dark:to-slate-950',
+  Explore:    'bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 dark:from-slate-700 dark:via-slate-800 dark:to-slate-950',
+  Backwaters: 'bg-gradient-to-br from-sky-200 via-cyan-300 to-teal-400 dark:from-sky-800 dark:via-cyan-900 dark:to-slate-950',
+}
+
 const CATEGORIES = ['All', 'Beach', 'Mountains', 'Heritage', 'Adventure', 'Hills', 'Spiritual', 'Weekend', 'Scenic', 'Royal']
 
 export default function PopularRoutes() {
@@ -204,6 +224,7 @@ export default function PopularRoutes() {
               {filtered.map((route, idx) => {
                 const savings = route.goldPrice - route.silverPrice
                 const tagColor = TAG_COLORS[route.tag] || TAG_COLORS.Explore
+                const tagBackdrop = TAG_BACKDROPS[route.tag] || TAG_BACKDROPS.Explore
                 const emoji = TAG_EMOJIS[route.tag] || '🗺️'
                 const photo = getStatePhoto({
                   stateCode: route.toStateCode,
@@ -217,45 +238,71 @@ export default function PopularRoutes() {
                   >
                     {/* Subtle hover glow */}
                     <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-cyan-500/5 via-transparent to-transparent" />
-                    {/* Destination state landscape — Ken-Burns on hover,
-                        click to expand into a full-size lightbox. */}
-                    {photo?.file && (
-                      <div className="relative h-36 sm:h-40 overflow-hidden">
+
+                    {/* ── Hero photo strip ─────────────────────────────────
+                       Always rendered, even when the image is slow / 404s,
+                       because the tag-tinted gradient + emoji + city name
+                       below act as a polished fallback. The actual photo
+                       (if it loads) layers on top with a Ken-Burns hover. */}
+                    <div className={`relative h-40 sm:h-44 overflow-hidden ${tagBackdrop}`}>
+                      {/* Decorative noise + soft vignette so the gradient
+                          doesn't read as flat colour. */}
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_120%,rgba(0,0,0,0.35),transparent_60%)]" aria-hidden />
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_50%_-10%,rgba(255,255,255,0.45),transparent_60%)] mix-blend-soft-light" aria-hidden />
+
+                      {/* Giant tag emoji watermark — only visible when the
+                          photo doesn't fully cover (loading / failed). */}
+                      <div
+                        className="pointer-events-none absolute -bottom-4 -right-2 text-[8rem] leading-none opacity-25 select-none rotate-[-8deg]"
+                        aria-hidden
+                      >
+                        {emoji}
+                      </div>
+
+                      {/* The actual destination photo — clickable lightbox.
+                          object-cover lets it sit *over* the gradient. */}
+                      {photo?.file && (
                         <PhotoLightbox
                           src={photo.file}
                           alt={`${photo.spot} — ${photo.name}`}
                           caption={photo.spot}
                           subcaption={photo.name}
                           badge={photo.biome}
-                          wrapperClassName="absolute inset-0"
+                          showHint={false}
+                          wrapperClassName="absolute inset-0 z-10"
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
-                        >
-                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
-                          <div className="pointer-events-none absolute bottom-2 left-3 right-3 flex items-end justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="text-[9px] sm:text-[10px] uppercase tracking-[0.18em] font-bold text-cyan-300/95">
-                                {photo.name}
-                              </div>
-                              <div className="text-xs sm:text-sm font-bold text-white truncate drop-shadow">
-                                {photo.spot}
-                              </div>
-                            </div>
-                          </div>
-                        </PhotoLightbox>
-                      </div>
-                    )}
+                        />
+                      )}
 
-                    {/* Card header */}
-                    <div className="bg-gradient-to-br from-white/5 to-transparent p-5 sm:p-6 border-b border-white/6">
-                      <div className="flex items-start justify-between gap-3 mb-4">
-                        <div className="w-12 h-12 rounded-2xl glass border border-white/10 flex items-center justify-center text-2xl shrink-0">
+                      {/* Always-on dark wash so foreground chips read clearly
+                          on both the photo *and* the gradient fallback. */}
+                      <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-slate-950/10" aria-hidden />
+
+                      {/* Top row — vibe pill (right) + emoji puck (left).
+                          pointer-events-none so the lightbox button below
+                          still receives the tap, while children stay visible. */}
+                      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 py-3">
+                        <div className="w-11 h-11 rounded-2xl bg-white/95 dark:bg-slate-950/70 ring-1 ring-white/40 dark:ring-white/15 backdrop-blur-md flex items-center justify-center text-xl shadow-[0_6px_18px_-6px_rgba(0,0,0,0.45)]">
                           {emoji}
                         </div>
-                        <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${tagColor}`}>
+                        <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-slate-950/65 backdrop-blur-md ${tagColor}`}>
                           {route.tag}
                         </span>
                       </div>
 
+                      {/* Bottom row — destination spot + state caption */}
+                      <div className="absolute inset-x-0 bottom-0 z-30 px-4 pb-3 pt-10 pointer-events-none">
+                        <div className="text-[9px] sm:text-[10px] uppercase tracking-[0.22em] font-bold text-cyan-200/95 drop-shadow">
+                          {photo?.name || 'India'}
+                        </div>
+                        <div className="text-base sm:text-lg font-display font-bold text-white truncate drop-shadow-[0_2px_8px_rgba(0,0,0,0.55)]">
+                          {photo?.spot || route.to}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card header */}
+                    <div className="bg-gradient-to-br from-white/5 to-transparent p-5 sm:p-6 border-b border-white/6">
                       <div className="flex items-center gap-2 text-white mb-1">
                         <MapPin size={14} className="text-green-400 shrink-0" />
                         <span className="font-semibold text-sm sm:text-base truncate">{route.from}</span>

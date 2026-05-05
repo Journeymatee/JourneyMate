@@ -1163,3 +1163,222 @@ h4, h5, h6                                          { letter-spacing: -0.01em; }
  *  poster slide live in a <style> tag scoped INSIDE the overlay so
  *  they're auto-removed when the wipe finishes. No global CSS needed.
  * ────────────────────────────────────────────────────────────────── */
+
+/* ──────────────────────────────────────────────────────────────────
+ *  LIGHT THEME — ROUND 3: Premium polish
+ *  ─────────────────────────────────────────────────────────────────
+ *  Goal: tighten "brightness mode" so it reads like a modern SaaS
+ *  product (Stripe / Linear / Vercel). Every rule below is scoped to
+ *  `[data-theme='light']` so dark mode stays untouched.
+ *
+ *  Layered upgrades:
+ *    1. Tabular figures — prices, days, distances line up perfectly.
+ *    2. Real frosted-glass cards — deeper backdrop blur + saturation,
+ *       inner top highlight, layered ink shadows, lift on hover.
+ *    3. Smoother body kerning + heading optical sizing.
+ *    4. Uniform interactive choreography — buttons compress on press,
+ *       inputs ease into a soft brand glow on focus.
+ *    5. Pill scrollbar with hover bloom (Linear-style).
+ *    6. Refined mesh canvas — luminous, professional, never gaudy.
+ *    7. Section / page-bg tints — softer wash so cards float on top.
+ *    8. Plan cards — gold/silver hairline highlight + brand-tinted
+ *       shadow on hover.
+ *    9. Reduced-motion: every new transition is gracefully disabled.
+ * ────────────────────────────────────────────────────────────────── */
+
+/* 1) Tabular numerics — apply globally so dark mode benefits too.
+ *    `font-variant-numeric: tabular-nums` makes every digit the same
+ *    width, so price columns / day counts / distances line up cleanly
+ *    when they animate or update. Stripe and Linear use this. */
+.price-animate,
+.tabular-nums,
+[data-numeric='true'] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 2) Glass cards — premium frosted surface with layered depth.
+ *    Specificity is the same as the earlier `[data-theme='light'] .glass`
+ *    rule, so this later definition wins via cascade order. */
+[data-theme='light'] .glass {
+  background-color: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 12px 28px -16px rgba(15, 23, 42, 0.18);
+  transition:
+    box-shadow   320ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 280ms ease,
+    transform    320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+[data-theme='light'] .glass:hover {
+  border-color: rgba(15, 23, 42, 0.10);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 6px 16px -8px rgba(15, 23, 42, 0.16),
+    0 24px 60px -24px rgba(15, 23, 42, 0.24);
+}
+
+/* 3) Body / heading typography polish. */
+[data-theme='light'] body {
+  font-feature-settings: "kern", "liga", "calt", "ss01";
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+}
+[data-theme='light'] h1,
+[data-theme='light'] h2,
+[data-theme='light'] h3,
+[data-theme='light'] .font-display {
+  letter-spacing: -0.022em;
+  text-rendering: optimizeLegibility;
+}
+[data-theme='light'] p,
+[data-theme='light'] li {
+  line-height: 1.65;
+}
+
+/* 4) Interactive choreography — additive only.
+ *
+ *    We deliberately do NOT set `transition` on every button/anchor
+ *    here, because most components in the codebase already opt-in via
+ *    Tailwind's `transition-all` / `transition-colors` utilities and
+ *    overriding the shorthand would clobber timings the components
+ *    chose for themselves.
+ *
+ *    The single addition: a uniform "press-compress" on :active so
+ *    every interactive element feels physical when clicked. We pair
+ *    it with a `transition-property` ONLY on `transform` (scoped
+ *    extra-specifically so it merges, not overrides) and only on
+ *    elements that do NOT already declare a transition for transform.
+ *    This is achieved by selecting `:active` with no transition
+ *    additions — the existing Tailwind transitions almost always
+ *    include `transform` already (transition-all / transition-transform).
+ */
+[data-theme='light'] button:not(:disabled):active,
+[data-theme='light'] [role='button']:not([aria-disabled='true']):active {
+  transform: scale(0.985);
+}
+
+/* Soft brand outline on focus — accessibility + polish.
+ *    Uses outline only (no box-shadow) so a focused card/button
+ *    doesn't lose its own elevation shadow during the focus state. */
+[data-theme='light'] *:focus-visible {
+  outline: 2px solid rgba(34, 197, 94, 0.6);
+  outline-offset: 2px;
+}
+
+/* 5) Inputs — refined surface + smooth focus transition. */
+[data-theme='light'] input,
+[data-theme='light'] textarea,
+[data-theme='light'] select {
+  transition:
+    background-color 200ms ease,
+    border-color     200ms ease,
+    box-shadow       220ms cubic-bezier(0.4, 0, 0.2, 1),
+    color            180ms ease;
+}
+[data-theme='light'] input:hover:not(:focus):not(:disabled),
+[data-theme='light'] textarea:hover:not(:focus):not(:disabled) {
+  border-color: rgba(15, 23, 42, 0.18);
+}
+
+/* 6) Pill scrollbar with hover bloom (light mode only — dark keeps
+ *    the existing thinner slate thumb). */
+[data-theme='light'] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+[data-theme='light'] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background-color: rgba(15, 23, 42, 0.16);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+  transition: background-color 220ms ease;
+}
+[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(15, 23, 42, 0.30);
+  background-clip: content-box;
+}
+/* Firefox */
+[data-theme='light'] {
+  scrollbar-color: rgba(15, 23, 42, 0.18) transparent;
+  scrollbar-width: thin;
+}
+
+/* 7) Refined luminous canvas. The earlier mesh-bg block already
+ *    provides three radial orbs; we tone them down a touch and add
+ *    a fourth, very faint, brand-emerald wash at the top so the page
+ *    feels lit from above. */
+[data-theme='light'] .mesh-bg {
+  background:
+    radial-gradient(1200px 700px at 50% -120px, rgba(34, 197, 94, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 18% 22%, rgba(34, 197, 94, 0.09) 0%, transparent 55%),
+    radial-gradient(ellipse at 82% 78%, rgba(245, 158, 11, 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 70%),
+    var(--bg-dark);
+}
+
+/* 8) Plan cards — brand-tinted lift on hover.
+ *    We do NOT add a `::before` sheen because plan cards have content
+ *    pinned to the top edge (the brand badge / price); a top-fading
+ *    overlay would mute that content. A single inset hairline at the
+ *    top achieves the same "lit-from-above" feel without covering
+ *    anything. */
+[data-theme='light'] .plan-card {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 22px -10px rgba(15, 23, 42, 0.10);
+}
+[data-theme='light'] .plan-card-silver:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 18px 44px -16px rgba(34, 197, 94, 0.28),
+    0 8px 22px -8px rgba(15, 23, 42, 0.10);
+}
+[data-theme='light'] .plan-card-gold:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 18px 44px -16px rgba(245, 158, 11, 0.28),
+    0 8px 22px -8px rgba(15, 23, 42, 0.10);
+}
+
+/* 9) Tab switchers / segmented controls (Sign in / Create account,
+ *    silver / gold tabs) — give the inactive chips a softer surface
+ *    in light mode so the active gradient pops. */
+[data-theme='light'] .day-tab {
+  color: rgb(71 85 105);
+}
+[data-theme='light'] .day-tab.active {
+  color: rgb(15 23 42);
+}
+
+/* 10) Selection in light mode — already defined earlier; bump the
+ *     contrast a hair so highlighted prose reads cleanly. */
+[data-theme='light'] ::selection {
+  background-color: rgba(34, 197, 94, 0.28);
+  color: rgb(15 23 42);
+}
+
+/* 11) Reduced motion — disable every newly-added transition. */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='light'] .glass,
+  [data-theme='light'] input,
+  [data-theme='light'] textarea,
+  [data-theme='light'] select,
+  [data-theme='light'] ::-webkit-scrollbar-thumb {
+    transition: none !important;
+  }
+  [data-theme='light'] button:not(:disabled):active,
+  [data-theme='light'] [role='button']:not([aria-disabled='true']):active {
+    transform: none;
+  }
+}
+

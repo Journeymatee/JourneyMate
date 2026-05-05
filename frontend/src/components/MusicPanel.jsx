@@ -67,7 +67,7 @@ function ProviderButton({ href, label, icon, kbd }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 transition hover:border-fuchsia-400/40 hover:bg-fuchsia-500/10 hover:text-white"
+      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-white/80 dark:bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 transition hover:border-fuchsia-400/60 dark:hover:border-fuchsia-400/40 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 hover:text-slate-900 dark:hover:text-white active:scale-[0.97] touch-manipulation"
       title={`Open in ${label}`}
     >
       {icon}
@@ -80,22 +80,26 @@ function ProviderButton({ href, label, icon, kbd }) {
 function TrackRow({ track, idx, accent }) {
   const ring =
     accent === 'gold'
-      ? 'border-amber-400/20 bg-amber-500/[0.04]'
-      : 'border-fuchsia-400/20 bg-fuchsia-500/[0.04]'
-  const accentText = accent === 'gold' ? 'text-amber-300' : 'text-fuchsia-300'
+      ? 'border-amber-300/70 bg-amber-50/80 dark:border-amber-400/20 dark:bg-amber-500/[0.04]'
+      : 'border-fuchsia-300/70 bg-fuchsia-50/80 dark:border-fuchsia-400/20 dark:bg-fuchsia-500/[0.04]'
+  const accentText = accent === 'gold' ? 'text-amber-700 dark:text-amber-300' : 'text-fuchsia-700 dark:text-fuchsia-300'
+  const counterBg =
+    accent === 'gold'
+      ? 'bg-white/80 dark:bg-slate-900/60 ring-1 ring-amber-300/70 dark:ring-amber-500/30'
+      : 'bg-white/80 dark:bg-slate-900/60 ring-1 ring-fuchsia-300/70 dark:ring-fuchsia-500/30'
   return (
     <li
-      className={`group relative flex flex-col gap-2 rounded-xl border ${ring} p-2.5 transition hover:border-fuchsia-400/40 sm:flex-row sm:items-center sm:gap-3 sm:p-3`}
+      className={`group relative flex flex-col gap-2 rounded-xl border ${ring} p-2.5 transition-colors hover:border-fuchsia-400/60 dark:hover:border-fuchsia-400/40 sm:flex-row sm:items-center sm:gap-3 sm:p-3`}
     >
       <div
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-slate-900/60 text-xs font-bold ${accentText}`}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${counterBg} text-xs font-bold tabular-nums ${accentText}`}
       >
         {String(idx + 1).padStart(2, '0')}
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-white">{track.title}</p>
-        <p className="truncate text-[11px] text-slate-400">
+        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{track.title}</p>
+        <p className="truncate text-[11px] text-slate-600 dark:text-slate-400">
           {track.artist || 'Unknown artist'}
           {track.language ? <span className="ml-1.5 text-slate-500">· {track.language}</span> : null}
         </p>
@@ -107,7 +111,7 @@ function TrackRow({ track, idx, accent }) {
             href={track.links.spotify}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-black/30 px-2 py-1 text-[10px] font-semibold text-slate-200 transition hover:border-emerald-400/40 hover:text-white"
+            className="inline-flex items-center gap-1 rounded-md border border-slate-900/10 dark:border-white/10 bg-white/80 dark:bg-black/30 px-2 py-1 text-[10px] font-semibold text-slate-700 dark:text-slate-200 transition hover:border-emerald-400/60 dark:hover:border-emerald-400/40 hover:text-slate-900 dark:hover:text-white active:scale-[0.97] touch-manipulation"
             title="Search on Spotify"
           >
             <SpotifyGlyph size={11} />
@@ -119,7 +123,7 @@ function TrackRow({ track, idx, accent }) {
             href={track.links.ytMusic}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-black/30 px-2 py-1 text-[10px] font-semibold text-slate-200 transition hover:border-rose-400/40 hover:text-white"
+            className="inline-flex items-center gap-1 rounded-md border border-slate-900/10 dark:border-white/10 bg-white/80 dark:bg-black/30 px-2 py-1 text-[10px] font-semibold text-slate-700 dark:text-slate-200 transition hover:border-rose-400/60 dark:hover:border-rose-400/40 hover:text-slate-900 dark:hover:text-white active:scale-[0.97] touch-manipulation"
             title="Search on YouTube Music"
           >
             <YouTubeGlyph size={11} />
@@ -179,26 +183,26 @@ function MusicPanelInner({ destination, tripType, vibes }) {
 
   return (
     <div
-      className="mb-6 sm:mb-8 rounded-2xl border border-white/10 glass p-4 sm:p-5 animate-slide-up w-full min-w-0"
+      className="mb-6 sm:mb-8 rounded-2xl border border-slate-900/10 dark:border-white/10 glass p-4 sm:p-5 animate-slide-up w-full min-w-0"
       style={{ animationDelay: '0.16s' }}
     >
       <div className="mb-3 flex items-center gap-2 min-w-0">
-        <div className="relative shrink-0">
+        <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-fuchsia-200 to-pink-200 dark:from-fuchsia-500/25 dark:to-pink-500/15 border border-fuchsia-400/60 dark:border-fuchsia-500/30 ring-1 ring-white/40 dark:ring-white/10 flex items-center justify-center">
           <Disc3
-            size={18}
-            className={`text-fuchsia-300 ${loading ? 'animate-spin' : ''}`}
+            size={16}
+            className={`text-fuchsia-700 dark:text-fuchsia-300 ${loading ? 'animate-spin' : ''}`}
             style={{ animationDuration: '2.5s' }}
           />
         </div>
-        <h3 className="text-sm font-bold tracking-wide text-white truncate">
+        <h3 className="text-sm font-bold tracking-wide text-slate-900 dark:text-white truncate">
           Soundtrack for {destination}
         </h3>
         {data?.source && (
           <span
             className={`ml-auto hidden xs:inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
               data.source.includes('llm')
-                ? 'border-fuchsia-400/30 bg-fuchsia-500/10 text-fuchsia-300'
-                : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-300'
+                ? 'border-fuchsia-400/60 dark:border-fuchsia-400/30 bg-fuchsia-100/80 dark:bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300'
+                : 'border-cyan-400/60 dark:border-cyan-400/30 bg-cyan-100/80 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-300'
             }`}
           >
             <Sparkles size={9} />
@@ -207,7 +211,7 @@ function MusicPanelInner({ destination, tripType, vibes }) {
         )}
       </div>
 
-      <p className="mb-4 text-xs text-slate-500 leading-snug">
+      <p className="mb-4 text-xs text-slate-600 dark:text-slate-400 leading-snug">
         {data?.summary
           ? data.summary
           : 'Music suggestions tuned to where you are going — open in your favourite app.'}
@@ -219,12 +223,12 @@ function MusicPanelInner({ destination, tripType, vibes }) {
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.02] p-3"
+              className="flex items-center gap-3 rounded-xl border border-slate-900/8 dark:border-white/8 bg-white/40 dark:bg-white/[0.02] p-3"
             >
-              <div className="h-9 w-9 shrink-0 animate-pulse rounded-lg bg-white/5" />
+              <div className="h-9 w-9 shrink-0 animate-pulse rounded-lg bg-slate-900/5 dark:bg-white/5" />
               <div className="flex-1 space-y-1.5">
-                <div className="h-3 w-2/3 animate-pulse rounded bg-white/5" />
-                <div className="h-2.5 w-1/3 animate-pulse rounded bg-white/5" />
+                <div className="h-3 w-2/3 animate-pulse rounded bg-slate-900/5 dark:bg-white/5" />
+                <div className="h-2.5 w-1/3 animate-pulse rounded bg-slate-900/5 dark:bg-white/5" />
               </div>
             </div>
           ))}
@@ -233,9 +237,9 @@ function MusicPanelInner({ destination, tripType, vibes }) {
 
       {/* Error / empty state */}
       {!loading && error && (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.02] p-6 text-center">
-          <Headphones size={22} className="text-slate-500" />
-          <p className="text-xs text-slate-400">
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-900/8 dark:border-white/8 bg-white/40 dark:bg-white/[0.02] p-6 text-center">
+          <Headphones size={22} className="text-slate-400 dark:text-slate-500" />
+          <p className="text-xs text-slate-600 dark:text-slate-400">
             Couldn’t load suggestions for this place right now.
           </p>
           <button
@@ -251,7 +255,7 @@ function MusicPanelInner({ destination, tripType, vibes }) {
                 .catch(() => setError(true))
                 .finally(() => setLoading(false))
             }}
-            className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-slate-200 hover:border-fuchsia-400/40 hover:bg-fuchsia-500/10 hover:text-white"
+            className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-slate-900/15 dark:border-white/15 bg-white/80 dark:bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:border-fuchsia-400/60 dark:hover:border-fuchsia-400/40 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 hover:text-slate-900 dark:hover:text-white transition-all active:scale-[0.97] touch-manipulation"
           >
             <RefreshCw size={12} />
             Retry
@@ -269,8 +273,8 @@ function MusicPanelInner({ destination, tripType, vibes }) {
           </ul>
 
           {/* Provider buttons (search the whole vibe at once) */}
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/8 pt-3">
-            <span className="mr-1 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-500">
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-900/8 dark:border-white/8 pt-3">
+            <span className="mr-1 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-500">
               <Music2 size={11} />
               Open vibe in
             </span>
@@ -296,14 +300,14 @@ function MusicPanelInner({ destination, tripType, vibes }) {
               <ProviderButton
                 href={data.links.jiosaavn}
                 label="JioSaavn"
-                icon={<Music2 size={12} className="text-cyan-300" />}
+                icon={<Music2 size={12} className="text-cyan-600 dark:text-cyan-300" />}
                 kbd
               />
             )}
           </div>
 
           {data.attribution && (
-            <p className="mt-2 text-[10px] text-slate-500 leading-relaxed">
+            <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-500 leading-relaxed">
               {data.attribution}
             </p>
           )}
@@ -312,7 +316,7 @@ function MusicPanelInner({ destination, tripType, vibes }) {
 
       {/* Tiny inline loader if refreshing while data already shown */}
       {loading && data && (
-        <div className="mt-3 flex items-center gap-2 text-[11px] text-slate-500">
+        <div className="mt-3 flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-500">
           <Loader2 size={11} className="animate-spin" />
           Updating to match your vibe…
         </div>

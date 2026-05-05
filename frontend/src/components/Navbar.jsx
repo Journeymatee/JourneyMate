@@ -13,6 +13,7 @@ import {
   Crown,
   Mail,
   Sparkles,
+  Radar,
 } from 'lucide-react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -25,6 +26,7 @@ import ThemeToggle from './ThemeToggle'
 const PUBLIC_NAV_LINKS = [
   { to: '/how-it-works', label: 'How it Works' },
   { to: '/popular-routes', label: 'Popular Routes' },
+  { to: '/live-search', label: 'Live Search', accent: true },
   { to: '/blog', label: 'Blog' },
 ]
 const SAVED_LINK = { to: '/saved', label: 'Saved' }
@@ -34,61 +36,65 @@ const ADMIN_LINK = { to: '/admin', label: 'Admin', adminOnly: true }
 // Drawer sections (mobile only) — icon, description and a tinted gradient
 // per item give the menu real visual hierarchy. Order matches the desktop
 // header so users see the same mental model on every screen size.
+//
+// IMPORTANT: each `wrap` / `icon` value below is a fully-formed Tailwind
+// class string with `dark:` prefixes baked in. This is deliberate — Tailwind
+// JIT scans source files for complete class strings, so building class names
+// at runtime via interpolation (e.g. `dark:${variant}`) would silently fail
+// because the generated CSS would never include those utilities.
+const TINT = {
+  sky: {
+    wrap: 'bg-gradient-to-br from-sky-100 to-sky-50 ring-1 ring-sky-300/60 dark:from-sky-500/25 dark:to-cyan-500/15 dark:ring-sky-400/30',
+    icon: 'text-sky-700 dark:text-sky-300',
+  },
+  emerald: {
+    wrap: 'bg-gradient-to-br from-emerald-100 to-green-50 ring-1 ring-emerald-300/60 dark:from-emerald-500/25 dark:to-green-500/15 dark:ring-emerald-400/30',
+    icon: 'text-emerald-700 dark:text-emerald-300',
+  },
+  amber: {
+    wrap: 'bg-gradient-to-br from-amber-100 to-orange-50 ring-1 ring-amber-300/60 dark:from-amber-500/25 dark:to-orange-500/15 dark:ring-amber-400/30',
+    icon: 'text-amber-700 dark:text-amber-300',
+  },
+  indigo: {
+    wrap: 'bg-gradient-to-br from-indigo-100 to-blue-50 ring-1 ring-indigo-300/60 dark:from-indigo-500/25 dark:to-blue-500/15 dark:ring-indigo-400/30',
+    icon: 'text-indigo-700 dark:text-indigo-300',
+  },
+  teal: {
+    wrap: 'bg-gradient-to-br from-emerald-100 to-teal-50 ring-1 ring-teal-300/60 dark:from-emerald-500/25 dark:to-teal-500/15 dark:ring-emerald-400/30',
+    icon: 'text-teal-700 dark:text-emerald-300',
+  },
+  yellow: {
+    wrap: 'bg-gradient-to-br from-yellow-100 to-amber-50 ring-1 ring-amber-300/60 dark:from-yellow-500/25 dark:to-amber-500/15 dark:ring-yellow-400/30',
+    icon: 'text-amber-700 dark:text-yellow-300',
+  },
+  rose: {
+    wrap: 'bg-gradient-to-br from-rose-100 to-pink-50 ring-1 ring-rose-300/60 dark:from-rose-500/25 dark:to-pink-500/15 dark:ring-rose-400/30',
+    icon: 'text-rose-700 dark:text-rose-300',
+  },
+  violet: {
+    wrap: 'bg-gradient-to-br from-violet-100 to-fuchsia-50 ring-1 ring-violet-300/60 dark:from-violet-500/25 dark:to-fuchsia-500/15 dark:ring-violet-400/30',
+    icon: 'text-violet-700 dark:text-violet-300',
+  },
+}
+
 const DISCOVER_LINKS = [
-  {
-    to: '/how-it-works',
-    label: 'How it Works',
-    desc: 'Silver vs Gold in 30 seconds',
-    Icon: Workflow,
-    tint: 'from-sky-500/25 to-cyan-500/15 text-sky-300 ring-sky-400/30',
-  },
-  {
-    to: '/popular-routes',
-    label: 'Popular Routes',
-    desc: 'Top picks across India',
-    Icon: MapPin,
-    tint: 'from-emerald-500/25 to-green-500/15 text-emerald-300 ring-emerald-400/30',
-  },
-  {
-    to: '/blog',
-    label: 'Blog',
-    desc: 'Stories, tips & guides',
-    Icon: BookOpen,
-    tint: 'from-amber-500/25 to-orange-500/15 text-amber-300 ring-amber-400/30',
-  },
+  { to: '/how-it-works',   label: 'How it Works',   desc: 'Silver vs Gold in 30 seconds',     Icon: Workflow,  tint: TINT.sky },
+  { to: '/popular-routes', label: 'Popular Routes', desc: 'Top picks across India',           Icon: MapPin,    tint: TINT.emerald },
+  { to: '/live-search',    label: 'Live Search',    desc: 'Real-time trains, flights, hotels',Icon: Radar,     tint: TINT.violet },
+  { to: '/blog',           label: 'Blog',           desc: 'Stories, tips & guides',           Icon: BookOpen,  tint: TINT.amber },
 ]
 
 const ABOUT_DRAWER_ITEM = {
-  to: '/about',
-  label: 'About',
-  desc: 'The team behind JourneyMate',
-  Icon: Info,
-  tint: 'from-indigo-500/25 to-blue-500/15 text-indigo-300 ring-indigo-400/30',
+  to: '/about', label: 'About', desc: 'The team behind JourneyMate', Icon: Info, tint: TINT.indigo,
 }
 
 const SAVED_DRAWER_ITEM = {
-  to: '/saved',
-  label: 'Saved trips',
-  desc: 'Your private wishlist',
-  Icon: Sparkles,
-  tint: 'from-emerald-500/25 to-teal-500/15 text-emerald-300 ring-emerald-400/30',
+  to: '/saved', label: 'Saved trips', desc: 'Your private wishlist', Icon: Sparkles, tint: TINT.teal,
 }
 
 const MORE_LINKS = [
-  {
-    to: '/pricing',
-    label: 'Pricing',
-    desc: 'Free forever for travellers',
-    Icon: Crown,
-    tint: 'from-yellow-500/25 to-amber-500/15 text-yellow-300 ring-yellow-400/30',
-  },
-  {
-    to: '/contact',
-    label: 'Contact',
-    desc: 'Talk to a real human',
-    Icon: Mail,
-    tint: 'from-rose-500/25 to-pink-500/15 text-rose-300 ring-rose-400/30',
-  },
+  { to: '/pricing', label: 'Pricing', desc: 'Free forever for travellers', Icon: Crown, tint: TINT.yellow },
+  { to: '/contact', label: 'Contact', desc: 'Talk to a real human',        Icon: Mail,  tint: TINT.rose },
 ]
 
 export default function Navbar() {
@@ -226,13 +232,23 @@ export default function Navbar() {
                     ? isActive
                       ? 'text-white bg-gradient-to-r from-violet-500/20 to-cyan-500/15 border border-violet-500/30'
                       : 'text-violet-300 hover:text-white hover:bg-violet-500/10 border border-violet-500/20'
-                    : isActive
-                      ? 'text-white bg-gradient-to-r from-green-500/15 to-emerald-500/10 border border-green-500/20'
-                      : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                    : link.accent
+                      ? isActive
+                        ? 'text-white bg-gradient-to-r from-emerald-500/25 to-cyan-500/20 border border-emerald-400/40'
+                        : 'text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-white hover:bg-emerald-500/10 border border-emerald-400/30 dark:border-emerald-400/20'
+                      : isActive
+                        ? 'text-white bg-gradient-to-r from-green-500/15 to-emerald-500/10 border border-green-500/20'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
                 }`
               }
             >
               {link.adminOnly && <ShieldCheck size={13} />}
+              {link.accent && (
+                <span className="relative flex h-1.5 w-1.5" aria-hidden>
+                  <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/60" />
+                  <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                </span>
+              )}
               {link.label}
             </NavLink>
           ))}
@@ -327,59 +343,83 @@ function MobileDrawer({ open, onClose, user, logout, firstName, initial }) {
         }`}
       />
 
-      {/* Sliding panel */}
+      {/* Sliding panel
+          Light-mode default (white sheet) + `dark:` variants restore the
+          original obsidian look. We bypass the global slate→white remap
+          in index.css by setting an explicit white background here. */}
       <aside
         role="dialog"
         aria-modal="true"
         aria-label="Main menu"
-        className={`absolute top-0 right-0 w-[88vw] max-w-[400px] bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 border-l border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.6)] flex flex-col transform transition-transform duration-300 ease-out ${
+        className={`absolute top-0 right-0 w-[88vw] max-w-[400px] flex flex-col transform transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] border-l shadow-[-12px_0_40px_-8px_rgba(15,23,42,0.18)] bg-white border-slate-900/8 dark:bg-gradient-to-b dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:border-white/10 dark:shadow-[0_0_60px_rgba(0,0,0,0.6)] ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{ height: '100dvh' }}
       >
-        {/* Ambient brand glow */}
-        <div className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-amber-500/10 blur-3xl" />
+        {/* Ambient brand glow — kept very faint so the panel reads as a
+            calm surface, not a glowing toy. Disabled in light mode so the
+            white sheet stays clean. */}
+        <div className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full hidden dark:block bg-emerald-500/[0.08] blur-3xl" aria-hidden />
+        <div className="pointer-events-none absolute -bottom-32 -left-24 w-72 h-72 rounded-full hidden dark:block bg-amber-500/[0.06] blur-3xl" aria-hidden />
 
-        {/* Header */}
-        <div className="relative flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/8 shrink-0">
-          <Link to="/" className="flex items-center gap-2.5" onClick={onClose}>
-            <img src="/logo.svg" alt="" className="w-9 h-9 rounded-xl shadow-lg shadow-green-500/20" />
-            <div>
-              <div className="font-display font-bold text-white leading-tight">JourneyMate</div>
-              <div className="text-[10px] text-slate-500 leading-none mt-0.5">Smart Travel Comparison</div>
+        {/* Header — slim, neutral, with a hairline divider. */}
+        <div className="relative flex items-center justify-between px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-3.5 shrink-0">
+          <Link to="/" className="flex items-center gap-2.5 min-w-0" onClick={onClose}>
+            <img src="/logo.svg" alt="" className="w-9 h-9 rounded-xl shadow-md shadow-emerald-500/20" />
+            <div className="min-w-0">
+              <div className="font-display font-bold leading-tight tracking-tight truncate text-slate-900 dark:text-white">JourneyMate</div>
+              <div className="text-[10px] leading-none mt-0.5 tracking-wide truncate text-slate-500">Smart travel comparison</div>
             </div>
           </Link>
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all"
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95 touch-manipulation shrink-0 ml-2 bg-slate-900/[0.04] hover:bg-slate-900/[0.08] border border-slate-900/10 text-slate-600 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-slate-300 dark:hover:text-white"
             aria-label="Close menu"
           >
             <X size={18} />
           </button>
         </div>
+        <div className="px-5 shrink-0">
+          <div className="h-px bg-gradient-to-r from-transparent via-slate-900/10 to-transparent dark:via-white/10" />
+        </div>
 
         {/* Scrollable body */}
         <div className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-5 space-y-6">
-          {/* Greeting card */}
+          {/* Greeting card — premium "account" tile. */}
           {user && (
-            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 via-slate-900/40 to-amber-500/10 p-4">
-              <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-amber-500/20 blur-2xl" />
-              <div className="relative flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-amber-500 flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-emerald-500/30">
+            <div className="relative overflow-hidden rounded-2xl p-4 border border-slate-900/8 bg-gradient-to-br from-emerald-50 via-white to-amber-50 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-gradient-to-br dark:from-emerald-500/[0.10] dark:via-slate-900/55 dark:to-amber-500/[0.08] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+              <div className="pointer-events-none absolute -top-10 -right-10 w-36 h-36 rounded-full bg-amber-300/30 dark:bg-amber-500/15 blur-2xl" aria-hidden />
+              <div className="relative flex items-center gap-3.5">
+                <div className="relative shrink-0">
+                  {/* Conic-gradient ring frame for the avatar — a small but
+                      hugely "expensive-looking" detail. */}
+                  <span
+                    aria-hidden
+                    className="absolute -inset-[3px] rounded-full opacity-90"
+                    style={{
+                      background:
+                        'conic-gradient(from 180deg at 50% 50%, #34d399 0deg, #fbbf24 140deg, #f472b6 240deg, #34d399 360deg)',
+                    }}
+                  />
+                  <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-amber-500 flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-emerald-500/30 ring-2 ring-white dark:ring-slate-950">
                     {initial}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-400 border-2 border-slate-950" />
+                  <span
+                    aria-hidden
+                    title="Online"
+                    className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-950 shadow-[0_0_0_3px_rgba(16,185,129,0.18)]"
+                  />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[11px] uppercase tracking-wider text-emerald-300/80 font-semibold flex items-center gap-1">
-                    <Sparkles size={11} />
+                  <div className="text-[10px] uppercase tracking-[0.16em] font-bold flex items-center gap-1 text-emerald-700 dark:text-emerald-300/85">
+                    <Sparkles size={10} />
                     Welcome back
                   </div>
-                  <div className="text-base font-bold text-white truncate">Hi, {firstName}</div>
-                  <div className="text-[11px] text-slate-400 truncate">{user.email}</div>
+                  <div className="text-[15px] font-semibold truncate mt-0.5 tracking-tight text-slate-900 dark:text-white">
+                    Hi, {firstName}
+                  </div>
+                  <div className="text-[11px] truncate text-slate-500 dark:text-slate-400">{user.email}</div>
                 </div>
               </div>
             </div>
@@ -387,44 +427,47 @@ function MobileDrawer({ open, onClose, user, logout, firstName, initial }) {
 
           <DrawerSection title="Discover">
             {DISCOVER_LINKS.map((item) => (
-              <DrawerItem key={item.to || item.label} item={item} />
+              <DrawerItem key={item.to || item.label} item={item} onNavigate={onClose} />
             ))}
-            {user && <DrawerItem item={SAVED_DRAWER_ITEM} />}
-            <DrawerItem item={ABOUT_DRAWER_ITEM} />
+            {user && <DrawerItem item={SAVED_DRAWER_ITEM} onNavigate={onClose} />}
+            <DrawerItem item={ABOUT_DRAWER_ITEM} onNavigate={onClose} />
           </DrawerSection>
 
           <DrawerSection title="More">
             {MORE_LINKS.map((item) => (
-              <DrawerItem key={item.to || item.label} item={item} />
+              <DrawerItem key={item.to || item.label} item={item} onNavigate={onClose} />
             ))}
 
             {user?.isAdmin && (
               <DrawerItem
+                onNavigate={onClose}
                 item={{
                   to: '/admin',
                   label: 'Admin Console',
                   desc: 'Backstage controls',
                   Icon: ShieldCheck,
-                  tint: 'from-violet-500/25 to-fuchsia-500/15 text-violet-300 ring-violet-400/30',
+                  tint: TINT.violet,
                 }}
               />
             )}
           </DrawerSection>
         </div>
 
-        {/* Footer — pinned, never overflows; safe-area aware on iOS */}
+        {/* Footer — pinned, never overflows; safe-area aware on iOS.
+            Light mode: solid white-95 with hairline divider; dark mode:
+            translucent slate strip with brand-emerald accent line above. */}
         <div
-          className="relative shrink-0 px-4 pt-3 pb-4 border-t border-white/8 bg-slate-950/70 backdrop-blur-xl space-y-2.5"
+          className="relative shrink-0 px-4 pt-3.5 pb-4 space-y-3 border-t bg-white/95 backdrop-blur-xl border-slate-900/8 dark:bg-slate-950/75 dark:border-white/8"
           style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent dark:via-emerald-500/30" aria-hidden />
 
           {/* Sign in / Sign out */}
           {user ? (
             <button
               type="button"
               onClick={() => { logout(); onClose() }}
-              className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-2xl bg-white/5 hover:bg-rose-500/10 border border-white/8 hover:border-rose-500/30 text-slate-300 hover:text-rose-300 transition-all duration-200 group"
+              className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-2xl transition-all duration-200 group active:scale-[0.99] touch-manipulation bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 hover:text-rose-800 dark:bg-white/5 dark:hover:bg-rose-500/10 dark:border-white/10 dark:hover:border-rose-500/30 dark:text-slate-300 dark:hover:text-rose-300"
             >
               <LogOut size={15} className="group-hover:-translate-x-0.5 transition-transform duration-200" />
               Sign out
@@ -433,15 +476,19 @@ function MobileDrawer({ open, onClose, user, logout, firstName, initial }) {
             <Link
               to="/login"
               onClick={onClose}
-              className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-amber-500 text-slate-950 hover:brightness-110 transition-all duration-200 shadow-lg shadow-emerald-500/20"
+              className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-amber-500 text-white dark:text-slate-950 hover:brightness-110 transition-all duration-200 shadow-lg shadow-emerald-500/30 active:scale-[0.99] touch-manipulation"
             >
               Sign in
             </Link>
           )}
 
-          <p className="text-center text-[10px] text-slate-600 tracking-wide">
-            v1.0 · Made with ♥ in India
-          </p>
+          <div className="flex items-center justify-center gap-2 text-[10px] tracking-wide text-slate-500">
+            <span className="font-semibold text-slate-700 dark:text-slate-400">v1.0</span>
+            <span aria-hidden className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+            <span>Made with</span>
+            <span aria-hidden className="text-rose-500 dark:text-rose-400">♥</span>
+            <span>in India</span>
+          </div>
         </div>
       </aside>
     </div>
@@ -453,41 +500,91 @@ function MobileDrawer({ open, onClose, user, logout, firstName, initial }) {
 function DrawerSection({ title, children }) {
   return (
     <div>
-      <div className="px-2 mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
-        {title}
+      <div className="flex items-center gap-2.5 px-2 mb-2.5">
+        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+          {title}
+        </span>
+        <span
+          aria-hidden
+          className="flex-1 h-px bg-gradient-to-r from-slate-900/12 via-slate-900/6 to-transparent dark:from-white/10 dark:via-white/5"
+        />
       </div>
-      <div className="space-y-1.5">{children}</div>
+      <div className="space-y-1">{children}</div>
     </div>
   )
 }
 
-function DrawerItem({ item }) {
+/**
+ * DrawerItem — single nav row.
+ *
+ * Uses Tailwind's `dark:` variant to render two distinct looks:
+ *   • Light mode → cream surface, saturated 700-weight icons in tinted-100
+ *     tiles, slate ink labels, hairline borders.
+ *   • Dark mode  → translucent slate surface, pastel 300-weight icons in
+ *     low-alpha brand tiles, soft white labels.
+ *
+ * `tint.wrap` / `tint.icon` are pre-formed strings from the TINT map so
+ * Tailwind's JIT picks them up at build time.
+ */
+function DrawerItem({ item, onNavigate }) {
   const { to, label, desc, Icon, tint } = item
+  const fallbackIconCls = 'text-slate-700 dark:text-white'
+
   return (
     <NavLink
       to={to}
       end={to === '/'}
+      onClick={onNavigate}
       className={({ isActive }) =>
-        `group flex items-center gap-3 px-2.5 py-2.5 rounded-xl border transition-all ${
+        `relative group flex items-center gap-3 px-2.5 py-2.5 rounded-xl border transition-all duration-200 active:scale-[0.99] touch-manipulation ${
           isActive
-            ? 'bg-white/5 border-white/12'
-            : 'bg-transparent border-transparent hover:bg-white/5 hover:border-white/10'
+            ? 'bg-emerald-50 border-emerald-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:bg-white/[0.06] dark:border-white/12 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
+            : 'bg-transparent border-transparent hover:bg-slate-900/[0.03] hover:border-slate-900/10 dark:hover:bg-white/5 dark:hover:border-white/10'
         }`
       }
     >
-      <div
-        className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${tint?.split(' ').filter((c) => c.startsWith('from-') || c.startsWith('to-')).join(' ')} ring-1 ${tint?.split(' ').find((c) => c.startsWith('ring-')) || 'ring-white/10'} flex items-center justify-center`}
-      >
-        <Icon
-          size={18}
-          className={tint?.split(' ').find((c) => c.startsWith('text-')) || 'text-white'}
-        />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold text-white leading-tight truncate">{label}</div>
-        <div className="text-[11px] text-slate-500 leading-tight truncate mt-0.5">{desc}</div>
-      </div>
-      <ChevronRight size={16} className="text-slate-600 group-hover:text-slate-400 group-hover:translate-x-0.5 transition-all" />
+      {({ isActive }) => (
+        <>
+          {/* Active indicator — a soft brand stripe down the left edge. */}
+          {isActive && (
+            <span
+              aria-hidden
+              className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-gradient-to-b from-emerald-500 to-amber-500 shadow-[0_0_12px_rgba(16,185,129,0.45)]"
+            />
+          )}
+
+          <div
+            className={`relative w-10 h-10 shrink-0 rounded-xl flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] group-hover:shadow-md group-hover:shadow-slate-900/10 dark:group-hover:shadow-lg dark:group-hover:shadow-black/20 transition-shadow duration-200 ${tint?.wrap || ''}`}
+          >
+            <Icon size={18} className={tint?.icon || fallbackIconCls} strokeWidth={2.4} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div
+              className={`text-[13.5px] font-semibold leading-tight truncate tracking-tight ${
+                isActive
+                  ? 'text-slate-900 dark:text-white'
+                  : 'text-slate-800 dark:text-slate-100'
+              }`}
+            >
+              {label}
+            </div>
+            <div className="text-[11px] leading-tight truncate mt-0.5 text-slate-500 dark:text-slate-500">
+              {desc}
+            </div>
+          </div>
+
+          <ChevronRight
+            size={15}
+            className={`shrink-0 transition-all duration-200 ${
+              isActive
+                ? 'text-slate-700 translate-x-0.5 dark:text-slate-300'
+                : 'text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 dark:text-slate-600 dark:group-hover:text-slate-400'
+            }`}
+            strokeWidth={2.4}
+          />
+        </>
+      )}
     </NavLink>
   )
 }

@@ -46,78 +46,78 @@ function formatDay(dateStr) {
 function WeatherCard({ label, weather, accent }) {
   if (!weather) {
     return (
-      <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3 sm:p-4 min-w-0">
-        <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+      <div className="rounded-2xl border border-slate-900/10 dark:border-white/8 bg-white/70 dark:bg-white/[0.03] p-3 sm:p-4 min-w-0">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
           <MapPin size={13} />
           <span className="truncate">{label}</span>
         </div>
-        <p className="mt-2 text-xs text-slate-500">Live weather not available right now.</p>
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">Live weather not available right now.</p>
       </div>
     )
   }
 
   const { current, forecast = [] } = weather
   const { label: condition, Icon } = describeCode(current?.code)
-  const accentText = accent === 'gold' ? 'text-amber-300' : 'text-cyan-300'
+  const accentText = accent === 'gold' ? 'text-amber-700 dark:text-amber-300' : 'text-cyan-700 dark:text-cyan-300'
   const accentRing =
     accent === 'gold'
-      ? 'border-amber-400/25 bg-amber-500/[0.06]'
-      : 'border-cyan-400/25 bg-cyan-500/[0.06]'
+      ? 'border-amber-300/70 dark:border-amber-400/25 bg-amber-50/80 dark:bg-amber-500/[0.06]'
+      : 'border-cyan-300/70 dark:border-cyan-400/25 bg-cyan-50/80 dark:bg-cyan-500/[0.06]'
 
   return (
     <div className={`rounded-2xl border ${accentRing} p-3 sm:p-4 min-w-0`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-400">
+          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">
             <MapPin size={12} className={accentText} />
             <span className="truncate">{label}</span>
           </p>
-          <p className="mt-0.5 truncate text-sm font-semibold text-white sm:text-base">
+          <p className="mt-0.5 truncate text-sm font-semibold text-slate-900 dark:text-white sm:text-base">
             {weather.label || label}
           </p>
         </div>
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 ${accentText}`}>
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-900/10 dark:border-white/10 bg-white/80 dark:bg-white/5 ${accentText}`}>
           <Icon size={20} />
         </div>
       </div>
 
-      <div className="mt-3 flex items-end gap-3">
-        <p className="text-3xl font-bold text-white sm:text-4xl">
+      <div className="mt-3 flex items-end gap-3 flex-wrap">
+        <p className="text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl tabular-nums leading-none">
           {formatTemp(current?.temperature)}
         </p>
         <div className="mb-1 min-w-0">
-          <p className="truncate text-xs font-medium text-slate-200 sm:text-sm">{condition}</p>
-          <p className="truncate text-[11px] text-slate-400">
-            Feels like {formatTemp(current?.feelsLike)}
+          <p className="truncate text-xs font-medium text-slate-700 dark:text-slate-200 sm:text-sm">{condition}</p>
+          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+            Feels like <span className="tabular-nums">{formatTemp(current?.feelsLike)}</span>
           </p>
         </div>
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-1.5 text-[10px] sm:text-[11px]">
-        <div className="rounded-lg border border-white/8 bg-slate-900/50 px-2 py-1.5">
-          <div className="flex items-center gap-1 text-slate-400">
-            <Droplets size={10} className="text-sky-300" />
+        <div className="rounded-lg border border-slate-900/8 dark:border-white/8 bg-white/80 dark:bg-slate-900/50 px-2 py-1.5">
+          <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+            <Droplets size={10} className="text-sky-600 dark:text-sky-300" />
             <span>Humidity</span>
           </div>
-          <p className="mt-0.5 font-semibold text-white">
+          <p className="mt-0.5 font-semibold text-slate-900 dark:text-white tabular-nums">
             {current?.humidity != null ? `${Math.round(current.humidity)}%` : '—'}
           </p>
         </div>
-        <div className="rounded-lg border border-white/8 bg-slate-900/50 px-2 py-1.5">
-          <div className="flex items-center gap-1 text-slate-400">
-            <Wind size={10} className="text-emerald-300" />
+        <div className="rounded-lg border border-slate-900/8 dark:border-white/8 bg-white/80 dark:bg-slate-900/50 px-2 py-1.5">
+          <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+            <Wind size={10} className="text-emerald-600 dark:text-emerald-300" />
             <span>Wind</span>
           </div>
-          <p className="mt-0.5 font-semibold text-white">
+          <p className="mt-0.5 font-semibold text-slate-900 dark:text-white tabular-nums">
             {current?.wind != null ? `${Math.round(current.wind)} km/h` : '—'}
           </p>
         </div>
-        <div className="rounded-lg border border-white/8 bg-slate-900/50 px-2 py-1.5">
-          <div className="flex items-center gap-1 text-slate-400">
-            <Thermometer size={10} className="text-rose-300" />
+        <div className="rounded-lg border border-slate-900/8 dark:border-white/8 bg-white/80 dark:bg-slate-900/50 px-2 py-1.5">
+          <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+            <Thermometer size={10} className="text-rose-600 dark:text-rose-300" />
             <span>Rain</span>
           </div>
-          <p className="mt-0.5 font-semibold text-white">
+          <p className="mt-0.5 font-semibold text-slate-900 dark:text-white tabular-nums">
             {current?.precipitation != null ? `${current.precipitation} mm` : '—'}
           </p>
         </div>
@@ -130,17 +130,17 @@ function WeatherCard({ label, weather, accent }) {
             return (
               <div
                 key={d.date}
-                className="flex flex-col items-center gap-0.5 rounded-lg border border-white/8 bg-slate-900/40 px-1.5 py-2 text-center"
+                className="flex flex-col items-center gap-0.5 rounded-lg border border-slate-900/8 dark:border-white/8 bg-white/70 dark:bg-slate-900/40 px-1.5 py-2 text-center"
               >
-                <p className="text-[10px] uppercase tracking-wide text-slate-400">
+                <p className="text-[10px] uppercase tracking-wide text-slate-600 dark:text-slate-400">
                   {formatDay(d.date)}
                 </p>
                 <meta.Icon size={14} className={accentText} />
-                <p className="text-[11px] font-semibold text-white">
+                <p className="text-[11px] font-semibold text-slate-900 dark:text-white tabular-nums">
                   {formatTemp(d.max)} <span className="text-slate-500">/ {formatTemp(d.min)}</span>
                 </p>
                 {Number.isFinite(d.precipChance) && d.precipChance > 0 && (
-                  <p className="text-[9px] text-sky-300">
+                  <p className="text-[9px] text-sky-600 dark:text-sky-300">
                     {Math.round(d.precipChance)}% rain
                   </p>
                 )}
@@ -163,16 +163,16 @@ export default function WeatherPanel({ weather, destinationLabel }) {
 
   return (
     <div
-      className="mb-6 sm:mb-8 rounded-2xl border border-white/10 glass p-4 sm:p-5 animate-slide-up w-full min-w-0"
+      className="mb-6 sm:mb-8 rounded-2xl border border-slate-900/10 dark:border-white/10 glass p-4 sm:p-5 animate-slide-up w-full min-w-0"
       style={{ animationDelay: '0.14s' }}
     >
       <div className="mb-3 flex items-center gap-2 min-w-0">
-        <CloudSun size={16} className="text-cyan-300 shrink-0" />
-        <h3 className="text-sm font-bold tracking-wide text-white truncate">
+        <CloudSun size={16} className="text-cyan-600 dark:text-cyan-300 shrink-0" />
+        <h3 className="text-sm font-bold tracking-wide text-slate-900 dark:text-white truncate">
           Weather in {placeName}
         </h3>
       </div>
-      <p className="mb-4 text-xs text-slate-500">
+      <p className="mb-4 text-xs text-slate-600 dark:text-slate-400">
         Current conditions and a 3-day outlook for your destination — pack accordingly.
       </p>
 
