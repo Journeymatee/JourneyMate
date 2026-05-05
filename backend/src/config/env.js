@@ -51,6 +51,55 @@ const env = {
   SEED_ON_BOOT: bool(process.env.SEED_ON_BOOT, true),
   TRUST_PROXY: bool(process.env.TRUST_PROXY, true),
   RATE_LIMIT_MAX: Number(process.env.RATE_LIMIT_MAX || 300),
+
+  // ─── Contact form / outbound email (nodemailer) ─────────────────────────
+  // Where the inbound contact-form notification gets sent. Defaults to the
+  // first ADMIN_EMAILS entry so the same person who manages the site also
+  // receives messages.
+  OWNER_EMAIL:
+    process.env.OWNER_EMAIL ||
+    process.env.CONTACT_EMAIL ||
+    String(process.env.ADMIN_EMAILS || '').split(',')[0].trim() ||
+    '',
+  // SMTP transport. Use a Gmail App Password (https://myaccount.google.com/apppasswords)
+  // for SMTP_USER/SMTP_PASS — regular passwords won't work.
+  SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
+  SMTP_PORT: Number(process.env.SMTP_PORT || 465),
+  SMTP_SECURE: bool(process.env.SMTP_SECURE, true),
+  SMTP_USER: process.env.SMTP_USER || '',
+  SMTP_PASS: process.env.SMTP_PASS || '',
+  // Optional pretty "From: JourneyMate <hello@example.com>" header. Falls
+  // back to SMTP_USER when not set.
+  MAIL_FROM: process.env.MAIL_FROM || '',
+  // Toggle: when false, the API still records messages but never tries to
+  // send mail (handy in CI / preview deploys without SMTP creds).
+  MAIL_ENABLED: bool(process.env.MAIL_ENABLED, true),
+
+  // ─── Live booking agent (real-time train / flight / hotel / web data) ───
+  // All optional — every tool ships a graceful fallback when its key is
+  // absent (deterministic deep-links + heuristic answers). Missing keys are
+  // logged once at boot and surfaced to the UI as "API key not configured".
+  //
+  // Tavily — AI-friendly web search. Free tier ~1k queries/month.
+  //   https://app.tavily.com/  → API Keys.
+  TAVILY_API_KEY: process.env.TAVILY_API_KEY || '',
+
+  // RapidAPI key used by the IRCTC1 train provider on RapidAPI marketplace.
+  // Free tier is generally enough for personal use.
+  //   https://rapidapi.com/IRCTCAPI/api/irctc1
+  RAPIDAPI_KEY: process.env.RAPIDAPI_KEY || '',
+  RAPIDAPI_TRAIN_HOST: process.env.RAPIDAPI_TRAIN_HOST || 'irctc1.p.rapidapi.com',
+
+  // Amadeus self-service (optional) — flight & hotel offers.
+  //   https://developers.amadeus.com/  → free Self-Service plan.
+  AMADEUS_CLIENT_ID: process.env.AMADEUS_CLIENT_ID || '',
+  AMADEUS_CLIENT_SECRET: process.env.AMADEUS_CLIENT_SECRET || '',
+
+  // Aviationstack (optional) — flight schedule fallback.
+  AVIATIONSTACK_KEY: process.env.AVIATIONSTACK_KEY || '',
+
+  // Per-call timeout for any external lookup spawned by the live agent.
+  AGENT_LIVE_TIMEOUT_MS: Number(process.env.AGENT_LIVE_TIMEOUT_MS || 9000),
 }
 
 module.exports = env

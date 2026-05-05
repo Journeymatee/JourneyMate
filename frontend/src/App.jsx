@@ -125,11 +125,12 @@ import Pricing from './pages/Pricing'
 import ContactUs from './pages/ContactUs'
 import AboutOwner from './pages/AboutOwner'
 import AdminAgent from './pages/AdminAgent'
+import LiveBookingAgent from './pages/LiveBookingAgent'
 import SavedTrips from './pages/SavedTrips'
 import SharedTrip from './pages/SharedTrip'
 import { AssistantWidget } from './features/ai'
 import { useAuth } from './context/AuthContext'
-import { searchTrip, tripErrorMessage, getTripPreferences } from './services/travelService'
+import { searchTrip, tripErrorMessage } from './services/travelService'
 import { wakeBackend, subscribeWakeStatus } from './api/client'
 
 function HomePage() {
@@ -360,27 +361,10 @@ function HomePage() {
   }, [tripType, vibes, view, tripData, searchParams.days, logout])
 
   // ─── No auto-hydration of trip-type / vibes ───
-  // Loading a saved preference like "family" felt like the app was
+  // Loading a saved preference like "couple" felt like the app was
   // making the choice *for* the user. The home view now starts with no
   // trip type and no vibes selected on every fresh load — only an
   // in-tab refresh (sessionStorage, handled above) restores intent.
-  // ─── Hydrate trip-type / vibes from server on first sign-in ───
-  // Only when we don't already have a session-restored value (sessionStorage
-  // wins because it represents in-tab intent).
-  const hydratedRef = useRef(false)
-  useEffect(() => {
-    if (hydratedRef.current) return
-    if (persisted) { hydratedRef.current = true; return }
-    let cancelled = false
-    getTripPreferences().then((prefs) => {
-      if (cancelled || !prefs) return
-      if (prefs.tripType) setTripType(prefs.tripType)
-      if (Array.isArray(prefs.vibes)) setVibes(prefs.vibes)
-      hydratedRef.current = true
-    })
-    return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   return (
     <>
@@ -522,6 +506,7 @@ function AppShell() {
         <Route path="/contact" element={<ContactUs />} />
         <Route path="/about" element={<AboutOwner />} />
         <Route path="/admin" element={<AdminAgent />} />
+        <Route path="/live-search" element={<LiveBookingAgent />} />
         <Route path="/saved" element={<SavedTrips />} />
         <Route path="/shared/:token" element={<SharedTrip />} />
         {/* If a logged-in user lands on /login (e.g. clicked an old link),

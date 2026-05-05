@@ -56,42 +56,53 @@ export default function TripHeroBanner({
         style={{ animationDelay: '0.02s' }}
       >
         {/* ── Photo layer ─────────────────────────────────────────── */}
+        {/*
+          Mobile tap-target safety: the bottom headline grows upward as text
+          wraps and on small phones can overlap the top action row. Every
+          decorative layer therefore opts out of pointer events so the only
+          things that can intercept taps inside this banner are the explicit
+          interactive controls (Back button + saveSlot). The action row also
+          gets an elevated z-index so it always wins the stacking order.
+        */}
         <div className="relative h-64 sm:h-80 md:h-96 lg:h-[28rem] w-full">
           {photo?.file && (
             <img
               src={photo.file}
               alt={`${photo.spot} — ${photo.name}`}
               onError={onPhotoError}
-              className="absolute inset-0 h-full w-full object-cover"
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
               style={{
                 animation: 'heroKenBurns 18s ease-in-out infinite alternate',
               }}
+              aria-hidden="true"
             />
           )}
 
-          {/* Gradient stack:
-              - top: subtle dark for action contrast
-              - bottom: deep dark for headline legibility
-              - radial glow on the right for premium depth */}
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/55 via-slate-950/15 to-slate-950/85" />
-          <div className="absolute inset-0 bg-[radial-gradient(120%_70%_at_15%_100%,rgba(245,158,11,0.18),transparent_55%)] mix-blend-soft-light" />
-          <div className="absolute inset-0 bg-[radial-gradient(80%_60%_at_100%_0%,rgba(56,189,248,0.18),transparent_60%)] mix-blend-soft-light" />
+          {/* Gradient stack — purely decorative; never absorbs taps. */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-slate-950/55 via-slate-950/15 to-slate-950/85" aria-hidden />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_70%_at_15%_100%,rgba(245,158,11,0.18),transparent_55%)] mix-blend-soft-light" aria-hidden />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_100%_0%,rgba(56,189,248,0.18),transparent_60%)] mix-blend-soft-light" aria-hidden />
 
-          {/* ── Top row: Back / Lightbox / Save ─────────────────── */}
-          <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-2 px-3 py-3 sm:px-5 sm:py-4">
+          {/* ── Top row: Back / Save ─────────────────────────────
+            Elevated z-index so a long, wrapping headline below can never
+            cover the tap target. `relative` activates the z-index. */}
+          <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-2 px-3 py-3 sm:px-5 sm:py-4">
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-slate-950/55 px-3.5 py-2 text-xs font-semibold text-white/90 backdrop-blur-md transition hover:border-white/30 hover:bg-slate-950/75 hover:text-white"
+              className="relative z-10 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-slate-950/55 px-3.5 py-2 text-xs font-semibold text-white/90 backdrop-blur-md transition hover:border-white/30 hover:bg-slate-950/75 hover:text-white active:scale-[0.97] touch-manipulation"
             >
               <ArrowLeft size={14} /> Back
             </button>
 
-            <div className="flex items-center gap-2">{saveSlot}</div>
+            <div className="relative z-10 flex items-center gap-2 touch-manipulation">{saveSlot}</div>
           </div>
 
-          {/* ── Bottom: route, duration, trip-type, savings ──────── */}
-          <div className="absolute inset-x-0 bottom-0 px-4 pb-4 pt-12 sm:px-7 sm:pb-7 sm:pt-16">
+          {/* ── Bottom: route, duration, trip-type, savings ──────
+            Decorative — opts out of pointer events so it can never sit on
+            top of the action row when the headline wraps to multiple
+            lines on mobile. (No interactive children today.) */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-4 pt-12 sm:px-7 sm:pb-7 sm:pt-16">
             <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
               {/* Left: route */}
               <div className="min-w-0 flex-1">

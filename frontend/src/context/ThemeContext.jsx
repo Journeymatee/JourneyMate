@@ -15,23 +15,27 @@ import { runMonkeyThemeWipe, isReducedMotion } from '../lib/themeWipe'
  * The choice is persisted to localStorage so it survives reloads.
  */
 
-const STORAGE_KEY = 'jm:theme-v1'
+// Bumped from v1 → v2 when we switched the default from dark to light.
+// The version bump effectively resets every existing visitor's stored
+// preference, so they all start in the new light default and can opt
+// back into dark via the toggle.
+const STORAGE_KEY = 'jm:theme-v2'
 const ThemeContext = createContext(null)
 
 function getSystemTheme() {
-  if (typeof window === 'undefined') return 'dark'
+  if (typeof window === 'undefined') return 'light'
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
 function readStoredMode() {
-  if (typeof window === 'undefined') return 'dark'
+  if (typeof window === 'undefined') return 'light'
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (raw === 'light' || raw === 'dark' || raw === 'system') return raw
   } catch {
     /* private mode / quota — ignore */
   }
-  return 'dark'
+  return 'light'
 }
 
 // Tracks the currently-running transition timer so rapid toggles
