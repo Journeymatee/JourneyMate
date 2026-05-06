@@ -8,6 +8,7 @@ import {
 import {
   searchTrains, searchFlights, searchHotels, searchWeb, checkTatkal, askAgent,
 } from '../services/agentService'
+import InventoryAvailabilityStrip from '../components/booking/InventoryAvailabilityStrip'
 
 /** "Book this in JourneyMate" — opens the in-app booking flow with the
  *  current search criteria pre-filled. The flow handles seat picking,
@@ -216,6 +217,14 @@ function TrainsTab() {
             to={data.to?.label || form.to}
             date={data.date || form.date}
           />
+
+          <InventoryAvailabilityStrip
+            type="train"
+            origin={data.from?.label || form.from}
+            destination={data.to?.label || form.to}
+            date={data.date || form.date}
+          />
+
           <div className="mb-4" />
 
           {data.trains?.length > 0 ? (
@@ -341,6 +350,14 @@ function FlightsTab() {
             date={data.date || form.date}
             classCode={form.cabin === 'premium_economy' ? 'premium' : form.cabin === 'first' ? 'business' : form.cabin}
           />
+
+          <InventoryAvailabilityStrip
+            type="flight"
+            origin={data.from?.label || form.from}
+            destination={data.to?.label || form.to}
+            date={data.date || form.date}
+          />
+
           <div className="mb-4" />
 
           {data.offers?.length > 0 ? (
@@ -448,6 +465,14 @@ function HotelsTab() {
             to={data.destination || form.destination}
             date={data.check_in || form.check_in}
           />
+
+          <InventoryAvailabilityStrip
+            type="hotel"
+            origin={data.destination || form.destination}
+            destination={data.destination || form.destination}
+            date={data.check_in || form.check_in}
+          />
+
           <div className="mb-4" />
 
           {data.stays?.length > 0 ? (
