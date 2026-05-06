@@ -284,22 +284,23 @@ export default function HeroSearch({ onSearch, loading, initialTripType = null, 
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[600px] h-[400px] sm:h-[600px] bg-indigo-500/[0.04] rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 max-w-3xl w-full">
+      <div className="relative z-10 max-w-3xl lg:max-w-4xl 2xl:max-w-5xl 3xl:max-w-6xl w-full mx-auto">
         {/* Hero text */}
         <div className="text-center">
           <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full glass border border-white/10 mb-4 sm:mb-6 animate-fade-in">
             <Zap size={12} className="text-amber-400 shrink-0" />
-            <span className="text-[11px] xs:text-xs sm:text-sm text-slate-300 font-medium">Compare Budget vs Luxury in seconds</span>
+            <span className="text-[11px] xs:text-xs sm:text-sm text-slate-200 font-medium">Compare Budget vs Luxury in seconds</span>
             <TrendingUp size={12} className="text-green-400 shrink-0" />
           </div>
           <h1 className="hero-title font-display font-bold text-white mb-3 sm:mb-4 animate-slide-up">
-            Travel Smart,
-            <br />
-            <span className="shimmer-silver">Save Big</span>
-            <span className="text-slate-500"> or </span>
-            <span className="shimmer-gold">Live Gold</span>
+            <span className="hero-line">Travel Smart,</span>
+            <span className="hero-line">
+              <span className="shimmer-silver">Save Big</span>
+              <span className="hero-title-or"> or </span>
+              <span className="shimmer-gold">Live Gold</span>
+            </span>
           </h1>
-          <p className="text-slate-400 text-sm sm:text-base md:text-lg mb-7 sm:mb-9 max-w-xl mx-auto leading-relaxed animate-fade-in px-2" style={{ animationDelay: '0.2s' }}>
+          <p className="hero-subtitle text-sm sm:text-base md:text-lg mb-7 sm:mb-9 max-w-xl lg:max-w-2xl mx-auto leading-relaxed animate-fade-in px-2" style={{ animationDelay: '0.2s' }}>
             Side-by-side comparison of budget and luxury packages across India.
           </p>
         </div>
@@ -462,7 +463,7 @@ export default function HeroSearch({ onSearch, loading, initialTripType = null, 
       </div>
 
       {/* Stats — popular routes block remains removed */}
-      <div className="relative z-[5] max-w-3xl w-full mt-10 sm:mt-16 animate-fade-in" style={{ animationDelay: '0.7s' }}>
+      <div className="relative z-[5] max-w-3xl lg:max-w-4xl 2xl:max-w-5xl 3xl:max-w-6xl w-full mt-10 sm:mt-16 animate-fade-in" style={{ animationDelay: '0.7s' }}>
         <div className="glass rounded-2xl p-4 sm:p-6 border border-white/8">
           <div className="grid grid-cols-3 gap-0 text-center divide-x divide-white/8">
             {[

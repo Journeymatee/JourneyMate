@@ -38,6 +38,7 @@ import {
 } from 'lucide-react'
 import PageHero from '../components/PageHero'
 import SectionHeader from '../components/SectionHeader'
+import { Button, Heading, Pill } from '../components/ui'
 
 /* ─────────────────────────────── TOC nav ──────────────────────────────────
  * Anchors used by the chip-strip directly under the hero. Keeping the
@@ -281,18 +282,15 @@ export default function HowItWorks() {
         subtitle="From a single search to a full Silver vs Gold itinerary in under three seconds — and a clear picture of where the product is heading next."
       >
         <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 text-[11px] font-semibold text-cyan-200">
-            <MapPin size={12} className="text-cyan-300" />
+          <Pill accent="cyan" variant="soft" icon={<MapPin size={12} />}>
             300+ cities
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 text-[11px] font-semibold text-emerald-200">
-            <Compass size={12} className="text-emerald-300" />
+          </Pill>
+          <Pill accent="emerald" variant="soft" icon={<Compass size={12} />}>
             600+ routes
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 text-[11px] font-semibold text-amber-200">
-            <Zap size={12} className="text-amber-300" />
+          </Pill>
+          <Pill accent="amber" variant="soft" icon={<Zap size={12} />}>
             ~3s to compare
-          </span>
+          </Pill>
         </div>
       </PageHero>
 
@@ -664,16 +662,20 @@ export default function HowItWorks() {
             />
             <div className="relative">
               <p className="text-slate-700 dark:text-slate-300 text-sm sm:text-base mb-5 max-w-xl mx-auto leading-relaxed">
-                Got a feature you wish JourneyMate had? Tell us — early ideas often jump straight into the <span className="text-emerald-700 dark:text-emerald-300 font-semibold">"Now"</span> tier.
+                Got a feature you wish JourneyMate had? Tell us — early ideas often jump straight into the{' '}
+                <span className="text-emerald-700 dark:text-emerald-300 font-semibold">&ldquo;Now&rdquo;</span>{' '}tier.
               </p>
-              <Link
+              <Button
+                variant="primary"
+                accent="violet"
+                size="md"
                 to="/about"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 text-white text-sm font-bold shadow-lg shadow-purple-500/30 transition-all hover:-translate-y-0.5 active:scale-[0.97] touch-manipulation"
+                iconLeft={<Sparkles size={14} />}
+                iconRight={<ArrowRight size={14} />}
+                className="!rounded-full !px-6 !py-3 !bg-gradient-to-r !from-violet-500 !to-fuchsia-500 hover:!from-violet-400 hover:!to-fuchsia-400 !shadow-purple-500/30"
               >
-                <Sparkles size={14} />
                 Send us a request
-                <ArrowRight size={14} />
-              </Link>
+              </Button>
             </div>
           </div>
         </section>
@@ -734,36 +736,38 @@ export default function HowItWorks() {
 
           <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="max-w-xl">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.16em] border border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-200">
-                <Sparkles size={11} /> Ready when you are
-              </span>
-              <h2
-                className="mt-3 font-bold text-2xl sm:text-3xl lg:text-4xl text-slate-900 dark:text-white tracking-tight leading-tight"
-                style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
-              >
+              <Pill accent="violet" variant="soft" icon={<Sparkles size={11} />}>
+                Ready when you are
+              </Pill>
+              <Heading level={2} size="lg" className="mt-3 leading-tight">
                 Plan your first trip in under a minute.
-              </h2>
+              </Heading>
               <p className="mt-2 text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
                 Type two cities, pick a vibe, and watch a Silver vs Gold itinerary build itself. No signup, no commitment — just a clearer view of what your trip can look like.
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <Link
+              <Button
+                variant="primary"
+                accent="emerald"
+                size="lg"
                 to="/"
-                className="inline-flex items-center gap-2 px-5 sm:px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-sm sm:text-base font-bold shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-0.5 active:scale-[0.97] touch-manipulation"
+                iconLeft={<Play size={15} fill="currentColor" />}
+                iconRight={<ArrowRight size={15} />}
+                className="!rounded-full"
               >
-                <Play size={15} fill="currentColor" />
                 Try it now
-                <ArrowRight size={15} />
-              </Link>
-              <Link
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
                 to="/popular-routes"
-                className="inline-flex items-center gap-2 px-5 sm:px-6 py-3 rounded-full bg-white/80 dark:bg-slate-900/50 border border-slate-900/10 dark:border-white/10 text-slate-900 dark:text-white text-sm sm:text-base font-semibold backdrop-blur-md hover:border-slate-900/20 dark:hover:border-white/25 hover:bg-white dark:hover:bg-slate-900/70 transition-all active:scale-[0.97] touch-manipulation"
+                iconLeft={<Compass size={15} />}
+                className="!rounded-full !bg-white/80 dark:!bg-slate-900/50 !border-slate-900/10 dark:!border-white/10 !text-slate-900 dark:!text-white"
               >
-                <Compass size={15} />
                 Browse routes
-              </Link>
+              </Button>
             </div>
           </div>
         </section>

@@ -27,6 +27,7 @@ import { findTripType } from '../data/tripVibes'
 import { getStatePhoto, onPhotoError } from '../utils/getStatePhoto'
 import PageHero from '../components/PageHero'
 import SectionHeader from '../components/SectionHeader'
+import { Button, Card, Heading, Pill } from '../components/ui'
 
 /**
  * "Saved trips & wishlist" page — list of every trip the user has bookmarked.
@@ -127,19 +128,16 @@ export default function SavedTrips() {
       >
         {stats && (
           <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 text-[11px] font-semibold text-emerald-200">
-              <Heart size={12} className="text-emerald-300" />
-              {totalSaved} saved
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 text-[11px] font-semibold text-cyan-200">
-              <MapPin size={12} className="text-cyan-300" />
-              {stats.cities} unique places
-            </span>
+            <Pill accent="emerald" variant="soft" icon={<Heart size={12} />}>
+              {`${totalSaved} saved`}
+            </Pill>
+            <Pill accent="cyan" variant="soft" icon={<MapPin size={12} />}>
+              {`${stats.cities} unique places`}
+            </Pill>
             {stats.totalDays > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 text-[11px] font-semibold text-amber-200">
-                <Calendar size={12} className="text-amber-300" />
-                {stats.totalDays} day-trips planned
-              </span>
+              <Pill accent="amber" variant="soft" icon={<Calendar size={12} />}>
+                {`${stats.totalDays} day-trips planned`}
+              </Pill>
             )}
           </div>
         )}
@@ -148,10 +146,14 @@ export default function SavedTrips() {
       <div className="max-w-5xl 2xl:max-w-6xl 3xl:max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 3xl:px-12 pb-16 sm:pb-20 pt-8 sm:pt-10">
         {/* Error banner */}
         {error && !loading && (
-          <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100 flex items-start gap-2">
-            <AlertCircle size={16} className="text-red-300 mt-0.5 shrink-0" />
+          <Card
+            variant="glass"
+            padding="sm"
+            className="mb-6 !rounded-2xl !border-red-500/30 !bg-red-500/10 px-4 py-3 text-sm text-red-100 flex items-start gap-2"
+          >
+            <AlertCircle size={16} className="text-red-300 mt-0.5 shrink-0" aria-hidden />
             <span>{error}</span>
-          </div>
+          </Card>
         )}
 
         {/* Content states */}
@@ -450,8 +452,11 @@ function formatDate(iso) {
 
 function EmptyState() {
   return (
-    <div className="relative glass rounded-3xl border border-white/10 p-8 sm:p-14 text-center overflow-hidden">
-      {/* Decorative background glow */}
+    <Card
+      variant="glass"
+      padding="lg"
+      className="relative text-center overflow-hidden !p-8 sm:!p-14"
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full opacity-50 blur-3xl"
@@ -459,26 +464,28 @@ function EmptyState() {
       />
       <div className="relative">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/30 flex items-center justify-center mx-auto mb-5 ring-1 ring-white/15">
-          <Bookmark size={26} className="text-white" />
+          <Bookmark size={26} className="text-white" aria-hidden />
         </div>
-        <h2
-          className="font-bold text-xl sm:text-2xl text-white mb-2 tracking-tight"
-          style={{ fontFamily: 'Clash Display, Syne, sans-serif' }}
-        >
+        <Heading level={2} size="md" className="mb-2">
           No saved trips yet
-        </h2>
+        </Heading>
         <p className="text-slate-400 text-sm sm:text-base max-w-md mx-auto mb-6 leading-relaxed">
-          Compare a route, then hit <span className="text-emerald-300 font-semibold">"Save trip"</span> on any plan you like — it'll live here so you can come back to it or share with whoever is travelling with you.
+          Compare a route, then hit{' '}
+          <span className="text-emerald-300 font-semibold">&ldquo;Save trip&rdquo;</span>
+          {' '}on any plan you like — it&apos;ll live here so you can come back to it or share with whoever is travelling with you.
         </p>
-        <Link
+        <Button
+          variant="primary"
+          accent="emerald"
+          size="md"
           to="/"
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-sm font-bold shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-0.5"
+          iconLeft={<Compass size={15} />}
+          className="!rounded-full !px-6 !py-3"
         >
-          <Compass size={15} />
           Start a comparison
-        </Link>
+        </Button>
       </div>
-    </div>
+    </Card>
   )
 }
 

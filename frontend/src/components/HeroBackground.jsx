@@ -105,8 +105,12 @@ export default function HeroBackground({ slides = DEFAULT_SLIDES, interval = SLI
 
       {overlay && (
         <>
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/65 via-slate-950/70 to-slate-950/85" />
-          <div className="absolute inset-0 bg-slate-950/35" />
+          {/* Light vertical veil — keeps the photo clear and vibrant. The
+           * heavy lifting for text readability is done by text-shadow halos
+           * on .hero-title / .hero-subtitle / shimmer drop-shadows, NOT by
+           * darkening the photo. */}
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/55 via-slate-950/55 to-slate-950/75" />
+          <div className="absolute inset-0 bg-slate-950/15" />
         </>
       )}
 
