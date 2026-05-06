@@ -1,58 +1,77 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  ShieldCheck,
-  Send,
-  Loader2,
-  Sparkles,
-  Database,
-  ChevronDown,
-  Users,
-  Receipt,
-  IndianRupee,
-  MessageSquare,
-  RefreshCw,
-  AlertTriangle,
-} from 'lucide-react'
 import { Navigate } from 'react-router-dom'
+import {
+  AlertTriangle,
+  ChevronDown,
+  Database,
+  IndianRupee,
+  Loader2,
+  MessageSquare,
+  Receipt,
+  RefreshCw,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Users,
+} from 'lucide-react'
+
 import api from '../api/client'
 import { useAuth } from '../context/AuthContext'
 
-const SUGGESTED_QUESTIONS = [
+import PageContainer from '../components/layout/PageContainer'
+import { Button, Card, Eyebrow, Heading, Pill } from '../components/ui'
+
+/* ─── Static suggestion list ─────────────────────────────────────── */
+
+const SUGGESTED_QUESTIONS = Object.freeze([
   'How many users signed up this week?',
   'Top 5 destinations in the last 30 days',
   'Show me the last 10 bookings',
   'Revenue this month vs last week',
   'Who used the AI assistant the most this week?',
   'Catalog summary (cities, routes, posts)',
-]
+])
+
+/* ─── Stat tile (private) ────────────────────────────────────────── */
+
+const STAT_ACCENTS = Object.freeze({
+  green: 'border-green-500/25 bg-green-500/5 text-green-400',
+  amber: 'border-amber-500/25 bg-amber-500/5 text-amber-400',
+  cyan:  'border-cyan-500/25 bg-cyan-500/5 text-cyan-400',
+  rose:  'border-rose-500/25 bg-rose-500/5 text-rose-400',
+})
 
 function StatCard({ icon: Icon, label, value, hint, accent = 'green' }) {
-  const colors = {
-    green: 'border-green-500/25 bg-green-500/5 text-green-400',
-    amber: 'border-amber-500/25 bg-amber-500/5 text-amber-400',
-    cyan:  'border-cyan-500/25 bg-cyan-500/5 text-cyan-400',
-    rose:  'border-rose-500/25 bg-rose-500/5 text-rose-400',
-  }
   return (
-    <div className="rounded-2xl glass border border-white/10 p-4 sm:p-5 min-w-0">
+    <Card variant="glass" padding="sm" className="!rounded-2xl !p-4 sm:!p-5 min-w-0">
       <div className="flex items-center gap-2 mb-2">
-        <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${colors[accent]}`}>
-          <Icon size={16} />
-        </div>
-        <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">{label}</span>
+        <span className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${STAT_ACCENTS[accent]}`}>
+          <Icon size={16} aria-hidden />
+        </span>
+        <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+          {label}
+        </span>
       </div>
-      <div className="text-xl sm:text-2xl font-display font-bold text-white leading-none">{value}</div>
-      {hint && <div className="text-[11px] text-slate-500 mt-1.5 leading-snug">{hint}</div>}
-    </div>
+      <div className="text-xl sm:text-2xl font-display font-bold text-white leading-none">
+        {value}
+      </div>
+      {hint && (
+        <div className="text-[11px] text-slate-500 mt-1.5 leading-snug">{hint}</div>
+      )}
+    </Card>
   )
 }
+
+/* ─── Tool-call expander chip (private) ──────────────────────────── */
 
 function ToolCallChip({ name, args, result }) {
   const [open, setOpen] = useState(false)
   const argSummary = useMemo(() => {
     const entries = Object.entries(args || {})
     if (!entries.length) return ''
-    return entries.map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`).join(', ')
+    return entries
+      .map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`)
+      .join(', ')
   }, [args])
 
   return (
@@ -62,13 +81,14 @@ function ToolCallChip({ name, args, result }) {
         onClick={() => setOpen((s) => !s)}
         className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-cyan-500/8 transition-colors"
       >
-        <Database size={12} className="text-cyan-400 shrink-0" />
+        <Database size={12} className="text-cyan-400 shrink-0" aria-hidden />
         <span className="text-[11px] font-mono text-cyan-300 truncate min-w-0 flex-1">
           {name}({argSummary})
         </span>
         <ChevronDown
           size={14}
           className={`text-cyan-400/70 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+          aria-hidden
         />
       </button>
       {open && (
@@ -79,6 +99,8 @@ function ToolCallChip({ name, args, result }) {
     </div>
   )
 }
+
+/* ─── Chat bubble (private) ──────────────────────────────────────── */
 
 function MessageBubble({ msg }) {
   const isUser = msg.role === 'user'
@@ -93,24 +115,28 @@ function MessageBubble({ msg }) {
       >
         {msg.role === 'assistant' && msg.warning && (
           <div className="mb-2 flex items-center gap-1.5 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2 py-1">
-            <AlertTriangle size={12} /> {msg.warning}
+            <AlertTriangle size={12} aria-hidden /> {msg.warning}
           </div>
         )}
         <div className="whitespace-pre-wrap break-words">{msg.content}</div>
-        {msg.role === 'assistant' && Array.isArray(msg.toolCalls) && msg.toolCalls.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-white/8 space-y-2">
-            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
-              Data sources ({msg.toolCalls.length})
+        {msg.role === 'assistant' &&
+          Array.isArray(msg.toolCalls) &&
+          msg.toolCalls.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-white/8 space-y-2">
+              <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+                Data sources ({msg.toolCalls.length})
+              </div>
+              {msg.toolCalls.map((tc, i) => (
+                <ToolCallChip key={i} name={tc.name} args={tc.args} result={tc.result} />
+              ))}
             </div>
-            {msg.toolCalls.map((tc, i) => (
-              <ToolCallChip key={i} name={tc.name} args={tc.args} result={tc.result} />
-            ))}
-          </div>
-        )}
+          )}
       </div>
     </div>
   )
 }
+
+/* ─── Page (orchestrator) ────────────────────────────────────────── */
 
 export default function AdminAgent() {
   const { user } = useAuth()
@@ -130,8 +156,10 @@ export default function AdminAgent() {
       setStats(data)
     } catch (err) {
       const code = err.response?.status
-      if (code === 403) setStatsError('Your account is not on the admin allow-list.')
-      else setStatsError(err.response?.data?.error?.message || 'Could not load stats')
+      if (code === 403)
+        setStatsError('Your account is not on the admin allow-list.')
+      else
+        setStatsError(err.response?.data?.error?.message || 'Could not load stats')
     } finally {
       setStatsLoading(false)
     }
@@ -143,27 +171,14 @@ export default function AdminAgent() {
   }, [user?.isAdmin])
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: 'smooth',
+    })
   }, [messages, sending])
 
   if (!user) return <Navigate to="/" replace />
-  if (!user.isAdmin) {
-    return (
-      <section className="min-h-[100dvh] mesh-bg pt-24 pb-20 px-4 flex items-start justify-center">
-        <div className="max-w-md w-full mt-12 glass border border-white/10 rounded-2xl p-6 text-center">
-          <ShieldCheck size={32} className="text-rose-400 mx-auto mb-3" />
-          <h2 className="text-xl font-display font-bold text-white mb-2">Admin only</h2>
-          <p className="text-sm text-slate-400">
-            Your account isn’t on the admin allow-list. Add your email to the
-            <code className="text-amber-300 mx-1 px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[11px]">
-              ADMIN_EMAILS
-            </code>
-            env variable on the backend and restart the server.
-          </p>
-        </div>
-      </section>
-    )
-  }
+  if (!user.isAdmin) return <AdminGuard />
 
   const send = async (text) => {
     const question = String(text ?? input).trim()
@@ -209,47 +224,59 @@ export default function AdminAgent() {
   }
 
   const fmtInr = (n) =>
-    typeof n === 'number'
-      ? `₹${n.toLocaleString('en-IN')}`
-      : '—'
+    typeof n === 'number' ? `\u20B9${n.toLocaleString('en-IN')}` : '—'
 
   return (
-    <section className="min-h-[100dvh] mesh-bg pt-20 sm:pt-24 pb-32 px-3 sm:px-5 lg:px-6 overflow-x-hidden">
-      <div className="max-w-5xl mx-auto w-full min-w-0">
-
+    <main className="min-h-[100dvh] mesh-bg pt-20 sm:pt-24 pb-32 overflow-x-hidden">
+      <PageContainer size="default" className="min-w-0">
         {/* Header */}
-        <div className="mb-5 sm:mb-7 animate-slide-up">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-violet-500/15 text-violet-300 border border-violet-500/30 mb-2">
-            <ShieldCheck size={11} /> Admin only
-          </div>
-          <h1 className="font-display font-bold text-2xl sm:text-3xl text-white">
+        <header className="mb-5 sm:mb-7 animate-slide-up">
+          <Pill
+            accent="rose"
+            variant="soft"
+            size="sm"
+            icon={<ShieldCheck size={11} />}
+            className="!bg-violet-500/15 !border-violet-500/30 !text-violet-300 mb-2"
+          >
+            Admin only
+          </Pill>
+          <Heading level={1} size="md">
             JourneyMate Admin Agent
-          </h1>
+          </Heading>
           <p className="text-sm text-slate-400 mt-1.5 max-w-2xl">
-            Ask anything about your real customer data. The agent only runs read-only queries — every
-            answer shows the data sources it pulled from so you can verify the numbers.
+            Ask anything about your real customer data. The agent only runs
+            read-only queries — every answer shows the data sources it pulled
+            from so you can verify the numbers.
           </p>
-        </div>
+        </header>
 
         {/* Live stats strip */}
-        <div className="mb-6 sm:mb-7 animate-slide-up" style={{ animationDelay: '0.06s' }}>
+        <section
+          className="mb-6 sm:mb-7 animate-slide-up"
+          style={{ animationDelay: '0.06s' }}
+        >
           {statsError ? (
-            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-200 text-sm p-4">
+            <Card variant="glass" padding="sm" className="!border-rose-500/30 !bg-rose-500/10 text-rose-200 text-sm">
               {statsError}
-            </div>
+            </Card>
           ) : (
             <>
               <div className="flex items-center justify-between mb-2.5">
-                <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold flex items-center gap-1.5">
-                  <Sparkles size={11} className="text-violet-300" /> Live snapshot
-                </div>
+                <Eyebrow accent="violet" icon={<Sparkles size={11} />}>
+                  Live snapshot
+                </Eyebrow>
                 <button
                   type="button"
                   onClick={fetchStats}
                   disabled={statsLoading}
                   className="text-[10px] uppercase tracking-wider text-slate-500 hover:text-white font-semibold flex items-center gap-1 disabled:opacity-50"
                 >
-                  <RefreshCw size={11} className={statsLoading ? 'animate-spin' : ''} /> Refresh
+                  <RefreshCw
+                    size={11}
+                    className={statsLoading ? 'animate-spin' : ''}
+                    aria-hidden
+                  />
+                  Refresh
                 </button>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
@@ -284,38 +311,21 @@ export default function AdminAgent() {
               </div>
             </>
           )}
-        </div>
+        </section>
 
         {/* Conversation */}
-        <div
-          className="rounded-2xl border border-white/10 glass animate-slide-up flex flex-col"
+        <Card
+          variant="glass"
+          padding="none"
+          className="animate-slide-up flex flex-col"
           style={{ animationDelay: '0.12s', minHeight: '52vh' }}
         >
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 max-h-[60vh]">
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 max-h-[60vh]"
+          >
             {messages.length === 0 && (
-              <div className="text-center py-10 sm:py-14">
-                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-violet-500/20 to-cyan-500/15 border border-violet-500/30 flex items-center justify-center">
-                  <Sparkles size={22} className="text-violet-300" />
-                </div>
-                <p className="text-sm text-slate-300 font-semibold mb-1">
-                  Ask me anything about your customers.
-                </p>
-                <p className="text-xs text-slate-500 mb-5">
-                  Read-only · Postgres-backed · Every answer shows its sources.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-2xl mx-auto">
-                  {SUGGESTED_QUESTIONS.map((q) => (
-                    <button
-                      key={q}
-                      type="button"
-                      onClick={() => send(q)}
-                      className="text-left text-xs text-slate-300 px-3 py-2.5 rounded-xl bg-white/4 hover:bg-white/8 border border-white/10 hover:border-violet-500/30 transition-all"
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <EmptyAdminChat onPick={send} />
             )}
             {messages.map((m, i) => (
               <MessageBubble key={i} msg={m} />
@@ -323,13 +333,13 @@ export default function AdminAgent() {
             {sending && (
               <div className="flex justify-start">
                 <div className="glass border border-white/10 rounded-2xl px-4 py-3 text-sm text-slate-400 inline-flex items-center gap-2">
-                  <Loader2 size={14} className="animate-spin" /> Querying your database…
+                  <Loader2 size={14} className="animate-spin" aria-hidden />
+                  Querying your database…
                 </div>
               </div>
             )}
           </div>
 
-          {/* Composer */}
           <form
             className="border-t border-white/10 p-3 sm:p-4 flex items-end gap-2"
             onSubmit={(e) => {
@@ -351,22 +361,86 @@ export default function AdminAgent() {
               disabled={sending}
               className="flex-1 min-w-0 resize-none rounded-xl bg-slate-900/60 border border-white/10 focus:border-violet-500/40 focus:outline-none text-sm text-white px-3.5 py-2.5 placeholder:text-slate-600 disabled:opacity-60 max-h-32"
             />
-            <button
+            <Button
               type="submit"
+              variant="primary"
+              accent="rose"
+              size="md"
               disabled={sending || !input.trim()}
-              className="shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-500 hover:from-violet-400 hover:to-cyan-400 text-white text-sm font-semibold shadow-lg shadow-violet-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              iconLeft={
+                sending ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Send size={14} />
+                )
+              }
+              className="shrink-0 !rounded-xl !py-2.5"
             >
-              {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               <span className="hidden xs:inline">Send</span>
-            </button>
+            </Button>
           </form>
-        </div>
+        </Card>
 
         <p className="text-[10px] text-slate-600 text-center mt-3 leading-snug">
-          Customer emails are partially masked in tool results. The agent runs only read-only SQL.
-          {' '}You are signed in as <span className="text-slate-400">{user.email}</span>.
+          Customer emails are partially masked in tool results. The agent runs only
+          read-only SQL. You are signed in as{' '}
+          <span className="text-slate-400">{user.email}</span>.
         </p>
+      </PageContainer>
+    </main>
+  )
+}
+
+/* ─── Empty-state for chat (private) ─────────────────────────────── */
+
+function EmptyAdminChat({ onPick }) {
+  return (
+    <div className="text-center py-10 sm:py-14">
+      <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-violet-500/20 to-cyan-500/15 border border-violet-500/30 flex items-center justify-center">
+        <Sparkles size={22} className="text-violet-300" aria-hidden />
       </div>
-    </section>
+      <p className="text-sm text-slate-300 font-semibold mb-1">
+        Ask me anything about your customers.
+      </p>
+      <p className="text-xs text-slate-500 mb-5">
+        Read-only · Postgres-backed · Every answer shows its sources.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-2xl mx-auto">
+        {SUGGESTED_QUESTIONS.map((q) => (
+          <button
+            key={q}
+            type="button"
+            onClick={() => onPick(q)}
+            className="text-left text-xs text-slate-300 px-3 py-2.5 rounded-xl bg-white/4 hover:bg-white/8 border border-white/10 hover:border-violet-500/30 transition-all"
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Non-admin guard (private) ──────────────────────────────────── */
+
+function AdminGuard() {
+  return (
+    <main className="min-h-[100dvh] mesh-bg pt-24 pb-20 flex items-start justify-center">
+      <PageContainer size="narrow">
+        <Card variant="glass" padding="md" className="text-center mt-12 max-w-md mx-auto">
+          <ShieldCheck size={32} className="text-rose-400 mx-auto mb-3" aria-hidden />
+          <Heading level={2} size="sm" className="mb-2">
+            Admin only
+          </Heading>
+          <p className="text-sm text-slate-400">
+            Your account isn&rsquo;t on the admin allow-list. Add your email to the
+            <code className="text-amber-300 mx-1 px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[11px]">
+              ADMIN_EMAILS
+            </code>
+            env variable on the backend and restart the server.
+          </p>
+        </Card>
+      </PageContainer>
+    </main>
   )
 }

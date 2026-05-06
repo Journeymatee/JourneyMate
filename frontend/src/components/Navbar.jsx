@@ -191,8 +191,8 @@ export default function Navbar() {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-slate-950/80 backdrop-blur-2xl border-b border-white/8 py-2.5 shadow-lg shadow-black/30'
-          : 'py-4 sm:py-5'
+          ? 'bg-slate-950/85 backdrop-blur-2xl border-b border-white/10 py-2.5 shadow-xl shadow-black/30'
+          : 'bg-slate-950/40 backdrop-blur-md border-b border-white/8 py-3 sm:py-4'
       }`}
     >
       <div className="max-w-7xl 3xl:max-w-[1680px] 4xl:max-w-[2000px] mx-auto px-3 sm:px-6 3xl:px-10 flex items-center justify-between gap-2 sm:gap-4">
@@ -213,10 +213,10 @@ export default function Navbar() {
             <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-green-500/0 to-amber-500/0 group-hover:from-green-500/20 group-hover:to-amber-500/20 transition-all duration-300" />
           </div>
           <div className="min-w-0">
-            <span className="font-display font-bold text-sm 2xs:text-base sm:text-lg 3xl:text-xl tracking-tight text-white block leading-tight truncate">
+            <span className="navbar-brand font-display font-bold text-sm 2xs:text-base sm:text-lg 3xl:text-xl tracking-tight text-white block leading-tight truncate">
               JourneyMate
             </span>
-            <span className="text-[10px] 3xl:text-[11px] text-slate-500 leading-none hidden sm:block">Smart Travel Comparison</span>
+            <span className="navbar-subtitle text-[10px] 3xl:text-[11px] text-slate-300 leading-none hidden sm:block">Smart Travel Comparison</span>
           </div>
         </Link>
 
@@ -238,7 +238,7 @@ export default function Navbar() {
                         : 'text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-white hover:bg-emerald-500/10 border border-emerald-400/30 dark:border-emerald-400/20'
                       : isActive
                         ? 'text-white bg-gradient-to-r from-green-500/15 to-emerald-500/10 border border-green-500/20'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                        : 'text-slate-100/90 hover:text-white hover:bg-white/10 border border-transparent'
                 }`
               }
             >
@@ -273,7 +273,7 @@ export default function Navbar() {
           <button
             type="button"
             onClick={() => { logout(); setMenuOpen(false) }}
-            className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-3 lg:px-4 py-2 rounded-xl bg-white/6 hover:bg-red-500/15 border border-white/10 hover:border-red-500/30 text-slate-300 hover:text-red-400 transition-all duration-200"
+            className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-3 lg:px-4 py-2 rounded-xl bg-slate-900/50 hover:bg-red-500/20 border border-white/15 hover:border-red-500/40 text-slate-100 hover:text-red-300 backdrop-blur-md transition-all duration-200"
             title="Log out"
           >
             <LogOut size={15} />
@@ -285,7 +285,7 @@ export default function Navbar() {
             <ThemeToggle />
             <button
               type="button"
-              className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+              className="w-9 h-9 rounded-xl bg-slate-900/50 border border-white/15 flex items-center justify-center text-slate-100 hover:text-white hover:bg-slate-900/65 backdrop-blur-md transition-all"
               onClick={() => setMenuOpen(!menuOpen)}
               aria-expanded={menuOpen}
               aria-label="Toggle menu"

@@ -7,6 +7,7 @@ import {
 import {
   searchTrains, searchFlights, searchHotels, searchWeb, checkTatkal, askAgent,
 } from '../services/agentService'
+import { Pill } from '../components/ui'
 
 /* ─────────────────────────── helpers ─────────────────────────── */
 
@@ -639,9 +640,9 @@ export default function LiveBookingAgent() {
           <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-gradient-to-br from-emerald-400/30 to-cyan-400/20 blur-3xl dark:from-emerald-500/20 dark:to-cyan-500/15" aria-hidden />
           <div className="pointer-events-none absolute -bottom-16 -left-16 h-56 w-56 rounded-full bg-gradient-to-br from-rose-400/30 to-violet-400/20 blur-3xl dark:from-rose-500/20 dark:to-violet-500/15" aria-hidden />
           <div className="relative">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-100/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/12 dark:text-emerald-300">
-              <Wifi size={10} />Real-time
-            </span>
+            <Pill accent="emerald" variant="soft" size="sm" icon={<Wifi size={10} />}>
+              Real-time
+            </Pill>
             <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-900 dark:text-white sm:text-3xl md:text-4xl">
               Live booking agent
             </h1>
