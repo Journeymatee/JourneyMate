@@ -100,6 +100,17 @@ const env = {
 
   // Per-call timeout for any external lookup spawned by the live agent.
   AGENT_LIVE_TIMEOUT_MS: Number(process.env.AGENT_LIVE_TIMEOUT_MS || 9000),
+
+  // ─── Razorpay (test mode) ────────────────────────────────────────────────
+  // The booking flow ALWAYS works without these — when keys are absent we
+  // skip the Razorpay round-trip and confirm bookings with a deterministic
+  // demo signature. Set both keys to enable the real Checkout widget.
+  //
+  // Get test keys at https://dashboard.razorpay.com/  → Account & Settings
+  // → API Keys (use the "Test mode" toggle in the top nav). Test cards:
+  // 4111 1111 1111 1111  · any future expiry  · any 3-digit CVV.
+  RAZORPAY_KEY_ID:     process.env.RAZORPAY_KEY_ID     || '',
+  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || '',
 }
 
 module.exports = env

@@ -1,12 +1,46 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Train, Plane, Hotel, Globe2, Sparkles, Search, Clock, MapPin,
   ExternalLink, AlertCircle, Loader2, ArrowRight, Wifi,
-  Tag, Send, Bot,
+  Tag, Send, Bot, Lock,
 } from 'lucide-react'
 import {
   searchTrains, searchFlights, searchHotels, searchWeb, checkTatkal, askAgent,
 } from '../services/agentService'
+
+/** "Book this in JourneyMate" — opens the in-app booking flow with the
+ *  current search criteria pre-filled. The flow handles seat picking,
+ *  passenger details, and Razorpay test-mode payment end-to-end. */
+function BookInJourneyMateCta({ type, from, to, date, classCode }) {
+  const params = new URLSearchParams()
+  params.set('type', type)
+  if (from) params.set('from', from)
+  if (to) params.set('to', to)
+  if (date) params.set('date', date)
+  if (classCode) params.set('class', classCode)
+  return (
+    <Link
+      to={`/booking?${params.toString()}`}
+      className="group flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-500/15 via-cyan-500/10 to-transparent px-4 py-3 transition-all hover:border-emerald-400/60 hover:from-emerald-500/25 active:scale-[0.99]"
+    >
+      <div className="min-w-0">
+        <p className="text-[10px] uppercase tracking-wider font-bold text-emerald-200">
+          New · One-tap booking
+        </p>
+        <p className="mt-0.5 text-sm font-bold text-white">
+          Book this {type} inside JourneyMate
+          <span className="ml-2 text-[11px] font-normal text-slate-300">
+            seat picker · Razorpay · email confirmation
+          </span>
+        </p>
+      </div>
+      <span className="inline-flex items-center gap-1.5 text-emerald-200 text-xs font-bold whitespace-nowrap">
+        <Lock size={12} aria-hidden /> Book now <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" aria-hidden />
+      </span>
+    </Link>
+  )
+}
 
 /* ─────────────────────────── helpers ─────────────────────────── */
 
@@ -176,6 +210,14 @@ function TrainsTab() {
             <ProviderBadge provider={data.provider} />
           </header>
 
+          <BookInJourneyMateCta
+            type="train"
+            from={data.from?.label || form.from}
+            to={data.to?.label || form.to}
+            date={data.date || form.date}
+          />
+          <div className="mb-4" />
+
           {data.trains?.length > 0 ? (
             <ul className="grid gap-3">
               {data.trains.map((t, i) => (
@@ -292,6 +334,15 @@ function FlightsTab() {
             <ProviderBadge provider={data.provider} />
           </header>
 
+          <BookInJourneyMateCta
+            type="flight"
+            from={data.from?.label || form.from}
+            to={data.to?.label || form.to}
+            date={data.date || form.date}
+            classCode={form.cabin === 'premium_economy' ? 'premium' : form.cabin === 'first' ? 'business' : form.cabin}
+          />
+          <div className="mb-4" />
+
           {data.offers?.length > 0 ? (
             <ul className="grid gap-3">
               {data.offers.map((o, i) => (
@@ -390,6 +441,14 @@ function HotelsTab() {
             </div>
             <ProviderBadge provider={data.provider} />
           </header>
+
+          <BookInJourneyMateCta
+            type="hotel"
+            from={data.destination || form.destination}
+            to={data.destination || form.destination}
+            date={data.check_in || form.check_in}
+          />
+          <div className="mb-4" />
 
           {data.stays?.length > 0 ? (
             <ul className="grid gap-3 sm:grid-cols-2">

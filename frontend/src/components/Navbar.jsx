@@ -29,8 +29,9 @@ const PUBLIC_NAV_LINKS = [
   { to: '/live-search', label: 'Live Search', accent: true },
   { to: '/blog', label: 'Blog' },
 ]
-const SAVED_LINK = { to: '/saved', label: 'Saved' }
-const ABOUT_LINK = { to: '/about', label: 'About' }
+const SAVED_LINK    = { to: '/saved',       label: 'Saved' }
+const BOOKINGS_LINK = { to: '/my-bookings', label: 'My bookings' }
+const ABOUT_LINK    = { to: '/about',       label: 'About' }
 const ADMIN_LINK = { to: '/admin', label: 'Admin', adminOnly: true }
 
 // Drawer sections (mobile only) — icon, description and a tinted gradient
@@ -92,6 +93,10 @@ const SAVED_DRAWER_ITEM = {
   to: '/saved', label: 'Saved trips', desc: 'Your private wishlist', Icon: Sparkles, tint: TINT.teal,
 }
 
+const BOOKINGS_DRAWER_ITEM = {
+  to: '/my-bookings', label: 'My bookings', desc: 'Confirmed trains, flights & hotels', Icon: Radar, tint: TINT.emerald,
+}
+
 const MORE_LINKS = [
   { to: '/pricing', label: 'Pricing', desc: 'Free forever for travellers', Icon: Crown, tint: TINT.yellow },
   { to: '/contact', label: 'Contact', desc: 'Talk to a real human',        Icon: Mail,  tint: TINT.rose },
@@ -109,7 +114,10 @@ export default function Navbar() {
   // reads "public pages → personal pages → about/credits" left-to-right.
   const navLinks = useMemo(() => {
     const links = [...PUBLIC_NAV_LINKS]
-    if (user) links.push(SAVED_LINK)
+    if (user) {
+      links.push(BOOKINGS_LINK)
+      links.push(SAVED_LINK)
+    }
     links.push(ABOUT_LINK)
     if (user?.isAdmin) links.push(ADMIN_LINK)
     return links
@@ -429,6 +437,7 @@ function MobileDrawer({ open, onClose, user, logout, firstName, initial }) {
             {DISCOVER_LINKS.map((item) => (
               <DrawerItem key={item.to || item.label} item={item} onNavigate={onClose} />
             ))}
+            {user && <DrawerItem item={BOOKINGS_DRAWER_ITEM} onNavigate={onClose} />}
             {user && <DrawerItem item={SAVED_DRAWER_ITEM} onNavigate={onClose} />}
             <DrawerItem item={ABOUT_DRAWER_ITEM} onNavigate={onClose} />
           </DrawerSection>
