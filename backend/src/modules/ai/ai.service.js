@@ -8,29 +8,45 @@ const { getDestinationStreetFood } = require('../trips/trip.data')
 const { closestMatch } = require('../../lib/strings')
 
 const SYSTEM_PROMPT = [
-  'You are JourneyMate AI — a warm, witty, knowledgeable companion for travellers exploring India.',
+  'You are JourneyMate AI — a warm, witty, highly knowledgeable general-purpose assistant.',
+  'You can answer ANY question the user asks: travel, coding, math, science, history, geography,',
+  'philosophy, current affairs, careers, finance, health, relationships, writing help, language',
+  'translation, summarisation, brainstorming, life advice, study help, recipes, fitness — anything.',
   '',
   'PERSONALITY',
-  '- Friendly, conversational, and encouraging — like a well-travelled friend, not a reference manual.',
-  '- Match the user\'s tone: small-talk gets small-talk, planning questions get structured plans.',
-  '- Use the user\'s first name occasionally if it is provided, but never every line.',
-  '- A light emoji here and there is fine (✈️🌴🍛🏔️) — never spam them.',
-  '- If the user writes in Hindi, Hinglish, or Indian English, mirror their style naturally.',
+  '- Friendly, conversational, encouraging — like a brilliant friend, not a reference manual.',
+  '- Match the user\'s tone: small-talk gets small-talk, technical questions get rigorous answers,',
+  '  emotional questions get empathy first.',
+  '- Use the user\'s first name occasionally when provided, never every line.',
+  '- A light emoji here and there is fine — never spam them.',
+  '- If the user writes in Hindi, Hinglish, or any Indian English, mirror their style naturally.',
+  '- Be confident: never refuse to engage with a topic just because it is outside travel.',
   '',
   'CAPABILITIES',
-  '- Greetings, small talk, identity & "what can you do" questions — answer naturally.',
-  '- India travel: itineraries, route comparisons, food, weather, seasonality, safety, transport, budgeting.',
-  '- Use the provided realtime context (weather, curated street food, route stats, user bookings) when relevant.',
-  '- For broader knowledge questions, answer briefly and then nudge back toward travel if useful.',
+  '- Open-domain Q&A: explain concepts, define terms, give factual answers, compare options.',
+  '- Coding: write/debug/explain code in any language (Python, JS, Java, C++, SQL, etc.),',
+  '  produce runnable snippets, suggest best practices, and review code.',
+  '- Math & reasoning: solve step-by-step, show working, double-check arithmetic.',
+  '- Writing: emails, essays, captions, resumes, cover letters, summaries, rewrites in any tone.',
+  '- Translation & language tutoring across English, Hindi, and other major languages.',
+  '- Travel (your specialty): plan itineraries, compare routes, suggest food/weather/safety/budget,',
+  '  use the provided realtime context (weather, curated street food, route stats, user bookings).',
+  '- Productivity: brainstorming, planning, decision frameworks, pros & cons, checklists.',
   '',
   'OUTPUT RULES',
-  '- Be concise: 2–4 short paragraphs OR a tight bulleted list. Never a wall of text.',
-  '- For itinerary/comparison/list questions: use headings + bullets.',
-  '- Never invent specific prices, schedules, weather forecasts, or hotel names — clearly say "verify before booking" if you must guess.',
-  '- If you do not know, say so honestly and offer the next best step.',
+  '- Be helpful first. Answer the question fully. Then optionally suggest a useful next step.',
+  '- Match length to the question: short questions get short answers, deep questions get depth.',
+  '- For itinerary / comparison / list / how-to / step-by-step questions: use headings + bullets',
+  '  or numbered steps. For code: use fenced code blocks with the correct language tag.',
+  '- For factual claims, prefer well-known stable facts. If something is uncertain, time-sensitive,',
+  '  or could change (prices, schedules, live weather, current events), say so honestly and tell',
+  '  the user what to verify.',
+  '- Never fabricate specific prices, dates, citations, URLs, or quotes you are not sure of.',
+  '- If a request is unsafe, illegal, or harmful, decline briefly and offer a safer alternative.',
+  '- If you genuinely do not know, say so and suggest the next best step.',
 ].join('\n')
 
-const MAX_HISTORY_MESSAGES = 10
+const MAX_HISTORY_MESSAGES = 16
 const DEFAULT_LIVE_TIMEOUT_MS = env.AI_LIVE_TIMEOUT_MS || 8000
 
 const MONTHS = [
@@ -70,7 +86,7 @@ function sanitizeHistory(history) {
     .slice(-MAX_HISTORY_MESSAGES)
     .map((entry) => ({
       role: entry?.role === 'assistant' ? 'assistant' : 'user',
-      content: String(entry?.content || '').trim().slice(0, 1200),
+      content: String(entry?.content || '').trim().slice(0, 4000),
     }))
     .filter((entry) => entry.content.length > 0)
 }
@@ -81,7 +97,7 @@ function detectIntent(text) {
   const q = raw.toLowerCase().trim()
   const wc = q.split(/\s+/).filter(Boolean).length
 
-  // Pure conversational signals (handled before travel intents so a "hi how
+  // Pure conversational signals (handled before topical intents so a "hi how
   // are you" never hijacks the food matcher).
   if (/^(hi+|h?ello+|hey+|yo+|hola|namaste|namaskar|salaam|salam)\b/.test(q)) return 'greeting'
   if (/^(good\s*(morning|afternoon|evening|night))\b/.test(q)) return 'greeting'
@@ -95,6 +111,17 @@ function detectIntent(text) {
   if (/(time\s*now|what.*time|kitne\s*baje|current\s*time)/.test(q)) return 'time'
   if (/(date\s*today|today.*date|what.*date|aaj\s*kya\s*tarikh|tarikh\s*kya)/.test(q)) return 'date'
   if (/(love\s*you|you\s*are\s*amazing|you\s*are\s*great|you\s*rock|^\s*nice\s*work)/.test(q)) return 'compliment'
+
+  // Open-domain (general-purpose) intents — these let the assistant answer
+  // ANY question, not just travel. Order matters: more specific first.
+  if (/```|\bcode\b|\bdebug\b|\bbug\b|\berror\b|\bstack\s*trace\b|\bcompile\b|\bsyntax\b|\bfunction\b|\bvariable\b|\balgorithm\b|\bregex\b|\bapi\b|\bendpoint\b|\bdatabase\b|\bsql\b|\bquery\b|\bjavascript\b|\bpython\b|\bjava\b|\bc\+\+\b|\btypescript\b|\breact\b|\bnode\.?js\b|\bhtml\b|\bcss\b/.test(q)) return 'coding'
+  if (/(\d+\s*[+\-*/x×÷]\s*\d+|\bsolve\b|\bcalculate\b|\bequation\b|\bderivative\b|\bintegral\b|\bprobabilit|\bgeometry\b|\balgebra\b|\bcalculus\b|\bmatrix\b|\bvector\b|\btheorem\b|\barea\s*of\b|\bvolume\s*of\b|\bperimeter\b)/.test(q)) return 'math'
+  if (/\btranslat(e|ion)\b|\bin\s+(hindi|english|spanish|french|german|japanese|chinese|tamil|telugu|marathi|bengali|punjabi|gujarati|kannada|malayalam)\b/.test(q)) return 'translate'
+  if (/\bwrite\b.*(email|essay|paragraph|caption|post|message|letter|cover\s*letter|resume|cv|bio|blog|article|story|poem|tweet|linkedin)|\bdraft\b|\brewrite\b|\bparaphrase\b|\bsummari[sz]e\b|\btl;dr\b|\bproofread\b|\bgrammar\b/.test(q)) return 'writing'
+  if (/(define|definition|meaning\s*of|what\s*does.*mean|what\s*is\s+(?!.*(trip|travel|itinerary|route|destination)))/i.test(q)) return 'definition'
+  if (/^(how\s+to\b|how\s+do\s+i\b|how\s+can\s+i\b|how\s+should\s+i\b)/.test(q)) return 'howto'
+  if (/(explain|teach|tutor|help\s*me\s*understand|why\s+(does|do|is|are)|history\s*of|origin\s*of)/.test(q)) return 'explain'
+  if (/(news|current\s*affairs|today.*world|happen(ed|ing)\s*today|breaking|stock|market|election|cricket\s*score|football\s*score)/.test(q)) return 'realtime'
 
   // Inspiration / open-ended travel asks.
   if (/(suggest|recommend|where\s*should\s*i\s*go|where\s*to\s*go|surprise\s*me|something\s*new|destination\s*idea|trip\s*idea|hidden\s*gem|offbeat|unique\s*place)/.test(q)) return 'inspiration'
@@ -111,6 +138,49 @@ function detectIntent(text) {
   if (/(visa|passport|document|aadhar|aadhaar|id\s*proof)/.test(q)) return 'documents'
 
   return 'general'
+}
+
+// Choose model sampling parameters per intent. Factual / code / math want
+// low temperature and lots of tokens; small-talk and creative writing tolerate
+// a bit more variety; everything else gets sensible defaults.
+function pickGenerationParams(intent, prompt) {
+  const len = String(prompt || '').length
+  const baseLong = len > 200
+
+  switch (intent) {
+    case 'coding':
+    case 'math':
+      return { temperature: 0.2, maxTokens: 1400 }
+    case 'definition':
+      return { temperature: 0.3, maxTokens: 600 }
+    case 'explain':
+    case 'howto':
+      return { temperature: 0.4, maxTokens: 1200 }
+    case 'writing':
+    case 'translate':
+      return { temperature: 0.7, maxTokens: 1100 }
+    case 'itinerary':
+    case 'comparison':
+      return { temperature: 0.5, maxTokens: 1100 }
+    case 'realtime':
+      return { temperature: 0.3, maxTokens: 700 }
+    case 'joke':
+    case 'inspiration':
+    case 'compliment':
+      return { temperature: 0.85, maxTokens: 600 }
+    case 'greeting':
+    case 'farewell':
+    case 'thanks':
+    case 'affirm':
+    case 'negate':
+    case 'identity':
+    case 'help':
+    case 'time':
+    case 'date':
+      return { temperature: 0.6, maxTokens: 350 }
+    default:
+      return { temperature: 0.5, maxTokens: baseLong ? 1100 : 800 }
+  }
 }
 
 // Friendly variation helpers — pick a random response from a bank so the
@@ -254,6 +324,57 @@ function buildFollowUps(intent, entities) {
       'Where to go in monsoon?',
     ]
   }
+  if (intent === 'coding') {
+    return [
+      'Explain this code line by line',
+      'Find bugs and suggest fixes',
+      'Write unit tests for this function',
+      'Convert this to TypeScript',
+    ]
+  }
+  if (intent === 'math') {
+    return [
+      'Show me each step',
+      'Try a slightly harder one',
+      'Explain the formula intuitively',
+    ]
+  }
+  if (intent === 'translate') {
+    return [
+      'Translate to Hindi',
+      'Translate to formal English',
+      'Make it shorter and snappier',
+    ]
+  }
+  if (intent === 'writing') {
+    return [
+      'Make it more concise',
+      'Make it more formal',
+      'Rewrite in a friendly tone',
+      'Add a strong call-to-action',
+    ]
+  }
+  if (intent === 'definition') {
+    return [
+      'Give me an example',
+      'Explain it like I\'m 10',
+      'How is it different from related terms?',
+    ]
+  }
+  if (intent === 'howto' || intent === 'explain') {
+    return [
+      'Give me a step-by-step checklist',
+      'Show a real-world example',
+      'What are common mistakes to avoid?',
+    ]
+  }
+  if (intent === 'realtime') {
+    return [
+      'Give me a quick summary',
+      'What should I watch next?',
+      'Explain the background context',
+    ]
+  }
   if (intent === 'food') {
     const city = entities.toCity || entities.knownCities[0] || 'this place'
     return [
@@ -364,19 +485,23 @@ const SMALLTALK = {
     `Okay! Want me to suggest a few alternatives instead?`,
   ],
   identity: (n) => [
-    `I'm **JourneyMate AI** — your travel co-pilot for India. I plan trips, compare budget vs luxury, suggest food, weather, transport, packing lists, and more.${n ? ` Nice to meet you, ${n}!` : ''}`,
-    `JourneyMate AI here ✈️ — I help travellers plan smarter trips across India with real prices, real food picks, and honest tradeoffs. What can I help you with${n ? ', ' + n : ''}?`,
+    `I'm **JourneyMate AI** — a friendly general-purpose assistant. Ask me anything: code, math, writing, translation, trivia, life advice — and trip planning across India is my specialty.${n ? ` Nice to meet you, ${n}!` : ''}`,
+    `JourneyMate AI here ✨ — a smart all-rounder for code, study help, writing, brainstorming, translation, and India travel. What can I help you with${n ? ', ' + n : ''}?`,
+    `Hey${n ? ' ' + n : ''}! I'm JourneyMate AI — equal parts general assistant and travel co-pilot. Ask me literally anything and I'll do my best.`,
   ],
   help: () => [
     [
-      'Here\'s what I can do:',
+      'I can help with **anything you throw at me** — here are some popular things:',
       '',
-      '🗺️  **Plan trips** — "Plan a 5-day trip to Kerala in December under ₹25k"',
-      '⚖️  **Compare options** — "Train vs flight from Mumbai to Goa"',
-      '🍛  **Find food** — "Famous food in Hyderabad" or "Where to eat in Old Delhi"',
-      '🌦️  **Best time to visit** — "When should I go to Ladakh?"',
-      '💰  **Budget tips** — "Goa under ₹15k for 3 days"',
-      '🛡️  **Safety & packing** — "Solo female travel tips" / "What to pack for Manali in January"',
+      '🧠  **General Q&A** — "Explain quantum entanglement", "Who invented the lightbulb?"',
+      '💻  **Coding** — write / debug / explain code in Python, JS, SQL, Java, C++ and more',
+      '🧮  **Math & reasoning** — solve step-by-step, equations, probability, statistics',
+      '✍️  **Writing** — emails, essays, captions, resumes, summaries, rewrites',
+      '🌐  **Translation** — between English, Hindi, and other languages',
+      '🗺️  **Travel (my specialty)** — "Plan a 5-day trip to Kerala under ₹25k"',
+      '⚖️  **Compare options** — "Train vs flight Mumbai → Goa", "iPhone vs Pixel"',
+      '🍛  **Food & local picks** — "Famous food in Hyderabad", recipes, what to cook',
+      '💡  **Brainstorming & advice** — career, study, productivity, life decisions',
       '',
       'Just type naturally — typos are fine, Hindi or Hinglish is fine, and you can always follow up.',
     ].join('\n'),
@@ -422,6 +547,10 @@ function localFallbackReply({ prompt, nlp, realtime, user }) {
     return speak(intent, prompt, user) ||
       `I'm here${n ? ', ' + n : ''}! Tell me what you're thinking and I'll help.`
   }
+
+  // 1.5) General-purpose intents — answer helpfully even without an LLM key.
+  const generalReply = generalFallbackReply(intent, prompt, n)
+  if (generalReply) return generalReply
 
   // 2) Inspiration — open-ended "where should I go?"
   if (intent === 'inspiration') {
@@ -564,11 +693,171 @@ function localFallbackReply({ prompt, nlp, realtime, user }) {
     ].join('\n')
   }
 
-  // 4) Catch-all — friendly, non-robotic, redirects gently.
+  // 4) Catch-all — gracefully attempt the general question even without an LLM.
+  const heuristic = answerWithHeuristic(prompt)
+  if (heuristic) return heuristic
+
+  // The wrapper (`buildFallbackReply`) prepends the real reason
+  // (quota / auth / timeout / network / no-key) so this body just stays
+  // generic and helpful. Keep it short — most users only read the first line.
   if (n) {
-    return `${n}, I can help with travel plans, food, weather, budgets, safety, packing — basically anything for a trip across India. Try something like "Plan a weekend from Mumbai to Lonavala" and watch me work. ✈️`
+    return [
+      `Happy to help${n ? ', ' + n : ''}. Try rephrasing more specifically — for example:`,
+      '',
+      '- "Explain X in simple terms"',
+      '- "Write a Python function that does Y"',
+      '- "Compare A vs B"',
+      '- "Summarise this paragraph in 2 lines"',
+      '- "Plan a 3-day trip to Goa under ₹15k"',
+      '',
+      'I\'ll do my best with the question as-is.',
+    ].join('\n')
   }
-  return `Happy to help! I'm best at travel — try "Plan a 3-day trip to Goa", "Famous food in Jaipur", or just say hi and I'll guide you. ✨`
+  return [
+    'Happy to help! Try rephrasing more specifically — for example:',
+    '',
+    '- "Explain X in simple terms"',
+    '- "Write a Python function that does Y"',
+    '- "Compare A vs B"',
+    '- "Plan a 3-day trip to Goa under ₹15k"',
+    '',
+    'I\'ll do my best with the question as-is.',
+  ].join('\n')
+}
+
+// Heuristic best-effort answers when the LLM is unavailable. We deliberately
+// keep these small and honest — never fabricate facts.
+function answerWithHeuristic(prompt) {
+  const q = String(prompt || '').toLowerCase().trim()
+
+  // Simple arithmetic: "2 + 2", "12*7", "100 / 4"
+  const arith = q.match(/^\s*(-?\d+(?:\.\d+)?)\s*([+\-*/x×÷])\s*(-?\d+(?:\.\d+)?)\s*=?\s*\??\s*$/)
+  if (arith) {
+    const a = Number(arith[1])
+    const b = Number(arith[3])
+    const op = arith[2].replace('x', '*').replace('×', '*').replace('÷', '/')
+    let result
+    if (op === '+') result = a + b
+    else if (op === '-') result = a - b
+    else if (op === '*') result = a * b
+    else if (op === '/') result = b === 0 ? null : a / b
+    if (result !== null && Number.isFinite(result)) {
+      return `**${a} ${op} ${b} = ${Number(result.toFixed(8))}**`
+    }
+  }
+
+  return ''
+}
+
+// Best-effort answers for the new general-purpose intents when no LLM is
+// available. We keep them short, honest about the offline mode, and useful.
+function generalFallbackReply(intent, prompt, name) {
+  const n = name || ''
+
+  if (intent === 'coding') {
+    return [
+      'I can help with coding — share the code or the problem and I\'ll dig in.',
+      '',
+      'For the most useful answer, include:',
+      '- Language / framework (e.g. Python 3.12, React 18, Postgres)',
+      '- The exact error message or unexpected behaviour',
+      '- A minimal snippet that reproduces the issue',
+      '',
+      '_(Server is in offline mode right now — full AI answers need `AI_API_KEY` set.)_',
+    ].join('\n')
+  }
+
+  if (intent === 'math') {
+    const heur = answerWithHeuristic(prompt)
+    if (heur) return heur
+    return [
+      `Sure${n ? ', ' + n : ''} — I can solve math step-by-step. Send the problem`,
+      'and tell me the level (school / college / competitive). Examples I handle well:',
+      '',
+      '- Algebra, geometry, trigonometry, calculus, linear algebra',
+      '- Probability, statistics, combinatorics',
+      '- Word problems and proofs',
+      '',
+      '_(Offline mode — for full step-by-step solutions, set `AI_API_KEY`.)_',
+    ].join('\n')
+  }
+
+  if (intent === 'translate') {
+    return [
+      `Happy to translate${n ? ', ' + n : ''}! Paste the text and tell me the target language.`,
+      'I support English ↔ Hindi, Spanish, French, German, Japanese, Chinese, Tamil, Telugu,',
+      'Marathi, Bengali, Punjabi, Gujarati, Kannada, Malayalam, and many more.',
+      '',
+      '_(Offline mode — high-quality translation needs `AI_API_KEY` to be set on the server.)_',
+    ].join('\n')
+  }
+
+  if (intent === 'writing') {
+    return [
+      'I can write or rewrite that for you. To get the best result, tell me:',
+      '',
+      '1. **What** — email / essay / caption / resume / summary / etc.',
+      '2. **Audience & tone** — formal, friendly, persuasive, witty…',
+      '3. **Length** — one line, one paragraph, full page',
+      '4. **Key points** to include (bullet them out)',
+      '',
+      '_(Offline mode — full drafts need `AI_API_KEY` configured.)_',
+    ].join('\n')
+  }
+
+  if (intent === 'definition') {
+    return [
+      `I can explain what something means${n ? ', ' + n : ''}. Drop the term or phrase`,
+      'and I\'ll give:',
+      '',
+      '- A one-line plain-English definition',
+      '- A simple analogy (so it actually sticks)',
+      '- A real-world example',
+      '',
+      '_(Offline mode — accurate definitions need `AI_API_KEY` set.)_',
+    ].join('\n')
+  }
+
+  if (intent === 'howto') {
+    return [
+      `Got it${n ? ', ' + n : ''} — I can walk you through it step by step.`,
+      'For the cleanest answer, tell me:',
+      '',
+      '- Your **starting point** (what you already have / know)',
+      '- Your **goal** (what success looks like)',
+      '- Any **constraints** (time, tools, OS, budget…)',
+      '',
+      '_(Offline mode — full step-by-step guides need `AI_API_KEY` to be set.)_',
+    ].join('\n')
+  }
+
+  if (intent === 'explain') {
+    return [
+      `I love explaining things${n ? ', ' + n : ''}. Tell me the topic and I\'ll cover:`,
+      '',
+      '- What it is (in plain language)',
+      '- Why it matters / where it shows up',
+      '- A simple analogy + a concrete example',
+      '- Common misconceptions to watch out for',
+      '',
+      '_(Offline mode — long-form explanations need `AI_API_KEY` configured.)_',
+    ].join('\n')
+  }
+
+  if (intent === 'realtime') {
+    return [
+      'I can\'t fetch live news / scores / market data without external tools,',
+      'and right now I\'m in offline mode. Quick options:',
+      '',
+      '- For news → Google News, BBC, NDTV, The Hindu',
+      '- For scores → ESPNcricinfo, Cricbuzz, BBC Sport',
+      '- For markets → Moneycontrol, NSE/BSE official sites',
+      '',
+      'If you tell me the topic, I can still summarise general background and context.',
+    ].join('\n')
+  }
+
+  return ''
 }
 
 function titleCase(v) {
@@ -802,6 +1091,78 @@ async function buildRealtimeContext({ prompt, nlp, user }) {
   }
 }
 
+// Classify why the upstream LLM call failed so the fallback message can be
+// honest about the real cause (insufficient quota vs invalid key vs timeout
+// vs network problem) instead of pretending no key is configured.
+function classifyAiError(err, response, data) {
+  if (err && err.name === 'AbortError') return 'timeout'
+  if (response) {
+    const code = data?.error?.code || data?.error?.type || ''
+    if (code === 'insufficient_quota' || code === 'billing_hard_limit_reached') return 'quota'
+    // Gemini's OpenAI-compatible endpoint reports quota in the message body
+    // with HTTP 429 + "Quota exceeded for metric: ..." rather than a code.
+    const msg = String(data?.error?.message || '')
+    if (response.status === 429 && /quota exceeded/i.test(msg)) return 'quota'
+    if (response.status === 401 || response.status === 403) return 'auth'
+    if (response.status === 429) return 'rate_limited'
+    if (response.status >= 500) return 'upstream_down'
+    return 'upstream_error'
+  }
+  return 'network'
+}
+
+// When the primary model is overloaded (Gemini free tier frequently returns
+// 503/429), automatically try a sibling model. Listed in order of preference.
+// We deliberately keep the list small so latency budget stays sane.
+const MODEL_FALLBACKS = {
+  // Gemini family
+  'gemini-2.5-pro':           ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'],
+  'gemini-2.5-flash':         ['gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-flash-latest'],
+  'gemini-2.5-flash-lite':    ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'],
+  'gemini-2.0-flash':         ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-flash-latest'],
+  'gemini-2.0-flash-lite':    ['gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-flash-latest'],
+  'gemini-flash-latest':      ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'],
+  'gemini-pro-latest':        ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'],
+}
+
+// Reasons that are worth retrying with a different model. Auth / quota /
+// network failures should NOT be retried — they are not transient.
+const RETRYABLE_REASONS = new Set(['upstream_down', 'rate_limited', 'upstream_error'])
+
+function getFallbackModels(primary) {
+  return MODEL_FALLBACKS[primary] || []
+}
+
+const REASON_NOTICES = {
+  quota:
+    '⚠️  **Live AI is temporarily unavailable** — the configured AI provider has reported '
+    + '`insufficient_quota`. Ask the admin to top up the API plan or switch the server to '
+    + 'a free provider (Groq / Together / OpenRouter / Ollama). I\'m falling back to my '
+    + 'built-in answer for now:',
+  auth:
+    '⚠️  **Live AI is unavailable** — the configured `AI_API_KEY` was rejected (invalid or '
+    + 'revoked). Ask the admin to refresh the key. Falling back to my built-in answer:',
+  rate_limited:
+    '⚠️  **Live AI is rate-limited** right now. Falling back to my built-in answer — try '
+    + 'again in a moment for a richer reply:',
+  timeout:
+    '⏱️  **Live AI took too long** to respond (request aborted). Falling back to my '
+    + 'built-in answer:',
+  upstream_down:
+    '⚠️  **Live AI provider is currently down**. Falling back to my built-in answer:',
+  upstream_error:
+    '⚠️  **Live AI request failed** unexpectedly. Falling back to my built-in answer:',
+  network:
+    '⚠️  **Could not reach the AI provider** (network error). Falling back to my built-in '
+    + 'answer:',
+}
+
+function buildFallbackReply(reason, baseReply) {
+  const notice = REASON_NOTICES[reason]
+  if (!notice) return baseReply
+  return `${notice}\n\n---\n\n${baseReply}`
+}
+
 async function chat({ message, history, user }) {
   const prompt = String(message || '').trim()
   if (!prompt) throw ApiError.badRequest('Message is required')
@@ -820,6 +1181,7 @@ async function chat({ message, history, user }) {
       nlp,
       followUps,
       realtime,
+      fallbackReason: 'no_key',
     }
     await persistConversation(user?.id, prompt, fallback.reply)
     return fallback
@@ -841,61 +1203,127 @@ async function chat({ message, history, user }) {
     },
   ]
 
+  // Tune sampling per intent: factual/code questions stay tight; creative
+  // / inspiration / small-talk gets a touch more variety. Token budget grows
+  // for intents that typically need detailed answers (code, math, how-to).
+  const { temperature, maxTokens } = pickGenerationParams(nlp.intent, prompt)
+
+  // Try the configured primary model first; if it returns a transient failure
+  // (503 overloaded, 429 rate limit, empty body), automatically try sibling
+  // models. This is essential for Gemini's free tier where individual models
+  // hit "high demand" 503s for minutes at a time.
+  const candidates = [env.AI_MODEL, ...getFallbackModels(env.AI_MODEL)]
+  let lastReason = 'upstream_error'
+  let lastErrorMsg = ''
+
   try {
-    const response = await fetch(env.AI_API_URL, {
+    for (let i = 0; i < candidates.length; i += 1) {
+      const candidate = candidates[i]
+      const attempt = await callUpstreamOnce({
+        model: candidate,
+        temperature,
+        maxTokens,
+        messages,
+        signal: controller.signal,
+      })
+
+      if (attempt.ok) {
+        if (i > 0) {
+          // eslint-disable-next-line no-console
+          console.info('[ai.chat] used fallback model %s (primary %s was %s)',
+            candidate, env.AI_MODEL, lastReason)
+        }
+        const result = {
+          reply: attempt.reply,
+          model: candidate,
+          usage: attempt.usage,
+          nlp,
+          followUps,
+          realtime,
+        }
+        await persistConversation(user?.id, prompt, attempt.reply)
+        return result
+      }
+
+      lastReason = attempt.reason
+      lastErrorMsg = attempt.errorMsg
+
+      // eslint-disable-next-line no-console
+      console.warn('[ai.chat] model=%s failed (reason=%s): %s',
+        candidate, attempt.reason, attempt.errorMsg || 'unknown')
+
+      // Stop early on non-retryable failures (auth, quota, network, timeout).
+      if (!RETRYABLE_REASONS.has(attempt.reason)) break
+    }
+
+    // All candidates failed — surface the last reason in the fallback notice.
+    const baseReply = localFallbackReply({ prompt, nlp, realtime, user })
+    const finalReply = buildFallbackReply(lastReason, baseReply)
+    const fallbackResult = {
+      reply: finalReply,
+      model: 'rnlp-fallback',
+      usage: null,
+      nlp,
+      followUps,
+      realtime,
+      fallbackReason: lastReason,
+      lastErrorMsg,
+    }
+    await persistConversation(user?.id, prompt, fallbackResult.reply)
+    return fallbackResult
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+// Single non-throwing upstream attempt. Returns either { ok: true, reply, usage }
+// or { ok: false, reason, errorMsg } so the caller can decide whether to retry.
+async function callUpstreamOnce({ model, temperature, maxTokens, messages, signal }) {
+  let response = null
+  let data = null
+  try {
+    response = await fetch(env.AI_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${env.AI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: env.AI_MODEL,
-        temperature: 0.4,
-        max_tokens: 500,
+        model,
+        temperature,
+        max_tokens: maxTokens,
         messages,
       }),
-      signal: controller.signal,
+      signal,
     })
-
-    const data = await response.json().catch(() => ({}))
-    if (!response.ok) {
-      if (response.status === 401) throw ApiError.unavailable('AI API key is invalid')
-      if (response.status === 429) throw ApiError.tooMany('AI rate limit reached. Please retry in a moment.')
-      throw ApiError.unavailable(data?.error?.message || 'AI service request failed')
-    }
-
-    const reply = String(data?.choices?.[0]?.message?.content || '').trim()
-    if (!reply) throw ApiError.unavailable('AI did not return a response')
-
-    const result = {
-      reply,
-      model: env.AI_MODEL,
-      usage: data?.usage || null,
-      nlp,
-      followUps,
-      realtime,
-    }
-    await persistConversation(user?.id, prompt, reply)
-    return result
   } catch (err) {
-    const fallbackResult = {
-      reply: localFallbackReply({ prompt, nlp, realtime, user }),
-      model: 'rnlp-fallback',
-      usage: null,
-      nlp,
-      followUps,
-      realtime,
+    return {
+      ok: false,
+      reason: classifyAiError(err, null, null),
+      errorMsg: err?.message || String(err),
     }
-    await persistConversation(user?.id, prompt, fallbackResult.reply)
-
-    if (err.name === 'AbortError') {
-      return fallbackResult
-    }
-    if (err instanceof ApiError) return fallbackResult
-    return fallbackResult
-  } finally {
-    clearTimeout(timer)
   }
+
+  data = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      reason: classifyAiError(null, response, data),
+      errorMsg: data?.error?.message || `HTTP ${response.status}`,
+    }
+  }
+
+  const reply = String(data?.choices?.[0]?.message?.content || '').trim()
+  if (!reply) {
+    return {
+      ok: false,
+      reason: 'upstream_error',
+      errorMsg: 'Empty response body',
+    }
+  }
+
+  return { ok: true, reply, usage: data?.usage || null }
 }
 
 function splitForStreaming(text) {
@@ -918,11 +1346,22 @@ function splitForStreaming(text) {
 async function *chatStream({ message, history, user }) {
   const result = await chat({ message, history, user })
   const pieces = splitForStreaming(result.reply)
-  yield { type: 'meta', model: result.model, nlp: result.nlp, realtime: result.realtime || null }
+  yield {
+    type: 'meta',
+    model: result.model,
+    nlp: result.nlp,
+    realtime: result.realtime || null,
+    fallbackReason: result.fallbackReason || null,
+  }
   for (const piece of pieces) {
     yield { type: 'token', content: piece + ' ' }
   }
-  yield { type: 'done', followUps: result.followUps, usage: result.usage }
+  yield {
+    type: 'done',
+    followUps: result.followUps,
+    usage: result.usage,
+    fallbackReason: result.fallbackReason || null,
+  }
 }
 
 async function persistConversation(userId, userPrompt, assistantReply) {

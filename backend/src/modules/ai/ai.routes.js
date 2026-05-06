@@ -10,19 +10,19 @@ const controller = require('./ai.controller')
 
 const router = express.Router()
 
-router.post(
-  '/chat/stream',
-  requireAuth,
-  authLimiter,
+// Validation rules shared between /chat and /chat/stream. We allow longer
+// messages (up to 6000 chars) so users can paste code, essays, or long
+// passages they want help with.
+const chatValidation = [
   body('message')
     .isString()
     .trim()
-    .isLength({ min: 2, max: 2000 })
-    .withMessage('message must be 2-2000 characters'),
+    .isLength({ min: 1, max: 6000 })
+    .withMessage('message must be 1-6000 characters'),
   body('history')
     .optional()
-    .isArray({ max: 20 })
-    .withMessage('history must be an array with max 20 items'),
+    .isArray({ max: 30 })
+    .withMessage('history must be an array with max 30 items'),
   body('history.*.role')
     .optional()
     .isIn(['user', 'assistant'])
@@ -30,8 +30,15 @@ router.post(
   body('history.*.content')
     .optional()
     .isString()
-    .isLength({ min: 1, max: 2000 })
-    .withMessage('history content must be 1-2000 chars'),
+    .isLength({ min: 1, max: 6000 })
+    .withMessage('history content must be 1-6000 chars'),
+]
+
+router.post(
+  '/chat/stream',
+  requireAuth,
+  authLimiter,
+  ...chatValidation,
   validate,
   controller.chatStream
 )
@@ -40,24 +47,7 @@ router.post(
   '/chat',
   requireAuth,
   authLimiter,
-  body('message')
-    .isString()
-    .trim()
-    .isLength({ min: 2, max: 2000 })
-    .withMessage('message must be 2-2000 characters'),
-  body('history')
-    .optional()
-    .isArray({ max: 20 })
-    .withMessage('history must be an array with max 20 items'),
-  body('history.*.role')
-    .optional()
-    .isIn(['user', 'assistant'])
-    .withMessage('history role must be user or assistant'),
-  body('history.*.content')
-    .optional()
-    .isString()
-    .isLength({ min: 1, max: 2000 })
-    .withMessage('history content must be 1-2000 chars'),
+  ...chatValidation,
   validate,
   controller.chat
 )
