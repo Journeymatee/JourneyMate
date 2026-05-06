@@ -10,7 +10,7 @@ import { PRIVACY_DOC } from '../data/legalContent'
  *   page → layout template → editorial data
  *
  * Adding a third legal page (e.g. Cookies, Refunds, DPA) is now a
- * 12-line file with new copy in `data/legalContent.js`.
+ * 12-line file with new copy in `data/legalContent.jsx`.
  */
 export default function PrivacyPolicy() {
   return (

@@ -122,8 +122,8 @@ When a page exceeds ~250 lines:
 | Page                    | Depth        | Notes                                                                                                |
 | ----------------------- | ------------ | ---------------------------------------------------------------------------------------------------- |
 | `AboutOwner.jsx`        | full split   | composes `components/about/*` + `data/aboutContent.js` + `hooks/aboutHooks.js`                       |
-| `Terms.jsx`             | template     | uses `LegalPageLayout` + `data/legalContent.js`                                                      |
-| `PrivacyPolicy.jsx`     | template     | uses `LegalPageLayout` + `data/legalContent.js`                                                      |
+| `Terms.jsx`             | template     | uses `LegalPageLayout` + `data/legalContent.jsx`                                                     |
+| `PrivacyPolicy.jsx`     | template     | uses `LegalPageLayout` + `data/legalContent.jsx`                                                     |
 | `Pricing.jsx`           | full split   | composes `PricingPlanCard` + `FaqAccordion` + `data/pricingContent.js`                               |
 | `SharedTrip.jsx`        | full split   | composes `Card`, `Button`, `PageContainer`; loading + error split into private subcomponents         |
 | `AdminAgent.jsx`        | full split   | `Heading`, `Pill`, `Card`, `Button`; chat empty state + admin guard extracted to private components  |
