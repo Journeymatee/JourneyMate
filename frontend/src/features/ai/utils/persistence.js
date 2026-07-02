@@ -10,6 +10,7 @@ const DEFAULT_GREETING = {
     'Compare train vs flight Mumbai→Bengaluru',
     'Best month to visit Manali, and why?',
   ],
+  plan: null,
 }
 
 export function loadMessages() {
@@ -38,5 +39,6 @@ export function buildResetGreeting() {
     role: 'bot',
     text: 'Cleared. What should we plan next?',
     followUps: [],
+    plan: null,
   }
 }

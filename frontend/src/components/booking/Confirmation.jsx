@@ -102,7 +102,7 @@ export default function Confirmation({ booking, providerMessage }) {
 
       <div className="grid sm:grid-cols-2 gap-3 mt-6">
         <Link
-          to="/my-bookings"
+          to="/live-search?tab=bookings"
           className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-white/15 bg-white/4 hover:bg-white/8 text-white font-semibold text-sm transition-colors"
         >
           <Mail size={14} aria-hidden /> See all my bookings

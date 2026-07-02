@@ -23,6 +23,18 @@ const SYSTEM_PROMPT = [
   '- Use the provided realtime context (weather, curated street food, route stats, user bookings) when relevant.',
   '- For broader knowledge questions, answer briefly and then nudge back toward travel if useful.',
   '',
+  'TRIP PLAN EDITING (IMPORTANT)',
+  '- Sometimes the user will ask to modify an existing trip plan: "make it 10% cheaper", "swap the beach day for a trek", "move this to day 2", etc.',
+  '- When a CURRENT_PLAN_STATE is provided, treat it as the source of truth and apply the user\'s requested edits to it.',
+  '- The updated plan MUST include transport/transfers between legs when relevant, and keep budgets consistent after changes.',
+  '- Do not invent precise prices or real-time schedules. Use rough ranges + what to verify.',
+  '',
+  'STRUCTURED OUTPUT FOR PLANS',
+  '- When you are producing OR updating a trip plan, you MUST include a JSON object between tags:',
+  '  <plan_json>{"version":1, ...}</plan_json>',
+  '- After the </plan_json> tag, write a concise human-friendly explanation of what changed and what to verify.',
+  '- The plan JSON must be valid JSON (double quotes, no trailing commas).',
+  '',
   'OUTPUT RULES',
   '- Be concise: 2–4 short paragraphs OR a tight bulleted list. Never a wall of text.',
   '- For itinerary/comparison/list questions: use headings + bullets.',
@@ -333,6 +345,21 @@ function buildUserMessage({ prompt, user, nlp, realtimeContext }) {
     '',
     'Respond in concise practical format. For itinerary/comparison, include headings + bullets and add what data user should verify.',
   ].join('\n')
+}
+
+function extractPlanJson(text) {
+  const raw = String(text || '')
+  const m = raw.match(/<plan_json>\s*([\s\S]*?)\s*<\/plan_json>/i)
+  if (!m) return { plan: null, cleaned: raw.trim() }
+  const jsonText = String(m[1] || '').trim()
+  let plan = null
+  try {
+    plan = JSON.parse(jsonText)
+  } catch {
+    plan = null
+  }
+  const cleaned = raw.replace(m[0], '').trim()
+  return { plan, cleaned }
 }
 
 // Conversational reply banks. Each bank holds 3-5 variants so the assistant
@@ -802,7 +829,7 @@ async function buildRealtimeContext({ prompt, nlp, user }) {
   }
 }
 
-async function chat({ message, history, user }) {
+async function chat({ message, history, planState, user }) {
   const prompt = String(message || '').trim()
   if (!prompt) throw ApiError.badRequest('Message is required')
 
@@ -837,7 +864,15 @@ async function chat({ message, history, user }) {
     ...mergedHistory,
     {
       role: 'user',
-      content: buildUserMessage({ prompt, user, nlp, realtimeContext: realtimeText }),
+      content: [
+        buildUserMessage({ prompt, user, nlp, realtimeContext: realtimeText }),
+        '',
+        planState && typeof planState === 'object'
+          ? `CURRENT_PLAN_STATE (JSON):\n${JSON.stringify(planState)}`
+          : 'CURRENT_PLAN_STATE: none',
+        '',
+        'If you are producing or updating a trip plan, include <plan_json>...</plan_json> as instructed.',
+      ].join('\n'),
     },
   ]
 
@@ -864,8 +899,11 @@ async function chat({ message, history, user }) {
       throw ApiError.unavailable(data?.error?.message || 'AI service request failed')
     }
 
-    const reply = String(data?.choices?.[0]?.message?.content || '').trim()
-    if (!reply) throw ApiError.unavailable('AI did not return a response')
+    const rawReply = String(data?.choices?.[0]?.message?.content || '').trim()
+    if (!rawReply) throw ApiError.unavailable('AI did not return a response')
+
+    const { plan, cleaned } = extractPlanJson(rawReply)
+    const reply = cleaned || rawReply
 
     const result = {
       reply,
@@ -874,8 +912,9 @@ async function chat({ message, history, user }) {
       nlp,
       followUps,
       realtime,
+      plan: plan || null,
     }
-    await persistConversation(user?.id, prompt, reply)
+    await persistConversation(user?.id, prompt, rawReply)
     return result
   } catch (err) {
     const fallbackResult = {
@@ -885,6 +924,7 @@ async function chat({ message, history, user }) {
       nlp,
       followUps,
       realtime,
+      plan: null,
     }
     await persistConversation(user?.id, prompt, fallbackResult.reply)
 
@@ -915,14 +955,14 @@ function splitForStreaming(text) {
   return chunks.length ? chunks : [String(text || '')]
 }
 
-async function *chatStream({ message, history, user }) {
-  const result = await chat({ message, history, user })
+async function *chatStream({ message, history, planState, user }) {
+  const result = await chat({ message, history, planState, user })
   const pieces = splitForStreaming(result.reply)
   yield { type: 'meta', model: result.model, nlp: result.nlp, realtime: result.realtime || null }
   for (const piece of pieces) {
     yield { type: 'token', content: piece + ' ' }
   }
-  yield { type: 'done', followUps: result.followUps, usage: result.usage }
+  yield { type: 'done', followUps: result.followUps, usage: result.usage, plan: result.plan || null }
 }
 
 async function persistConversation(userId, userPrompt, assistantReply) {

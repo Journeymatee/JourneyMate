@@ -19,6 +19,10 @@ router.post(
     .trim()
     .isLength({ min: 2, max: 2000 })
     .withMessage('message must be 2-2000 characters'),
+  body('planState')
+    .optional({ nullable: true })
+    .isObject()
+    .withMessage('planState must be an object'),
   body('history')
     .optional()
     .isArray({ max: 20 })
@@ -45,6 +49,10 @@ router.post(
     .trim()
     .isLength({ min: 2, max: 2000 })
     .withMessage('message must be 2-2000 characters'),
+  body('planState')
+    .optional({ nullable: true })
+    .isObject()
+    .withMessage('planState must be an object'),
   body('history')
     .optional()
     .isArray({ max: 20 })

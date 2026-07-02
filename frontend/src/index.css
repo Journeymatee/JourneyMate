@@ -21,50 +21,24 @@
   --scroll-hover:   #475569;
 }
 
-/* ── Light theme — clean slate-50 surface with crisp ink text ──
- *
- * Inspired by modern productivity tools (Linear, Vercel, Notion):
- * a true off-white backdrop, crisp white cards, deep ink text. The
- * old cream `#fafaf7` was warm but felt dated — slate-50 reads as
- * professional and works perfectly with our brand emerald/amber.
- * ─────────────────────────────────────────────────────────────── */
+/* ── Light theme — warm cream background, ink text ───────────── */
 :root[data-theme='light'] {
-  --silver-primary: #15803d;        /* deeper green for cream contrast */
-  --gold-primary:   #b45309;        /* deeper amber */
-  --bg-dark:        #f8fafc;        /* slate-50 — page background */
-  --bg-card:        #ffffff;        /* pure white — elevated cards */
-  --bg-surface:     #f1f5f9;        /* slate-100 — sub-surface chips */
-  --text-primary:   #0f172a;        /* slate-900 — primary ink */
-  --text-secondary: #1e293b;        /* slate-800 — strong body */
-  --text-muted:     #475569;        /* slate-600 — muted body */
-  --text-faint:     #64748b;        /* slate-500 — small caption */
-  --border-subtle:  rgba(15, 23, 42, 0.08);
-  --border-strong:  rgba(15, 23, 42, 0.14);
-  /* Frosted white panels show as real cards on slate-50 + photos. */
-  --glass-bg:       rgba(255, 255, 255, 0.92);
-  --glass-silver:   rgba(34, 197, 94, 0.14);
-  --glass-gold:     rgba(245, 158, 11, 0.14);
-  --scroll-track:   #e2e8f0;
+  --silver-primary: #16a34a;
+  --gold-primary:   #d97706;
+  --bg-dark:        #fafaf7;
+  --bg-card:        #ffffff;
+  --bg-surface:     #f5f5f1;
+  --text-primary:   #0f172a;
+  --text-muted:     #475569;
+  --border-subtle:  rgba(15, 23, 42, 0.10);
+  /* Frosted white panels show as real cards on cream + photos. */
+  --glass-bg:       rgba(255, 255, 255, 0.86);
+  --glass-silver:   rgba(34, 197, 94, 0.16);
+  --glass-gold:     rgba(245, 158, 11, 0.16);
+  --scroll-track:   #ece9e2;
   --scroll-thumb:   #cbd5e1;
   --scroll-hover:   #94a3b8;
-  --shadow-card:    0 1px 2px rgba(15, 23, 42, 0.04),
-                    0 4px 12px -2px rgba(15, 23, 42, 0.08);
-  --shadow-elevated:0 8px 24px -8px rgba(15, 23, 42, 0.14),
-                    0 2px 6px -2px rgba(15, 23, 42, 0.06);
   color-scheme: light;
-}
-
-/* ── Dark theme — keep the original "obsidian" feel but bump
- *    secondary surfaces to slate values so they read as a
- *    coherent depth scale (page → card → surface → border).  ── */
-:root[data-theme='dark'] {
-  --text-secondary: #cbd5e1;        /* slate-300 — strong body */
-  --text-faint:     #64748b;        /* slate-500 — small caption */
-  --border-strong:  rgba(255, 255, 255, 0.16);
-  --shadow-card:    0 1px 2px rgba(0, 0, 0, 0.4),
-                    0 4px 16px -4px rgba(0, 0, 0, 0.45);
-  --shadow-elevated:0 12px 32px -12px rgba(0, 0, 0, 0.6),
-                    0 4px 12px -4px rgba(0, 0, 0, 0.4);
 }
 
 /* ── Reset ───────────────────────────────────────────────────── */
@@ -85,39 +59,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100dvh;
-  /* Slightly tighter optical letter-spacing for body type — gives the
-   * whole product a more "designed" feel in both modes. */
-  letter-spacing: -0.005em;
-}
-
-/* ── Theme transition — when the user flips between light & dark
- *    everything (backgrounds, text, borders, shadows, fills) eases
- *    over ~220ms instead of snapping. This is the single biggest
- *    "feels professional" upgrade for a theme toggle.
- *
- *    We scope it to a temporary `theme-transitioning` class added
- *    by the ThemeProvider during the switch (see ThemeContext) so
- *    we don't pay the cost on every interaction or scroll repaint. */
-.theme-transitioning,
-.theme-transitioning *,
-.theme-transitioning *::before,
-.theme-transitioning *::after {
-  transition:
-    background-color 220ms cubic-bezier(0.4, 0, 0.2, 1),
-    color            180ms cubic-bezier(0.4, 0, 0.2, 1),
-    border-color     200ms cubic-bezier(0.4, 0, 0.2, 1),
-    fill             180ms cubic-bezier(0.4, 0, 0.2, 1),
-    stroke           180ms cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow       240ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .theme-transitioning,
-  .theme-transitioning *,
-  .theme-transitioning *::before,
-  .theme-transitioning *::after {
-    transition: none !important;
-  }
 }
 
 /* Remove tap highlight on iOS */
@@ -287,7 +228,6 @@ a, button { -webkit-tap-highlight-color: transparent; }
   }
   .animate-blink { animation: none !important; opacity: 1; }
 }
-
 /* ── Day tab ─────────────────────────────────────────────────── */
 .day-tab { transition: all 0.25s ease; position: relative; }
 .day-tab::after {
@@ -315,7 +255,6 @@ a, button { -webkit-tap-highlight-color: transparent; }
 /* Hide scrollbar */
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
-
 /* Touch / accessibility */
 *:focus-visible {
   outline: 2px solid rgba(34,197,94,0.6);
@@ -454,81 +393,6 @@ img { image-rendering: -webkit-optimize-contrast; }
 }
 
 /* ────────────────────────────────────────────────────────────────
- * PROFESSIONAL TYPOGRAPHY (both modes)
- *
- * Editorial-grade defaults for headings & body. We target both the
- * Tailwind `font-display` class AND inline `font-family: Clash
- * Display, Syne, sans-serif` so headers added later automatically
- * get the same crisp, mode-aware treatment.
- * ──────────────────────────────────────────────────────────────── */
-
-/* Display / heading defaults — tighter tracking, optical sizing.
- * Clash Display is the primary, Syne is the fallback (already loaded
- * for older areas), then a system stack as the final safety net. */
-h1, h2, h3, h4, h5, h6,
-.font-display,
-[style*="Clash Display"] {
-  font-feature-settings: "ss01", "ss02", "kern", "liga";
-  font-optical-sizing: auto;
-}
-
-/* Subtle automatic letter-spacing — the bigger the heading, the
- * tighter the optical track. Keeps display type from feeling loose
- * on small screens and from "exploding" on TVs. */
-h1, .font-display.text-5xl, .font-display.text-6xl,
-.font-display.text-7xl, .font-display.text-8xl,
-.font-display.text-9xl { letter-spacing: -0.024em; }
-h2, .font-display.text-3xl, .font-display.text-4xl { letter-spacing: -0.02em; }
-h3, .font-display.text-xl, .font-display.text-2xl  { letter-spacing: -0.014em; }
-h4, h5, h6                                          { letter-spacing: -0.01em; }
-
-/* Dark mode: ultra-clean white headings with a tiny soft halo so they
- * feel "lit" rather than flat. Body text stays slate-200/300 for
- * comfortable long-reading. */
-:root[data-theme='dark'] h1,
-:root[data-theme='dark'] h2,
-:root[data-theme='dark'] h3 {
-  color: #f8fafc;
-}
-
-/* Light mode: deep ink for headings, slate-700 body — proper contrast
- * ratios for a pro-grade editorial feel. */
-:root[data-theme='light'] h1,
-:root[data-theme='light'] h2,
-:root[data-theme='light'] h3,
-:root[data-theme='light'] h4,
-:root[data-theme='light'] h5,
-:root[data-theme='light'] h6 {
-  color: #0b1220;                       /* near-black ink, slightly cooled */
-  text-rendering: optimizeLegibility;
-}
-
-/* Inline Clash-Display headings (added via `style={fontFamily:...}`)
- * inherit text-color from parent, but on the rare occasions where
- * they sit on the bare page bg we still want them to read as solid
- * ink in light mode. */
-:root[data-theme='light'] [style*="Clash Display"] {
-  color: inherit;
-}
-
-/* Body: in light mode promote `<p>` to slate-700 (sharper than the
- * previous slate-600 muted) for better long-form readability. */
-:root[data-theme='light'] p {
-  color: #334155;                       /* slate-700 — body */
-}
-:root[data-theme='light'] p strong,
-:root[data-theme='light'] p b {
-  color: #0b1220;
-}
-
-/* Selection — brand emerald wash in dark, deeper in light (already
- * defined later, kept here so dark mode also looks intentional). */
-:root[data-theme='dark'] ::selection {
-  background-color: rgba(34, 197, 94, 0.32);
-  color: #f8fafc;
-}
-
-/* ────────────────────────────────────────────────────────────────
  * LIGHT THEME — re-skin every dark-mode utility used across the app.
  *
  * The app was authored as dark-only, so most surfaces use hardcoded
@@ -549,21 +413,15 @@ h4, h5, h6                                          { letter-spacing: -0.01em; }
   color: var(--text-primary);
 }
 
-/* ── Headings / text: dark utilities remap to ink + slate ──────
- *
- * Carefully laddered so the dark-mode visual hierarchy survives:
- *   text-white   → near-black ink   (brightest "title" copy)
- *   text-slate-* → progressively muted slate (descending contrast)
- *   AAA/AA contrast is retained on every surface.
- * ────────────────────────────────────────────────────────────── */
-[data-theme='light'] .text-white            { color: #0b1220; }   /* near-black ink */
-[data-theme='light'] .text-slate-100        { color: #0f172a; }
-[data-theme='light'] .text-slate-200        { color: #1e293b; }
-[data-theme='light'] .text-slate-300        { color: #334155; }
-[data-theme='light'] .text-slate-400        { color: #475569; }   /* slate-600 */
-[data-theme='light'] .text-slate-500        { color: #64748b; }   /* slate-500 */
-[data-theme='light'] .text-slate-600        { color: #64748b; }
-[data-theme='light'] .text-slate-700        { color: #475569; }
+/* ── Headings / text: dark utilities remap to ink + slate ────── */
+[data-theme='light'] .text-white            { color: rgb(15 23 42); }
+[data-theme='light'] .text-slate-100        { color: rgb(15 23 42); }
+[data-theme='light'] .text-slate-200        { color: rgb(30 41 59); }
+[data-theme='light'] .text-slate-300        { color: rgb(30 41 59); }
+[data-theme='light'] .text-slate-400        { color: rgb(51 65 85); }
+[data-theme='light'] .text-slate-500        { color: rgb(71 85 105); }
+[data-theme='light'] .text-slate-600        { color: rgb(71 85 105); }
+[data-theme='light'] .text-slate-700        { color: rgb(51 65 85); }
 
 /* Brighter brand text (originally meant to pop on black) needs a
  * deeper saturation on cream. */
@@ -574,13 +432,6 @@ h4, h5, h6                                          { letter-spacing: -0.01em; }
 [data-theme='light'] .text-amber-300        { color: rgb(180 83 9); }
 [data-theme='light'] .text-emerald-300      { color: rgb(5 150 105); }
 [data-theme='light'] .text-fuchsia-300\/90  { color: rgb(162 28 175); }
-[data-theme='light'] .text-cyan-300\/90     { color: rgb(8 145 178); }
-[data-theme='light'] .text-sky-300\/90      { color: rgb(7 89 133); }
-[data-theme='light'] .text-violet-300\/90   { color: rgb(109 40 217); }
-[data-theme='light'] .text-purple-300\/90   { color: rgb(126 34 206); }
-[data-theme='light'] .text-rose-300\/90     { color: rgb(190 18 60); }
-[data-theme='light'] .text-amber-300\/90    { color: rgb(180 83 9); }
-[data-theme='light'] .text-emerald-300\/90  { color: rgb(5 150 105); }
 [data-theme='light'] .text-cyan-400         { color: rgb(14 116 144); }
 [data-theme='light'] .text-purple-400       { color: rgb(126 34 206); }
 [data-theme='light'] .text-amber-400        { color: rgb(180 83 9); }
@@ -639,59 +490,25 @@ h4, h5, h6                                          { letter-spacing: -0.01em; }
 [data-theme='light'] .placeholder\:text-slate-400::placeholder { color: rgb(100 116 139); }
 [data-theme='light'] .placeholder\:text-slate-600::placeholder { color: rgb(71 85 105); }
 
-/* ── Mesh / page bg (already var-driven, but tone-shift accents) ─
- *
- * On the new slate-50 surface the original 8% washes were nearly
- * invisible. Bump them just enough that the page feels alive without
- * looking gaudy. */
+/* ── Mesh / page bg (already var-driven, but tone-shift accents) ─ */
 [data-theme='light'] .mesh-bg {
   background:
-    radial-gradient(ellipse at 20% 20%, rgba(34, 197, 94, 0.11) 0%, transparent 55%),
-    radial-gradient(ellipse at 80% 80%, rgba(245, 158, 11, 0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(99, 102, 241, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse at 20% 20%, rgba(34, 197, 94, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(245, 158, 11, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(99, 102, 241, 0.04) 0%, transparent 70%),
     var(--bg-dark);
 }
-[data-theme='light'] .page-bg-blue {
-  background:
-    radial-gradient(ellipse at 15% 20%, rgba(99,102,241,0.13) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 75%, rgba(59,130,246,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(99,102,241,0.05) 0%, transparent 70%),
-    var(--bg-dark);
-}
-[data-theme='light'] .page-bg-cyan {
-  background:
-    radial-gradient(ellipse at 15% 20%, rgba(6,182,212,0.13) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 75%, rgba(20,184,166,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(6,182,212,0.05) 0%, transparent 70%),
-    var(--bg-dark);
-}
-[data-theme='light'] .page-bg-purple {
-  background:
-    radial-gradient(ellipse at 15% 20%, rgba(139,92,246,0.13) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 75%, rgba(168,85,247,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(139,92,246,0.05) 0%, transparent 70%),
-    var(--bg-dark);
-}
-[data-theme='light'] .page-bg-amber {
-  background:
-    radial-gradient(ellipse at 15% 20%, rgba(245,158,11,0.13) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 75%, rgba(234,88,12,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(245,158,11,0.05) 0%, transparent 70%),
-    var(--bg-dark);
-}
-[data-theme='light'] .page-bg-emerald {
-  background:
-    radial-gradient(ellipse at 15% 20%, rgba(16,185,129,0.13) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 75%, rgba(34,197,94,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(16,185,129,0.05) 0%, transparent 70%),
-    var(--bg-dark);
-}
+
+/* The page-bg-* utilities already reference var(--bg-dark) so they
+ * auto-switch background — only the overlay tints need softening so
+ * coloured radial gradients don't wash out cream. */
+[data-theme='light'] .page-bg-blue,
+[data-theme='light'] .page-bg-cyan,
+[data-theme='light'] .page-bg-purple,
+[data-theme='light'] .page-bg-amber,
+[data-theme='light'] .page-bg-emerald,
 [data-theme='light'] .page-bg-teal {
-  background:
-    radial-gradient(ellipse at 15% 20%, rgba(20,184,166,0.13) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 75%, rgba(6,182,212,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(20,184,166,0.05) 0%, transparent 70%),
-    var(--bg-dark);
+  background-blend-mode: multiply;
 }
 
 /* ── Noise texture: lower opacity on cream ───────────────────── */
@@ -707,16 +524,11 @@ h4, h5, h6                                          { letter-spacing: -0.01em; }
  * for legibility.) */
 
 /* `.glass` already auto-themes via --glass-bg; here we add the shadow
- * + softer hairline border that real elevated cards need on slate-50.
- *
- * Two layers: a tight contact shadow for definition and a wider lift
- * shadow for depth — same recipe modern productivity apps use. */
+ * + softer hairline border that real elevated cards need on cream. */
 [data-theme='light'] .glass {
-  border-color: var(--border-subtle);
-  box-shadow: var(--shadow-card);
-}
-[data-theme='light'] .glass:hover {
-  box-shadow: var(--shadow-elevated);
+  border-color: rgba(15, 23, 42, 0.06);
+  box-shadow: 0 8px 30px -12px rgba(15, 23, 42, 0.18),
+              0 2px 8px -4px rgba(15, 23, 42, 0.10);
 }
 
 /* Search inputs: solid surface (not see-through over photo). */
@@ -1154,231 +966,3 @@ h4, h5, h6                                          { letter-spacing: -0.01em; }
   background-color: rgba(255, 255, 255, 0.96) !important;
   box-shadow: -16px 0 40px -12px rgba(15, 23, 42, 0.18);
 }
-
-/* ──────────────────────────────────────────────────────────────────
- *  Theme wipe-up transition
- *  ─────────────────────────────────────────────────────────────────
- *  The cartoon-monkey wipe is implemented in `src/lib/themeWipe.js`.
- *  All keyframes for the mascot (bob, arm wiggle, blink) and the
- *  poster slide live in a <style> tag scoped INSIDE the overlay so
- *  they're auto-removed when the wipe finishes. No global CSS needed.
- * ────────────────────────────────────────────────────────────────── */
-
-/* ──────────────────────────────────────────────────────────────────
- *  LIGHT THEME — ROUND 3: Premium polish
- *  ─────────────────────────────────────────────────────────────────
- *  Goal: tighten "brightness mode" so it reads like a modern SaaS
- *  product (Stripe / Linear / Vercel). Every rule below is scoped to
- *  `[data-theme='light']` so dark mode stays untouched.
- *
- *  Layered upgrades:
- *    1. Tabular figures — prices, days, distances line up perfectly.
- *    2. Real frosted-glass cards — deeper backdrop blur + saturation,
- *       inner top highlight, layered ink shadows, lift on hover.
- *    3. Smoother body kerning + heading optical sizing.
- *    4. Uniform interactive choreography — buttons compress on press,
- *       inputs ease into a soft brand glow on focus.
- *    5. Pill scrollbar with hover bloom (Linear-style).
- *    6. Refined mesh canvas — luminous, professional, never gaudy.
- *    7. Section / page-bg tints — softer wash so cards float on top.
- *    8. Plan cards — gold/silver hairline highlight + brand-tinted
- *       shadow on hover.
- *    9. Reduced-motion: every new transition is gracefully disabled.
- * ────────────────────────────────────────────────────────────────── */
-
-/* 1) Tabular numerics — apply globally so dark mode benefits too.
- *    `font-variant-numeric: tabular-nums` makes every digit the same
- *    width, so price columns / day counts / distances line up cleanly
- *    when they animate or update. Stripe and Linear use this. */
-.price-animate,
-.tabular-nums,
-[data-numeric='true'] {
-  font-variant-numeric: tabular-nums;
-}
-
-/* 2) Glass cards — premium frosted surface with layered depth.
- *    Specificity is the same as the earlier `[data-theme='light'] .glass`
- *    rule, so this later definition wins via cascade order. */
-[data-theme='light'] .glass {
-  background-color: rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(22px) saturate(180%);
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 12px 28px -16px rgba(15, 23, 42, 0.18);
-  transition:
-    box-shadow   320ms cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 280ms ease,
-    transform    320ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-[data-theme='light'] .glass:hover {
-  border-color: rgba(15, 23, 42, 0.10);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 6px 16px -8px rgba(15, 23, 42, 0.16),
-    0 24px 60px -24px rgba(15, 23, 42, 0.24);
-}
-
-/* 3) Body / heading typography polish. */
-[data-theme='light'] body {
-  font-feature-settings: "kern", "liga", "calt", "ss01";
-  letter-spacing: -0.011em;
-  -webkit-font-smoothing: antialiased;
-}
-[data-theme='light'] h1,
-[data-theme='light'] h2,
-[data-theme='light'] h3,
-[data-theme='light'] .font-display {
-  letter-spacing: -0.022em;
-  text-rendering: optimizeLegibility;
-}
-[data-theme='light'] p,
-[data-theme='light'] li {
-  line-height: 1.65;
-}
-
-/* 4) Interactive choreography — additive only.
- *
- *    We deliberately do NOT set `transition` on every button/anchor
- *    here, because most components in the codebase already opt-in via
- *    Tailwind's `transition-all` / `transition-colors` utilities and
- *    overriding the shorthand would clobber timings the components
- *    chose for themselves.
- *
- *    The single addition: a uniform "press-compress" on :active so
- *    every interactive element feels physical when clicked. We pair
- *    it with a `transition-property` ONLY on `transform` (scoped
- *    extra-specifically so it merges, not overrides) and only on
- *    elements that do NOT already declare a transition for transform.
- *    This is achieved by selecting `:active` with no transition
- *    additions — the existing Tailwind transitions almost always
- *    include `transform` already (transition-all / transition-transform).
- */
-[data-theme='light'] button:not(:disabled):active,
-[data-theme='light'] [role='button']:not([aria-disabled='true']):active {
-  transform: scale(0.985);
-}
-
-/* Soft brand outline on focus — accessibility + polish.
- *    Uses outline only (no box-shadow) so a focused card/button
- *    doesn't lose its own elevation shadow during the focus state. */
-[data-theme='light'] *:focus-visible {
-  outline: 2px solid rgba(34, 197, 94, 0.6);
-  outline-offset: 2px;
-}
-
-/* 5) Inputs — refined surface + smooth focus transition. */
-[data-theme='light'] input,
-[data-theme='light'] textarea,
-[data-theme='light'] select {
-  transition:
-    background-color 200ms ease,
-    border-color     200ms ease,
-    box-shadow       220ms cubic-bezier(0.4, 0, 0.2, 1),
-    color            180ms ease;
-}
-[data-theme='light'] input:hover:not(:focus):not(:disabled),
-[data-theme='light'] textarea:hover:not(:focus):not(:disabled) {
-  border-color: rgba(15, 23, 42, 0.18);
-}
-
-/* 6) Pill scrollbar with hover bloom (light mode only — dark keeps
- *    the existing thinner slate thumb). */
-[data-theme='light'] ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-[data-theme='light'] ::-webkit-scrollbar-track {
-  background: transparent;
-}
-[data-theme='light'] ::-webkit-scrollbar-thumb {
-  background-color: rgba(15, 23, 42, 0.16);
-  border: 2px solid transparent;
-  background-clip: content-box;
-  border-radius: 999px;
-  transition: background-color 220ms ease;
-}
-[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(15, 23, 42, 0.30);
-  background-clip: content-box;
-}
-/* Firefox */
-[data-theme='light'] {
-  scrollbar-color: rgba(15, 23, 42, 0.18) transparent;
-  scrollbar-width: thin;
-}
-
-/* 7) Refined luminous canvas. The earlier mesh-bg block already
- *    provides three radial orbs; we tone them down a touch and add
- *    a fourth, very faint, brand-emerald wash at the top so the page
- *    feels lit from above. */
-[data-theme='light'] .mesh-bg {
-  background:
-    radial-gradient(1200px 700px at 50% -120px, rgba(34, 197, 94, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse at 18% 22%, rgba(34, 197, 94, 0.09) 0%, transparent 55%),
-    radial-gradient(ellipse at 82% 78%, rgba(245, 158, 11, 0.08) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 70%),
-    var(--bg-dark);
-}
-
-/* 8) Plan cards — brand-tinted lift on hover.
- *    We do NOT add a `::before` sheen because plan cards have content
- *    pinned to the top edge (the brand badge / price); a top-fading
- *    overlay would mute that content. A single inset hairline at the
- *    top achieves the same "lit-from-above" feel without covering
- *    anything. */
-[data-theme='light'] .plan-card {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 8px 22px -10px rgba(15, 23, 42, 0.10);
-}
-[data-theme='light'] .plan-card-silver:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 1px 2px rgba(15, 23, 42, 0.06),
-    0 18px 44px -16px rgba(34, 197, 94, 0.28),
-    0 8px 22px -8px rgba(15, 23, 42, 0.10);
-}
-[data-theme='light'] .plan-card-gold:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 1px 2px rgba(15, 23, 42, 0.06),
-    0 18px 44px -16px rgba(245, 158, 11, 0.28),
-    0 8px 22px -8px rgba(15, 23, 42, 0.10);
-}
-
-/* 9) Tab switchers / segmented controls (Sign in / Create account,
- *    silver / gold tabs) — give the inactive chips a softer surface
- *    in light mode so the active gradient pops. */
-[data-theme='light'] .day-tab {
-  color: rgb(71 85 105);
-}
-[data-theme='light'] .day-tab.active {
-  color: rgb(15 23 42);
-}
-
-/* 10) Selection in light mode — already defined earlier; bump the
- *     contrast a hair so highlighted prose reads cleanly. */
-[data-theme='light'] ::selection {
-  background-color: rgba(34, 197, 94, 0.28);
-  color: rgb(15 23 42);
-}
-
-/* 11) Reduced motion — disable every newly-added transition. */
-@media (prefers-reduced-motion: reduce) {
-  [data-theme='light'] .glass,
-  [data-theme='light'] input,
-  [data-theme='light'] textarea,
-  [data-theme='light'] select,
-  [data-theme='light'] ::-webkit-scrollbar-thumb {
-    transition: none !important;
-  }
-  [data-theme='light'] button:not(:disabled):active,
-  [data-theme='light'] [role='button']:not([aria-disabled='true']):active {
-    transform: none;
-  }
-}
-
