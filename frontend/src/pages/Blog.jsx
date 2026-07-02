@@ -15,6 +15,7 @@ import api, { API_BASE_URL } from '../api/client'
 import PageHero from '../components/PageHero'
 import SectionHeader from '../components/SectionHeader'
 import BlogExperienceCard from '../components/BlogExperienceCard'
+import { Button, Card } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 import { useExperienceClientId } from '../hooks/useExperienceClientId'
 import {
@@ -181,9 +182,13 @@ export default function Blog() {
       <div className="max-w-7xl 3xl:max-w-[1680px] 4xl:max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 3xl:px-12 pb-16 sm:pb-20 pt-6 sm:pt-8">
 
         {error && (
-          <div className="max-w-2xl mx-auto mb-8 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100 text-center">
+          <Card
+            variant="glass"
+            padding="sm"
+            className="max-w-2xl mx-auto mb-8 !rounded-2xl !border-red-500/30 !bg-red-500/10 px-4 py-3 text-sm text-red-100 text-center"
+          >
             {error}
-          </div>
+          </Card>
         )}
 
         {/* Featured posts */}
@@ -358,14 +363,16 @@ export default function Blog() {
             title="Travel notes from real members"
             subtitle="Like, react, and comment on any note below. Add your own to help the next traveller."
             badge={
-              <button
-                type="button"
+              <Button
+                variant="primary"
+                accent="blue"
+                size="sm"
                 onClick={openShareModal}
-                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 text-sm font-bold px-4 py-2 shadow-lg shadow-cyan-500/30 transition-all hover:-translate-y-0.5"
+                iconLeft={<Sparkles size={14} />}
+                className="!rounded-full"
               >
-                <Sparkles size={14} />
                 Share yours
-              </button>
+              </Button>
             }
             divider
           />
@@ -385,20 +392,22 @@ export default function Blog() {
               ))}
             </div>
           ) : experiences.length === 0 ? (
-            <div className="glass rounded-2xl border border-white/10 p-6 sm:p-8 text-center">
+            <Card variant="glass" padding="md" className="text-center !rounded-2xl !p-6 sm:!p-8">
               <p className="text-sm text-slate-400 max-w-md mx-auto">
                 No community notes yet. Be the first — drop a destination, the
                 month you would pick again, and an honest one-paragraph take.
               </p>
-              <button
-                type="button"
+              <Button
+                variant="primary"
+                accent="blue"
+                size="md"
                 onClick={openShareModal}
-                className="inline-flex items-center gap-1.5 mt-4 rounded-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-bold px-5 py-2.5 transition-colors"
+                iconRight={<ChevronRight size={14} />}
+                className="!rounded-full mt-4"
               >
                 Share your experience
-                <ChevronRight size={14} />
-              </button>
-            </div>
+              </Button>
+            </Card>
           ) : (
             <ul className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 list-none p-0">
               {experiences.slice(0, 6).map((exp) => (

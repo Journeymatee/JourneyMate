@@ -88,6 +88,10 @@ a, button { -webkit-tap-highlight-color: transparent; }
 }
 
 /* ── Shimmer text ────────────────────────────────────────────── */
+/* The photo veil is intentionally LIGHT so the background stays vivid;
+ * readability comes from the text itself via a layered ink halo.
+ * (Gradient text needs filter: drop-shadow because text-shadow can't
+ * paint through transparent fill.) */
 .shimmer-silver {
   background: linear-gradient(90deg,#22c55e,#86efac,#22c55e);
   background-size: 200% auto;
@@ -95,6 +99,10 @@ a, button { -webkit-tap-highlight-color: transparent; }
   -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: shimmer 3s linear infinite;
+  filter:
+    drop-shadow(0 0 1px rgba(15, 23, 42, 0.95))
+    drop-shadow(0 1px 0 rgba(15, 23, 42, 0.7))
+    drop-shadow(0 3px 14px rgba(15, 23, 42, 0.55));
 }
 .shimmer-gold {
   background: linear-gradient(90deg,#f59e0b,#fde68a,#f59e0b);
@@ -103,6 +111,58 @@ a, button { -webkit-tap-highlight-color: transparent; }
   -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: shimmer 3s linear infinite;
+  filter:
+    drop-shadow(0 0 1px rgba(15, 23, 42, 0.95))
+    drop-shadow(0 1px 0 rgba(15, 23, 42, 0.7))
+    drop-shadow(0 3px 14px rgba(15, 23, 42, 0.55));
+}
+
+/* ── Hero title connector ("or") — readable on any photo ─────── */
+.hero-title-or {
+  color: rgba(248, 250, 252, 0.92);
+  font-weight: 500;
+  text-shadow:
+    0 0 1px rgba(15, 23, 42, 0.9),
+    0 1px 0 rgba(15, 23, 42, 0.75),
+    0 2px 12px rgba(15, 23, 42, 0.6);
+}
+
+/* ── Hero subtitle ("Side-by-side comparison...") ────────────── */
+/* Always near-white with a layered ink halo so it reads on bright
+ * skies even when the photo overlay is light. */
+.hero-subtitle {
+  color: rgba(248, 250, 252, 0.97);
+  text-shadow:
+    0 0 1px rgba(15, 23, 42, 0.95),
+    0 1px 0 rgba(15, 23, 42, 0.7),
+    0 2px 12px rgba(15, 23, 42, 0.6),
+    0 4px 28px rgba(15, 23, 42, 0.5);
+  font-weight: 500;
+  letter-spacing: 0.005em;
+}
+
+/* ── Hero title — guaranteed contrast on photos in both modes ── */
+/* Stronger halo so the photo veil can stay light and the photo vivid. */
+.hero-title {
+  text-shadow:
+    0 0 1px rgba(15, 23, 42, 0.95),
+    0 1px 0 rgba(15, 23, 42, 0.7),
+    0 2px 10px rgba(15, 23, 42, 0.6),
+    0 6px 32px rgba(15, 23, 42, 0.45);
+}
+
+/* ── Navbar logo + subtitle — always readable on photo or solid bg ─── */
+.navbar-brand {
+  text-shadow:
+    0 0 1px rgba(15, 23, 42, 0.9),
+    0 1px 0 rgba(15, 23, 42, 0.55),
+    0 2px 8px rgba(15, 23, 42, 0.45);
+}
+.navbar-subtitle {
+  color: rgba(226, 232, 240, 0.85) !important;
+  text-shadow:
+    0 1px 0 rgba(15, 23, 42, 0.55),
+    0 2px 8px rgba(15, 23, 42, 0.4);
 }
 
 /* ── Noise texture ───────────────────────────────────────────── */
@@ -278,10 +338,51 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .split-grid { grid-template-columns: 1fr; }
 @media (min-width: 1280px) { .split-grid { grid-template-columns: 1fr 1fr; } }
 
-/* Fluid hero title */
+/* Fluid hero title — sized so each line ("Travel Smart," and the
+ * "Save Big or Live Gold" group) fits within its container on every
+ * breakpoint without orphaning a single word on its own line.
+ *
+ * Tuned conservatively: at 1024px viewport the second line measures
+ * ~720px wide (well under the lg:max-w-4xl=896px container) so it
+ * always stays on a single row. */
 .hero-title {
-  font-size: clamp(1.75rem, 8vw, 4.5rem);
-  line-height: 1.05;
+  font-size: clamp(1.55rem, 5.4vw, 4rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+/* Each "line" of the headline is a centre-aligned block that wraps as a
+ * whole phrase, never mid-word — so we never get "Save Big or Live"
+ * orphaning "Gold" on its own line again. */
+.hero-line {
+  display: block;
+  text-align: center;
+  width: 100%;
+}
+.hero-line + .hero-line { margin-top: 0.05em; }
+
+/* The shimmer phrases ("Save Big" and "Live Gold") are inseparable units —
+ * they never break mid-phrase. The connector " or " is the only legal
+ * wrap point on narrow viewports. */
+.hero-line .shimmer-silver,
+.hero-line .shimmer-gold,
+.hero-line .hero-title-or {
+  white-space: nowrap;
+}
+
+/* From `md` (768px) up the second line stays on a single row. We use
+ * `md` (not `lg`) because tablet viewports also have enough room with
+ * the smaller clamp we now use. Below `md` the line wraps cleanly at
+ * the " or " word boundary. */
+@media (min-width: 768px) {
+  .hero-line { white-space: nowrap; }
+}
+
+/* Extra safety net for the awkward 1024-1279px laptop band where the
+ * 5.4vw clamp lands at ~3.46rem — we explicitly cap the title here so
+ * "Save Big or Live Gold" always fits cleanly. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .hero-title { font-size: 3.4rem; }
 }
 
 /* Smooth images */
@@ -650,6 +751,48 @@ img { image-rendering: -webkit-optimize-contrast; }
   color: rgba(241, 245, 249, 0.95) !important;
 }
 
+/* HomePage hero subtitle / "or" connector — re-promote in light mode
+ * because the global text-* remap would otherwise dim them on photos. */
+[data-theme='light'] .hero-subtitle {
+  color: rgba(241, 245, 249, 0.96) !important;
+  text-shadow:
+    0 1px 0 rgba(15, 23, 42, 0.6),
+    0 2px 10px rgba(15, 23, 42, 0.5),
+    0 4px 24px rgba(15, 23, 42, 0.4);
+}
+[data-theme='light'] .hero-title-or {
+  color: rgba(241, 245, 249, 0.9) !important;
+  text-shadow:
+    0 1px 0 rgba(15, 23, 42, 0.65),
+    0 2px 12px rgba(15, 23, 42, 0.55);
+}
+
+/* Navbar brand text needs to stay near-white in light mode too — the
+ * navbar sits over the hero photo, not on the cream surface. */
+[data-theme='light'] .navbar-brand {
+  color: rgba(255, 255, 255, 0.98) !important;
+  text-shadow:
+    0 0 1px rgba(15, 23, 42, 0.95),
+    0 1px 0 rgba(15, 23, 42, 0.6),
+    0 2px 10px rgba(15, 23, 42, 0.5);
+}
+[data-theme='light'] .navbar-subtitle {
+  color: rgba(241, 245, 249, 0.9) !important;
+  text-shadow:
+    0 1px 0 rgba(15, 23, 42, 0.6),
+    0 2px 8px rgba(15, 23, 42, 0.4);
+}
+
+/* Brighter shimmer gradients in light mode so they pop on bright photo
+ * slides (misty mountains, sunrise terraces) without losing brand colour.
+ * The drop-shadow on .shimmer-silver / .shimmer-gold gives the ink halo. */
+[data-theme='light'] .shimmer-silver {
+  background-image: linear-gradient(90deg, #166534, #4ade80, #166534);
+}
+[data-theme='light'] .shimmer-gold {
+  background-image: linear-gradient(90deg, #92400e, #fbbf24, #92400e);
+}
+
 /* PageHero eyebrow chip — promote to dim ink chip with white-ish stroke
  * so it reads on the photo. (Only inside `<header>` — chip-like uses
  * of `bg-slate-950/55` elsewhere keep their cream override.) */
@@ -902,13 +1045,69 @@ img { image-rendering: -webkit-optimize-contrast; }
   background-color: rgba(15, 23, 42, 0.05);
 }
 
-/* ── Top navbar: solid frosted strip on cream so it reads cleanly ─ */
-[data-theme='light'] nav.bg-slate-950\/80,
-[data-theme='light'] header.bg-slate-950\/80 {
-  background-color: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(12px) saturate(160%);
-  -webkit-backdrop-filter: blur(12px) saturate(160%);
+/* ── Top navbar in light mode ─────────────────────────────────────
+ * The navbar uses two states:
+ *   • At top of page  → bg-slate-950/40 (subtle dark glass over photo)
+ *   • Scrolled        → bg-slate-950/85 (deep dark glass)
+ * In light mode we replace BOTH with white frosted glass so the cream
+ * page never feels like it has a black bar at the top.
+ *
+ * `nav.fixed` selector ensures we only re-skin the top app navbar,
+ * not unrelated nav elements deeper in the page. */
+[data-theme='light'] nav.fixed.bg-slate-950\/40,
+[data-theme='light'] nav.fixed.bg-slate-950\/85,
+[data-theme='light'] nav.fixed.bg-slate-950\/80 {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border-bottom-color: rgba(15, 23, 42, 0.08) !important;
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
+}
+/* Slightly stronger surface + soft drop shadow once the user has scrolled. */
+[data-theme='light'] nav.fixed.bg-slate-950\/85 {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  box-shadow:
+    0 1px 0 rgba(15, 23, 42, 0.06),
+    0 8px 24px -12px rgba(15, 23, 42, 0.18);
+}
+
+/* Desktop nav links inside the light-mode navbar — flip from white-ish
+ * to ink so they read against the cream surface. */
+[data-theme='light'] nav.fixed .text-slate-100\/90,
+[data-theme='light'] nav.fixed .text-slate-100 {
+  color: rgb(15 23 42) !important;
+}
+[data-theme='light'] nav.fixed .text-slate-100\/90:hover,
+[data-theme='light'] nav.fixed .text-slate-100:hover {
+  color: rgb(2 6 23) !important;
+}
+[data-theme='light'] nav.fixed .hover\:bg-white\/10:hover {
+  background-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+/* Logout / hamburger / theme-toggle buttons in light-mode navbar.
+ * The buttons used `bg-slate-900/50 border-white/15` for the dark
+ * design — on cream we want a soft slate ink chip with hairline border. */
+[data-theme='light'] nav.fixed .bg-slate-900\/50 {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+  border-color: rgba(15, 23, 42, 0.10) !important;
+}
+[data-theme='light'] nav.fixed .bg-slate-900\/50:hover,
+[data-theme='light'] nav.fixed .hover\:bg-slate-900\/65:hover {
+  background-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Brand + subtitle should switch back to ink once the navbar has a
+ * cream surface. The earlier rule kept them white because we assumed
+ * the navbar floated transparently over the photo — now the surface
+ * is white, so white-on-white is invisible. */
+[data-theme='light'] nav.fixed .navbar-brand {
+  color: rgb(15 23 42) !important;
+  text-shadow: none !important;
+}
+[data-theme='light'] nav.fixed .navbar-subtitle {
+  color: rgb(71 85 105) !important;
+  text-shadow: none !important;
 }
 
 /* ── Small chips / pills using `bg-emerald-500/10`, `/15`, `/20`
@@ -966,3 +1165,412 @@ img { image-rendering: -webkit-optimize-contrast; }
   background-color: rgba(255, 255, 255, 0.96) !important;
   box-shadow: -16px 0 40px -12px rgba(15, 23, 42, 0.18);
 }
+
+/* ──────────────────────────────────────────────────────────────────
+ *  Theme wipe-up transition
+ *  ─────────────────────────────────────────────────────────────────
+ *  The cartoon-monkey wipe is implemented in `src/lib/themeWipe.js`.
+ *  All keyframes for the mascot (bob, arm wiggle, blink) and the
+ *  poster slide live in a <style> tag scoped INSIDE the overlay so
+ *  they're auto-removed when the wipe finishes. No global CSS needed.
+ * ────────────────────────────────────────────────────────────────── */
+
+/* ──────────────────────────────────────────────────────────────────
+ *  LIGHT THEME — ROUND 3: Premium polish
+ *  ─────────────────────────────────────────────────────────────────
+ *  Goal: tighten "brightness mode" so it reads like a modern SaaS
+ *  product (Stripe / Linear / Vercel). Every rule below is scoped to
+ *  `[data-theme='light']` so dark mode stays untouched.
+ *
+ *  Layered upgrades:
+ *    1. Tabular figures — prices, days, distances line up perfectly.
+ *    2. Real frosted-glass cards — deeper backdrop blur + saturation,
+ *       inner top highlight, layered ink shadows, lift on hover.
+ *    3. Smoother body kerning + heading optical sizing.
+ *    4. Uniform interactive choreography — buttons compress on press,
+ *       inputs ease into a soft brand glow on focus.
+ *    5. Pill scrollbar with hover bloom (Linear-style).
+ *    6. Refined mesh canvas — luminous, professional, never gaudy.
+ *    7. Section / page-bg tints — softer wash so cards float on top.
+ *    8. Plan cards — gold/silver hairline highlight + brand-tinted
+ *       shadow on hover.
+ *    9. Reduced-motion: every new transition is gracefully disabled.
+ * ────────────────────────────────────────────────────────────────── */
+
+/* 1) Tabular numerics — apply globally so dark mode benefits too.
+ *    `font-variant-numeric: tabular-nums` makes every digit the same
+ *    width, so price columns / day counts / distances line up cleanly
+ *    when they animate or update. Stripe and Linear use this. */
+.price-animate,
+.tabular-nums,
+[data-numeric='true'] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 2) Glass cards — premium frosted surface with layered depth.
+ *    Specificity is the same as the earlier `[data-theme='light'] .glass`
+ *    rule, so this later definition wins via cascade order. */
+[data-theme='light'] .glass {
+  background-color: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 12px 28px -16px rgba(15, 23, 42, 0.18);
+  transition:
+    box-shadow   320ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 280ms ease,
+    transform    320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+[data-theme='light'] .glass:hover {
+  border-color: rgba(15, 23, 42, 0.10);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 6px 16px -8px rgba(15, 23, 42, 0.16),
+    0 24px 60px -24px rgba(15, 23, 42, 0.24);
+}
+
+/* 3) Body / heading typography polish. */
+[data-theme='light'] body {
+  font-feature-settings: "kern", "liga", "calt", "ss01";
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+}
+[data-theme='light'] h1,
+[data-theme='light'] h2,
+[data-theme='light'] h3,
+[data-theme='light'] .font-display {
+  letter-spacing: -0.022em;
+  text-rendering: optimizeLegibility;
+}
+[data-theme='light'] p,
+[data-theme='light'] li {
+  line-height: 1.65;
+}
+
+/* 4) Interactive choreography — additive only.
+ *
+ *    We deliberately do NOT set `transition` on every button/anchor
+ *    here, because most components in the codebase already opt-in via
+ *    Tailwind's `transition-all` / `transition-colors` utilities and
+ *    overriding the shorthand would clobber timings the components
+ *    chose for themselves.
+ *
+ *    The single addition: a uniform "press-compress" on :active so
+ *    every interactive element feels physical when clicked. We pair
+ *    it with a `transition-property` ONLY on `transform` (scoped
+ *    extra-specifically so it merges, not overrides) and only on
+ *    elements that do NOT already declare a transition for transform.
+ *    This is achieved by selecting `:active` with no transition
+ *    additions — the existing Tailwind transitions almost always
+ *    include `transform` already (transition-all / transition-transform).
+ */
+[data-theme='light'] button:not(:disabled):active,
+[data-theme='light'] [role='button']:not([aria-disabled='true']):active {
+  transform: scale(0.985);
+}
+
+/* Soft brand outline on focus — accessibility + polish.
+ *    Uses outline only (no box-shadow) so a focused card/button
+ *    doesn't lose its own elevation shadow during the focus state. */
+[data-theme='light'] *:focus-visible {
+  outline: 2px solid rgba(34, 197, 94, 0.6);
+  outline-offset: 2px;
+}
+
+/* 5) Inputs — refined surface + smooth focus transition. */
+[data-theme='light'] input,
+[data-theme='light'] textarea,
+[data-theme='light'] select {
+  transition:
+    background-color 200ms ease,
+    border-color     200ms ease,
+    box-shadow       220ms cubic-bezier(0.4, 0, 0.2, 1),
+    color            180ms ease;
+}
+[data-theme='light'] input:hover:not(:focus):not(:disabled),
+[data-theme='light'] textarea:hover:not(:focus):not(:disabled) {
+  border-color: rgba(15, 23, 42, 0.18);
+}
+
+/* 6) Pill scrollbar with hover bloom (light mode only — dark keeps
+ *    the existing thinner slate thumb). */
+[data-theme='light'] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+[data-theme='light'] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background-color: rgba(15, 23, 42, 0.16);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+  transition: background-color 220ms ease;
+}
+[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(15, 23, 42, 0.30);
+  background-clip: content-box;
+}
+/* Firefox */
+[data-theme='light'] {
+  scrollbar-color: rgba(15, 23, 42, 0.18) transparent;
+  scrollbar-width: thin;
+}
+
+/* 7) Refined luminous canvas. The earlier mesh-bg block already
+ *    provides three radial orbs; we tone them down a touch and add
+ *    a fourth, very faint, brand-emerald wash at the top so the page
+ *    feels lit from above. */
+[data-theme='light'] .mesh-bg {
+  background:
+    radial-gradient(1200px 700px at 50% -120px, rgba(34, 197, 94, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 18% 22%, rgba(34, 197, 94, 0.09) 0%, transparent 55%),
+    radial-gradient(ellipse at 82% 78%, rgba(245, 158, 11, 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 70%),
+    var(--bg-dark);
+}
+
+/* 8) Plan cards — brand-tinted lift on hover.
+ *    We do NOT add a `::before` sheen because plan cards have content
+ *    pinned to the top edge (the brand badge / price); a top-fading
+ *    overlay would mute that content. A single inset hairline at the
+ *    top achieves the same "lit-from-above" feel without covering
+ *    anything. */
+[data-theme='light'] .plan-card {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 22px -10px rgba(15, 23, 42, 0.10);
+}
+[data-theme='light'] .plan-card-silver:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 18px 44px -16px rgba(34, 197, 94, 0.28),
+    0 8px 22px -8px rgba(15, 23, 42, 0.10);
+}
+[data-theme='light'] .plan-card-gold:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 18px 44px -16px rgba(245, 158, 11, 0.28),
+    0 8px 22px -8px rgba(15, 23, 42, 0.10);
+}
+
+/* 9) Tab switchers / segmented controls (Sign in / Create account,
+ *    silver / gold tabs) — give the inactive chips a softer surface
+ *    in light mode so the active gradient pops. */
+[data-theme='light'] .day-tab {
+  color: rgb(71 85 105);
+}
+[data-theme='light'] .day-tab.active {
+  color: rgb(15 23 42);
+}
+
+/* 10) Selection in light mode — already defined earlier; bump the
+ *     contrast a hair so highlighted prose reads cleanly. */
+[data-theme='light'] ::selection {
+  background-color: rgba(34, 197, 94, 0.28);
+  color: rgb(15 23 42);
+}
+
+/* 11) Reduced motion — disable every newly-added transition. */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='light'] .glass,
+  [data-theme='light'] input,
+  [data-theme='light'] textarea,
+  [data-theme='light'] select,
+  [data-theme='light'] ::-webkit-scrollbar-thumb {
+    transition: none !important;
+  }
+  [data-theme='light'] button:not(:disabled):active,
+  [data-theme='light'] [role='button']:not([aria-disabled='true']):active {
+    transform: none;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ *  About page — themable Aurora + portrait surfaces
+ *  Default styles paint the dark cinematic look; [data-theme='light']
+ *  rules below flip them to a clean cream/sky aesthetic so the page
+ *  matches the rest of the product in brightness mode.
+ * ────────────────────────────────────────────────────────────────── */
+
+/* ── Aurora base gradient ───────────────────────────────────────── */
+.about-aurora__base {
+  background:
+    radial-gradient(120% 80% at 20% 0%, rgba(30, 41, 90, 0.55) 0%, transparent 55%),
+    radial-gradient(120% 80% at 100% 100%, rgba(76, 29, 149, 0.32) 0%, transparent 55%),
+    linear-gradient(180deg, #050816 0%, #060a1d 50%, #03060f 100%);
+}
+[data-theme='light'] .about-aurora__base {
+  background:
+    radial-gradient(120% 80% at 18% 0%, rgba(125, 211, 252, 0.45) 0%, transparent 55%),
+    radial-gradient(120% 80% at 100% 100%, rgba(196, 181, 253, 0.40) 0%, transparent 55%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2ff 50%, #f5f3ff 100%);
+}
+
+/* ── Aurora dot grid ────────────────────────────────────────────── */
+.about-aurora__grid {
+  opacity: 0.35;
+  background-image: radial-gradient(rgba(148, 163, 184, 0.18) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 80%);
+          mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 80%);
+}
+[data-theme='light'] .about-aurora__grid {
+  opacity: 0.55;
+  background-image: radial-gradient(rgba(15, 23, 42, 0.10) 1px, transparent 1px);
+}
+
+/* ── Aurora orbs ────────────────────────────────────────────────── */
+.about-aurora__orb--emerald {
+  opacity: 0.55;
+  background: radial-gradient(circle, rgba(34,197,94,0.28) 0%, transparent 70%);
+}
+.about-aurora__orb--rose {
+  opacity: 0.50;
+  background: radial-gradient(circle, rgba(244,63,94,0.22) 0%, transparent 70%);
+}
+.about-aurora__orb--indigo {
+  opacity: 0.50;
+  background: radial-gradient(circle, rgba(99,102,241,0.26) 0%, transparent 70%);
+}
+.about-aurora__orb--sky {
+  opacity: 0.25;
+  background: radial-gradient(circle, rgba(14,165,233,0.18) 0%, transparent 70%);
+}
+[data-theme='light'] .about-aurora__orb--emerald {
+  opacity: 0.55;
+  background: radial-gradient(circle, rgba(16,185,129,0.32) 0%, transparent 70%);
+}
+[data-theme='light'] .about-aurora__orb--rose {
+  opacity: 0.45;
+  background: radial-gradient(circle, rgba(251,113,133,0.30) 0%, transparent 70%);
+}
+[data-theme='light'] .about-aurora__orb--indigo {
+  opacity: 0.50;
+  background: radial-gradient(circle, rgba(129,140,248,0.32) 0%, transparent 70%);
+}
+[data-theme='light'] .about-aurora__orb--sky {
+  opacity: 0.55;
+  background: radial-gradient(circle, rgba(56,189,248,0.30) 0%, transparent 70%);
+}
+
+/* ── Top fade behind the navbar ────────────────────────────────── */
+.about-aurora__topfade {
+  background: linear-gradient(to bottom, rgba(2,6,23,0.85), transparent);
+}
+[data-theme='light'] .about-aurora__topfade {
+  background: linear-gradient(to bottom, rgba(248,250,252,0.92), transparent);
+}
+
+/* ── Portrait ambient & pad ────────────────────────────────────── */
+.portrait-ambient {
+  opacity: 0.90;
+  background:
+    radial-gradient(60% 70% at 30% 20%, rgba(34,197,94,0.32), transparent 60%),
+    radial-gradient(50% 60% at 75% 80%, rgba(244,63,94,0.28), transparent 60%),
+    radial-gradient(60% 60% at 80% 25%, rgba(99,102,241,0.28), transparent 60%);
+}
+.portrait-pad {
+  background: linear-gradient(135deg, rgba(16,185,129,0.18), rgba(99,102,241,0.16) 45%, rgba(244,63,94,0.18));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 30px 60px -20px rgba(2,6,23,0.55);
+}
+[data-theme='light'] .portrait-ambient {
+  opacity: 0.75;
+  background:
+    radial-gradient(60% 70% at 30% 20%, rgba(16,185,129,0.30), transparent 60%),
+    radial-gradient(50% 60% at 75% 80%, rgba(251,113,133,0.26), transparent 60%),
+    radial-gradient(60% 60% at 80% 25%, rgba(129,140,248,0.28), transparent 60%);
+}
+[data-theme='light'] .portrait-pad {
+  background: linear-gradient(135deg, rgba(16,185,129,0.22), rgba(129,140,248,0.20) 45%, rgba(251,113,133,0.22));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.65),
+    0 30px 60px -20px rgba(15,23,42,0.18),
+    0 0 0 1px rgba(255,255,255,0.55);
+}
+
+/* ── About-page text & surface fallbacks for light mode ────────── */
+[data-theme='light'] main:has(.about-aurora) {
+  color: rgb(15 23 42);
+}
+
+/* Hero typography flips: white → slate-900 ink so it reads on cream. */
+[data-theme='light'] main:has(.about-aurora) h1,
+[data-theme='light'] main:has(.about-aurora) h2,
+[data-theme='light'] main:has(.about-aurora) h3 {
+  color: rgb(15 23 42);
+}
+[data-theme='light'] main:has(.about-aurora) .text-white {
+  color: rgb(15 23 42) !important;
+}
+[data-theme='light'] main:has(.about-aurora) .text-slate-100,
+[data-theme='light'] main:has(.about-aurora) .text-slate-200 {
+  color: rgb(30 41 59) !important;
+}
+[data-theme='light'] main:has(.about-aurora) .text-slate-300,
+[data-theme='light'] main:has(.about-aurora) .text-slate-300\/80,
+[data-theme='light'] main:has(.about-aurora) .text-slate-300\/90 {
+  color: rgb(71 85 105) !important;
+}
+[data-theme='light'] main:has(.about-aurora) .text-slate-400,
+[data-theme='light'] main:has(.about-aurora) .text-slate-500 {
+  color: rgb(100 116 139) !important;
+}
+
+/* Glass surfaces inside the page need to flip from black-glass to
+ * white-glass — otherwise they read as muddy grey on cream. */
+[data-theme='light'] main:has(.about-aurora) .bg-white\/\[0\.01\],
+[data-theme='light'] main:has(.about-aurora) .bg-white\/\[0\.04\],
+[data-theme='light'] main:has(.about-aurora) .bg-white\/\[0\.06\],
+[data-theme='light'] main:has(.about-aurora) .bg-white\/\[0\.08\],
+[data-theme='light'] main:has(.about-aurora) .bg-white\/\[0\.10\],
+[data-theme='light'] main:has(.about-aurora) .bg-white\/4,
+[data-theme='light'] main:has(.about-aurora) .bg-white\/5,
+[data-theme='light'] main:has(.about-aurora) .bg-white\/8,
+[data-theme='light'] main:has(.about-aurora) .bg-white\/10 {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset, 0 8px 24px -12px rgba(15,23,42,0.10);
+}
+
+/* Cards built with `bg-gradient-to-br from-white/[0.04] to-white/[0.01]`
+ * (PhilosophyCard) — flatten the gradient to a soft white surface. */
+[data-theme='light'] main:has(.about-aurora) .bg-gradient-to-br.from-white\/\[0\.04\] {
+  background-image: none !important;
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset, 0 8px 24px -12px rgba(15,23,42,0.10);
+}
+
+[data-theme='light'] main:has(.about-aurora) .border-white\/10,
+[data-theme='light'] main:has(.about-aurora) .border-white\/15,
+[data-theme='light'] main:has(.about-aurora) .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.10) !important;
+}
+
+/* The stats strip cells use bg-slate-950/30 — flip to soft white on cream. */
+[data-theme='light'] main:has(.about-aurora) .bg-slate-950\/30 {
+  background-color: rgba(255, 255, 255, 0.80) !important;
+}
+
+/* Outer stats strip wrapper — also a black-glass surface. */
+[data-theme='light'] main:has(.about-aurora) .bg-white\/\[0\.04\].backdrop-blur-md {
+  background-color: rgba(255, 255, 255, 0.70) !important;
+}
+
+/* The vertical timeline guideline becomes too subtle on cream. */
+[data-theme='light'] main:has(.about-aurora) .bg-gradient-to-b.from-emerald-500\/40 {
+  background-image: linear-gradient(to bottom, rgba(16,185,129,0.55), rgba(245,158,11,0.40), transparent) !important;
+}
+
+/* Caption / pill chips that use bg-slate-950/80-90 stay dark intentionally
+ * (they sit *on* the photo, where dark glass reads correctly in both modes).
+ * We leave those alone. */
+
