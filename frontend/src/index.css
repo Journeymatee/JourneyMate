@@ -21,50 +21,24 @@
   --scroll-hover:   #475569;
 }
 
-/* ── Light theme — clean slate-50 surface with crisp ink text ──
- *
- * Inspired by modern productivity tools (Linear, Vercel, Notion):
- * a true off-white backdrop, crisp white cards, deep ink text. The
- * old cream `#fafaf7` was warm but felt dated — slate-50 reads as
- * professional and works perfectly with our brand emerald/amber.
- * ─────────────────────────────────────────────────────────────── */
+/* ── Light theme — warm cream background, ink text ───────────── */
 :root[data-theme='light'] {
-  --silver-primary: #15803d;        /* deeper green for cream contrast */
-  --gold-primary:   #b45309;        /* deeper amber */
-  --bg-dark:        #f8fafc;        /* slate-50 — page background */
-  --bg-card:        #ffffff;        /* pure white — elevated cards */
-  --bg-surface:     #f1f5f9;        /* slate-100 — sub-surface chips */
-  --text-primary:   #0f172a;        /* slate-900 — primary ink */
-  --text-secondary: #1e293b;        /* slate-800 — strong body */
-  --text-muted:     #475569;        /* slate-600 — muted body */
-  --text-faint:     #64748b;        /* slate-500 — small caption */
-  --border-subtle:  rgba(15, 23, 42, 0.08);
-  --border-strong:  rgba(15, 23, 42, 0.14);
-  /* Frosted white panels show as real cards on slate-50 + photos. */
-  --glass-bg:       rgba(255, 255, 255, 0.92);
-  --glass-silver:   rgba(34, 197, 94, 0.14);
-  --glass-gold:     rgba(245, 158, 11, 0.14);
-  --scroll-track:   #e2e8f0;
+  --silver-primary: #16a34a;
+  --gold-primary:   #d97706;
+  --bg-dark:        #fafaf7;
+  --bg-card:        #ffffff;
+  --bg-surface:     #f5f5f1;
+  --text-primary:   #0f172a;
+  --text-muted:     #475569;
+  --border-subtle:  rgba(15, 23, 42, 0.10);
+  /* Frosted white panels show as real cards on cream + photos. */
+  --glass-bg:       rgba(255, 255, 255, 0.86);
+  --glass-silver:   rgba(34, 197, 94, 0.16);
+  --glass-gold:     rgba(245, 158, 11, 0.16);
+  --scroll-track:   #ece9e2;
   --scroll-thumb:   #cbd5e1;
   --scroll-hover:   #94a3b8;
-  --shadow-card:    0 1px 2px rgba(15, 23, 42, 0.04),
-                    0 4px 12px -2px rgba(15, 23, 42, 0.08);
-  --shadow-elevated:0 8px 24px -8px rgba(15, 23, 42, 0.14),
-                    0 2px 6px -2px rgba(15, 23, 42, 0.06);
   color-scheme: light;
-}
-
-/* ── Dark theme — keep the original "obsidian" feel but bump
- *    secondary surfaces to slate values so they read as a
- *    coherent depth scale (page → card → surface → border).  ── */
-:root[data-theme='dark'] {
-  --text-secondary: #cbd5e1;        /* slate-300 — strong body */
-  --text-faint:     #64748b;        /* slate-500 — small caption */
-  --border-strong:  rgba(255, 255, 255, 0.16);
-  --shadow-card:    0 1px 2px rgba(0, 0, 0, 0.4),
-                    0 4px 16px -4px rgba(0, 0, 0, 0.45);
-  --shadow-elevated:0 12px 32px -12px rgba(0, 0, 0, 0.6),
-                    0 4px 12px -4px rgba(0, 0, 0, 0.4);
 }
 
 /* ── Reset ───────────────────────────────────────────────────── */
@@ -85,39 +59,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100dvh;
-  /* Slightly tighter optical letter-spacing for body type — gives the
-   * whole product a more "designed" feel in both modes. */
-  letter-spacing: -0.005em;
-}
-
-/* ── Theme transition — when the user flips between light & dark
- *    everything (backgrounds, text, borders, shadows, fills) eases
- *    over ~220ms instead of snapping. This is the single biggest
- *    "feels professional" upgrade for a theme toggle.
- *
- *    We scope it to a temporary `theme-transitioning` class added
- *    by the ThemeProvider during the switch (see ThemeContext) so
- *    we don't pay the cost on every interaction or scroll repaint. */
-.theme-transitioning,
-.theme-transitioning *,
-.theme-transitioning *::before,
-.theme-transitioning *::after {
-  transition:
-    background-color 220ms cubic-bezier(0.4, 0, 0.2, 1),
-    color            180ms cubic-bezier(0.4, 0, 0.2, 1),
-    border-color     200ms cubic-bezier(0.4, 0, 0.2, 1),
-    fill             180ms cubic-bezier(0.4, 0, 0.2, 1),
-    stroke           180ms cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow       240ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .theme-transitioning,
-  .theme-transitioning *,
-  .theme-transitioning *::before,
-  .theme-transitioning *::after {
-    transition: none !important;
-  }
 }
 
 /* Remove tap highlight on iOS */
@@ -347,7 +288,6 @@ a, button { -webkit-tap-highlight-color: transparent; }
   }
   .animate-blink { animation: none !important; opacity: 1; }
 }
-
 /* ── Day tab ─────────────────────────────────────────────────── */
 .day-tab { transition: all 0.25s ease; position: relative; }
 .day-tab::after {
@@ -375,7 +315,6 @@ a, button { -webkit-tap-highlight-color: transparent; }
 /* Hide scrollbar */
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
-
 /* Touch / accessibility */
 *:focus-visible {
   outline: 2px solid rgba(34,197,94,0.6);
@@ -555,81 +494,6 @@ img { image-rendering: -webkit-optimize-contrast; }
 }
 
 /* ────────────────────────────────────────────────────────────────
- * PROFESSIONAL TYPOGRAPHY (both modes)
- *
- * Editorial-grade defaults for headings & body. We target both the
- * Tailwind `font-display` class AND inline `font-family: Clash
- * Display, Syne, sans-serif` so headers added later automatically
- * get the same crisp, mode-aware treatment.
- * ──────────────────────────────────────────────────────────────── */
-
-/* Display / heading defaults — tighter tracking, optical sizing.
- * Clash Display is the primary, Syne is the fallback (already loaded
- * for older areas), then a system stack as the final safety net. */
-h1, h2, h3, h4, h5, h6,
-.font-display,
-[style*="Clash Display"] {
-  font-feature-settings: "ss01", "ss02", "kern", "liga";
-  font-optical-sizing: auto;
-}
-
-/* Subtle automatic letter-spacing — the bigger the heading, the
- * tighter the optical track. Keeps display type from feeling loose
- * on small screens and from "exploding" on TVs. */
-h1, .font-display.text-5xl, .font-display.text-6xl,
-.font-display.text-7xl, .font-display.text-8xl,
-.font-display.text-9xl { letter-spacing: -0.024em; }
-h2, .font-display.text-3xl, .font-display.text-4xl { letter-spacing: -0.02em; }
-h3, .font-display.text-xl, .font-display.text-2xl  { letter-spacing: -0.014em; }
-h4, h5, h6                                          { letter-spacing: -0.01em; }
-
-/* Dark mode: ultra-clean white headings with a tiny soft halo so they
- * feel "lit" rather than flat. Body text stays slate-200/300 for
- * comfortable long-reading. */
-:root[data-theme='dark'] h1,
-:root[data-theme='dark'] h2,
-:root[data-theme='dark'] h3 {
-  color: #f8fafc;
-}
-
-/* Light mode: deep ink for headings, slate-700 body — proper contrast
- * ratios for a pro-grade editorial feel. */
-:root[data-theme='light'] h1,
-:root[data-theme='light'] h2,
-:root[data-theme='light'] h3,
-:root[data-theme='light'] h4,
-:root[data-theme='light'] h5,
-:root[data-theme='light'] h6 {
-  color: #0b1220;                       /* near-black ink, slightly cooled */
-  text-rendering: optimizeLegibility;
-}
-
-/* Inline Clash-Display headings (added via `style={fontFamily:...}`)
- * inherit text-color from parent, but on the rare occasions where
- * they sit on the bare page bg we still want them to read as solid
- * ink in light mode. */
-:root[data-theme='light'] [style*="Clash Display"] {
-  color: inherit;
-}
-
-/* Body: in light mode promote `<p>` to slate-700 (sharper than the
- * previous slate-600 muted) for better long-form readability. */
-:root[data-theme='light'] p {
-  color: #334155;                       /* slate-700 — body */
-}
-:root[data-theme='light'] p strong,
-:root[data-theme='light'] p b {
-  color: #0b1220;
-}
-
-/* Selection — brand emerald wash in dark, deeper in light (already
- * defined later, kept here so dark mode also looks intentional). */
-:root[data-theme='dark'] ::selection {
-  background-color: rgba(34, 197, 94, 0.32);
-  color: #f8fafc;
-}
-
-/* ────────────────────────────────────────────────────────────────
  * LIGHT THEME — re-skin every dark-mode utility used across the app.
  *
  * The app was authored as dark-only, so most surfaces use hardcoded
@@ -650,21 +514,15 @@ h4, h5, h6                                          { letter-spacing: -0.01em; }
   color: var(--text-primary);
 }
 
-/* ── Headings / text: dark utilities remap to ink + slate ──────
- *
- * Carefully laddered so the dark-mode visual hierarchy survives:
- *   text-white   → near-black ink   (brightest "title" copy)
- *   text-slate-* → progressively muted slate (descending contrast)
- *   AAA/AA contrast is retained on every surface.
- * ────────────────────────────────────────────────────────────── */
-[data-theme='light'] .text-white            { color: #0b1220; }   /* near-black ink */
-[data-theme='light'] .text-slate-100        { color: #0f172a; }
-[data-theme='light'] .text-slate-200        { color: #1e293b; }
-[data-theme='light'] .text-slate-300        { color: #334155; }
-[data-theme='light'] .text-slate-400        { color: #475569; }   /* slate-600 */
-[data-theme='light'] .text-slate-500        { color: #64748b; }   /* slate-500 */
-[data-theme='light'] .text-slate-600        { color: #64748b; }
-[data-theme='light'] .text-slate-700        { color: #475569; }
+/* ── Headings / text: dark utilities remap to ink + slate ────── */
+[data-theme='light'] .text-white            { color: rgb(15 23 42); }
+[data-theme='light'] .text-slate-100        { color: rgb(15 23 42); }
+[data-theme='light'] .text-slate-200        { color: rgb(30 41 59); }
+[data-theme='light'] .text-slate-300        { color: rgb(30 41 59); }
+[data-theme='light'] .text-slate-400        { color: rgb(51 65 85); }
+[data-theme='light'] .text-slate-500        { color: rgb(71 85 105); }
+[data-theme='light'] .text-slate-600        { color: rgb(71 85 105); }
+[data-theme='light'] .text-slate-700        { color: rgb(51 65 85); }
 
 /* Brighter brand text (originally meant to pop on black) needs a
  * deeper saturation on cream. */
@@ -675,13 +533,6 @@ h4, h5, h6                                          { letter-spacing: -0.01em; }
 [data-theme='light'] .text-amber-300        { color: rgb(180 83 9); }
 [data-theme='light'] .text-emerald-300      { color: rgb(5 150 105); }
 [data-theme='light'] .text-fuchsia-300\/90  { color: rgb(162 28 175); }
-[data-theme='light'] .text-cyan-300\/90     { color: rgb(8 145 178); }
-[data-theme='light'] .text-sky-300\/90      { color: rgb(7 89 133); }
-[data-theme='light'] .text-violet-300\/90   { color: rgb(109 40 217); }
-[data-theme='light'] .text-purple-300\/90   { color: rgb(126 34 206); }
-[data-theme='light'] .text-rose-300\/90     { color: rgb(190 18 60); }
-[data-theme='light'] .text-amber-300\/90    { color: rgb(180 83 9); }
-[data-theme='light'] .text-emerald-300\/90  { color: rgb(5 150 105); }
 [data-theme='light'] .text-cyan-400         { color: rgb(14 116 144); }
 [data-theme='light'] .text-purple-400       { color: rgb(126 34 206); }
 [data-theme='light'] .text-amber-400        { color: rgb(180 83 9); }
@@ -740,59 +591,25 @@ h4, h5, h6                                          { letter-spacing: -0.01em; }
 [data-theme='light'] .placeholder\:text-slate-400::placeholder { color: rgb(100 116 139); }
 [data-theme='light'] .placeholder\:text-slate-600::placeholder { color: rgb(71 85 105); }
 
-/* ── Mesh / page bg (already var-driven, but tone-shift accents) ─
- *
- * On the new slate-50 surface the original 8% washes were nearly
- * invisible. Bump them just enough that the page feels alive without
- * looking gaudy. */
+/* ── Mesh / page bg (already var-driven, but tone-shift accents) ─ */
 [data-theme='light'] .mesh-bg {
   background:
-    radial-gradient(ellipse at 20% 20%, rgba(34, 197, 94, 0.11) 0%, transparent 55%),
-    radial-gradient(ellipse at 80% 80%, rgba(245, 158, 11, 0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(99, 102, 241, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse at 20% 20%, rgba(34, 197, 94, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(245, 158, 11, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(99, 102, 241, 0.04) 0%, transparent 70%),
     var(--bg-dark);
 }
-[data-theme='light'] .page-bg-blue {
-  background:
-    radial-gradient(ellipse at 15% 20%, rgba(99,102,241,0.13) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 75%, rgba(59,130,246,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(99,102,241,0.05) 0%, transparent 70%),
-    var(--bg-dark);
-}
-[data-theme='light'] .page-bg-cyan {
-  background:
-    radial-gradient(ellipse at 15% 20%, rgba(6,182,212,0.13) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 75%, rgba(20,184,166,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(6,182,212,0.05) 0%, transparent 70%),
-    var(--bg-dark);
-}
-[data-theme='light'] .page-bg-purple {
-  background:
-    radial-gradient(ellipse at 15% 20%, rgba(139,92,246,0.13) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 75%, rgba(168,85,247,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(139,92,246,0.05) 0%, transparent 70%),
-    var(--bg-dark);
-}
-[data-theme='light'] .page-bg-amber {
-  background:
-    radial-gradient(ellipse at 15% 20%, rgba(245,158,11,0.13) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 75%, rgba(234,88,12,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(245,158,11,0.05) 0%, transparent 70%),
-    var(--bg-dark);
-}
-[data-theme='light'] .page-bg-emerald {
-  background:
-    radial-gradient(ellipse at 15% 20%, rgba(16,185,129,0.13) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 75%, rgba(34,197,94,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(16,185,129,0.05) 0%, transparent 70%),
-    var(--bg-dark);
-}
+
+/* The page-bg-* utilities already reference var(--bg-dark) so they
+ * auto-switch background — only the overlay tints need softening so
+ * coloured radial gradients don't wash out cream. */
+[data-theme='light'] .page-bg-blue,
+[data-theme='light'] .page-bg-cyan,
+[data-theme='light'] .page-bg-purple,
+[data-theme='light'] .page-bg-amber,
+[data-theme='light'] .page-bg-emerald,
 [data-theme='light'] .page-bg-teal {
-  background:
-    radial-gradient(ellipse at 15% 20%, rgba(20,184,166,0.13) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 75%, rgba(6,182,212,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(20,184,166,0.05) 0%, transparent 70%),
-    var(--bg-dark);
+  background-blend-mode: multiply;
 }
 
 /* ── Noise texture: lower opacity on cream ───────────────────── */
@@ -808,16 +625,11 @@ h4, h5, h6                                          { letter-spacing: -0.01em; }
  * for legibility.) */
 
 /* `.glass` already auto-themes via --glass-bg; here we add the shadow
- * + softer hairline border that real elevated cards need on slate-50.
- *
- * Two layers: a tight contact shadow for definition and a wider lift
- * shadow for depth — same recipe modern productivity apps use. */
+ * + softer hairline border that real elevated cards need on cream. */
 [data-theme='light'] .glass {
-  border-color: var(--border-subtle);
-  box-shadow: var(--shadow-card);
-}
-[data-theme='light'] .glass:hover {
-  box-shadow: var(--shadow-elevated);
+  border-color: rgba(15, 23, 42, 0.06);
+  box-shadow: 0 8px 30px -12px rgba(15, 23, 42, 0.18),
+              0 2px 8px -4px rgba(15, 23, 42, 0.10);
 }
 
 /* Search inputs: solid surface (not see-through over photo). */

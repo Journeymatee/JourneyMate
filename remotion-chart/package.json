@@ -1,0 +1,17 @@
+{
+  "name": "remotion-chart",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "remotion studio src/index.jsx",
+    "render": "remotion render src/index.jsx FiveBarChart out/five-bar-chart.mp4",
+    "still": "remotion still src/index.jsx FiveBarChart out/five-bar-chart.png --frame=45 --scale=0.5"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.481",
+    "@rspack/binding-darwin-arm64": "^1.7.11",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "remotion": "^4.0.481"
+  }
+}

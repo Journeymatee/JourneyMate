@@ -13,6 +13,7 @@ export async function chatWithAi(message, history = []) {
  *
  * @param {string} message
  * @param {Array<{role:'user'|'assistant', content:string}>} history
+ * @param {any} planState
  * @param {{
  *   onMeta?: (payload:any) => void,
  *   onToken?: (chunk:string) => void,
@@ -20,7 +21,7 @@ export async function chatWithAi(message, history = []) {
  *   signal?: AbortSignal,
  * }} handlers
  */
-export async function streamChatWithAi(message, history = [], handlers = {}) {
+export async function streamChatWithAi(message, history = [], planState = null, handlers = {}) {
   const { signal, onMeta, onToken, onDone } = handlers
 
   const token = localStorage.getItem('jm_token')
@@ -30,7 +31,7 @@ export async function streamChatWithAi(message, history = [], handlers = {}) {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ message, history }),
+    body: JSON.stringify({ message, history, planState }),
     signal,
   })
 
@@ -52,7 +53,7 @@ export async function streamChatWithAi(message, history = [], handlers = {}) {
 
   const decoder = new TextDecoder()
   let buffer = ''
-  let finalPayload = { model: 'AI', followUps: [], usage: null, realtime: null }
+  let finalPayload = { model: 'AI', followUps: [], usage: null, realtime: null, plan: null }
 
   try {
     while (true) {
@@ -92,6 +93,7 @@ export async function streamChatWithAi(message, history = [], handlers = {}) {
             ...finalPayload,
             followUps: Array.isArray(payload.followUps) ? payload.followUps : [],
             usage: payload.usage || null,
+            plan: payload.plan || null,
           }
           onDone?.(payload)
         } else if (payload.type === 'end') {

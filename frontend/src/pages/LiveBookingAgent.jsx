@@ -1,13 +1,49 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Train, Plane, Hotel, Globe2, Sparkles, Search, Clock, MapPin,
   ExternalLink, AlertCircle, Loader2, ArrowRight, Wifi,
-  Tag, Send, Bot,
+  Tag, Send, Bot, Lock, BookmarkCheck,
 } from 'lucide-react'
 import {
   searchTrains, searchFlights, searchHotels, searchWeb, checkTatkal, askAgent,
 } from '../services/agentService'
 import { Pill } from '../components/ui'
+import InventoryAvailabilityStrip from '../components/booking/InventoryAvailabilityStrip'
+import BookingsList from '../components/booking/BookingsList'
+
+/** "Book this in JourneyMate" — opens the in-app booking flow with the
+ *  current search criteria pre-filled. The flow handles seat picking,
+ *  passenger details, and Razorpay test-mode payment end-to-end. */
+function BookInJourneyMateCta({ type, from, to, date, classCode }) {
+  const params = new URLSearchParams()
+  params.set('type', type)
+  if (from) params.set('from', from)
+  if (to) params.set('to', to)
+  if (date) params.set('date', date)
+  if (classCode) params.set('class', classCode)
+  return (
+    <Link
+      to={`/booking?${params.toString()}`}
+      className="group flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-500/15 via-cyan-500/10 to-transparent px-4 py-3 transition-all hover:border-emerald-400/60 hover:from-emerald-500/25 active:scale-[0.99]"
+    >
+      <div className="min-w-0">
+        <p className="text-[10px] uppercase tracking-wider font-bold text-emerald-200">
+          New · One-tap booking
+        </p>
+        <p className="mt-0.5 text-sm font-bold text-white">
+          Book this {type} inside JourneyMate
+          <span className="ml-2 text-[11px] font-normal text-slate-300">
+            seat picker · Razorpay · email confirmation
+          </span>
+        </p>
+      </div>
+      <span className="inline-flex items-center gap-1.5 text-emerald-200 text-xs font-bold whitespace-nowrap">
+        <Lock size={12} aria-hidden /> Book now <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" aria-hidden />
+      </span>
+    </Link>
+  )
+}
 
 /* ─────────────────────────── helpers ─────────────────────────── */
 
@@ -78,11 +114,12 @@ const labelClass = 'mb-1 block text-[11px] font-semibold uppercase tracking-wide
 /* ─────────────────────────── TABS ─────────────────────────── */
 
 const TABS = [
-  { id: 'trains',  label: 'Trains',  Icon: Train,   tint: 'from-cyan-500 to-blue-600',     blurb: 'IRCTC live data + Tatkal advisor' },
-  { id: 'flights', label: 'Flights', Icon: Plane,   tint: 'from-violet-500 to-fuchsia-600', blurb: 'MMT, Skyscanner, Google Flights' },
-  { id: 'hotels',  label: 'Hotels',  Icon: Hotel,   tint: 'from-amber-500 to-orange-600',  blurb: 'Booking.com, Agoda, OYO + map' },
-  { id: 'web',     label: 'Web',     Icon: Globe2,  tint: 'from-emerald-500 to-teal-600',  blurb: 'Real-time web search' },
-  { id: 'ask',     label: 'Ask AI',  Icon: Sparkles,tint: 'from-rose-500 to-pink-600',     blurb: 'Type any travel question' },
+  { id: 'trains',   label: 'Trains',      Icon: Train,         tint: 'from-cyan-500 to-blue-600',      blurb: 'IRCTC live data + Tatkal advisor' },
+  { id: 'flights',  label: 'Flights',     Icon: Plane,         tint: 'from-violet-500 to-fuchsia-600', blurb: 'MMT, Skyscanner, Google Flights' },
+  { id: 'hotels',   label: 'Hotels',      Icon: Hotel,         tint: 'from-amber-500 to-orange-600',   blurb: 'Booking.com, Agoda, OYO + map' },
+  { id: 'web',      label: 'Web',         Icon: Globe2,        tint: 'from-emerald-500 to-teal-600',   blurb: 'Real-time web search' },
+  { id: 'ask',      label: 'Ask AI',      Icon: Sparkles,      tint: 'from-rose-500 to-pink-600',      blurb: 'Type any travel question' },
+  { id: 'bookings', label: 'My bookings', Icon: BookmarkCheck, tint: 'from-emerald-500 to-cyan-600',   blurb: 'Confirmed trains, flights & hotels' },
 ]
 
 /* ─────────────────────────── TRAINS ─────────────────────────── */
@@ -176,6 +213,22 @@ function TrainsTab() {
             </div>
             <ProviderBadge provider={data.provider} />
           </header>
+
+          <BookInJourneyMateCta
+            type="train"
+            from={data.from?.label || form.from}
+            to={data.to?.label || form.to}
+            date={data.date || form.date}
+          />
+
+          <InventoryAvailabilityStrip
+            type="train"
+            origin={data.from?.label || form.from}
+            destination={data.to?.label || form.to}
+            date={data.date || form.date}
+          />
+
+          <div className="mb-4" />
 
           {data.trains?.length > 0 ? (
             <ul className="grid gap-3">
@@ -293,6 +346,23 @@ function FlightsTab() {
             <ProviderBadge provider={data.provider} />
           </header>
 
+          <BookInJourneyMateCta
+            type="flight"
+            from={data.from?.label || form.from}
+            to={data.to?.label || form.to}
+            date={data.date || form.date}
+            classCode={form.cabin === 'premium_economy' ? 'premium' : form.cabin === 'first' ? 'business' : form.cabin}
+          />
+
+          <InventoryAvailabilityStrip
+            type="flight"
+            origin={data.from?.label || form.from}
+            destination={data.to?.label || form.to}
+            date={data.date || form.date}
+          />
+
+          <div className="mb-4" />
+
           {data.offers?.length > 0 ? (
             <ul className="grid gap-3">
               {data.offers.map((o, i) => (
@@ -391,6 +461,22 @@ function HotelsTab() {
             </div>
             <ProviderBadge provider={data.provider} />
           </header>
+
+          <BookInJourneyMateCta
+            type="hotel"
+            from={data.destination || form.destination}
+            to={data.destination || form.destination}
+            date={data.check_in || form.check_in}
+          />
+
+          <InventoryAvailabilityStrip
+            type="hotel"
+            origin={data.destination || form.destination}
+            destination={data.destination || form.destination}
+            date={data.check_in || form.check_in}
+          />
+
+          <div className="mb-4" />
 
           {data.stays?.length > 0 ? (
             <ul className="grid gap-3 sm:grid-cols-2">
@@ -615,22 +701,100 @@ function AskTab() {
   )
 }
 
+/* ─────────────────────────── BOOKINGS ─────────────────────────── */
+
+/**
+ * "My bookings" tab — shows the signed-in user's confirmed / cancelled
+ * bookings inside Live Search so users never have to leave the agent
+ * to manage their trips. Powered by the shared BookingsList component.
+ */
+function BookingsTab({ onSwitchTab }) {
+  return (
+    <div>
+      <BookingsList
+        density="compact"
+        emptyCta={(
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => onSwitchTab('trains')}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-bold hover:from-cyan-400 hover:to-blue-500 transition-all shadow-md"
+            >
+              <Train size={13} aria-hidden /> Search trains
+            </button>
+            <button
+              type="button"
+              onClick={() => onSwitchTab('flights')}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-900/12 bg-white/85 text-slate-700 text-sm font-bold hover:bg-slate-100 transition-all dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-200 dark:hover:bg-white/[0.08]"
+            >
+              <Plane size={13} aria-hidden /> Search flights
+            </button>
+            <button
+              type="button"
+              onClick={() => onSwitchTab('hotels')}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-900/12 bg-white/85 text-slate-700 text-sm font-bold hover:bg-slate-100 transition-all dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-200 dark:hover:bg-white/[0.08]"
+            >
+              <Hotel size={13} aria-hidden /> Find hotels
+            </button>
+          </div>
+        )}
+      />
+    </div>
+  )
+}
+
 /* ─────────────────────────── PAGE ─────────────────────────── */
 
+const VALID_TABS = new Set(['trains', 'flights', 'hotels', 'web', 'ask', 'bookings'])
+
+function readInitialTab(search) {
+  const t = new URLSearchParams(search || '').get('tab')
+  return VALID_TABS.has(t) ? t : 'trains'
+}
+
 export default function LiveBookingAgent() {
-  const [tab, setTab] = useState('trains')
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [tab, setTab] = useState(() => readInitialTab(location.search))
 
   useEffect(() => {
     document.title = 'Live booking agent · JourneyMate'
   }, [])
 
-  const ActiveTab = useMemo(() => ({
-    trains: TrainsTab,
-    flights: FlightsTab,
-    hotels: HotelsTab,
-    web: WebTab,
-    ask: AskTab,
-  }[tab]), [tab])
+  // Sync the tab back into the URL (?tab=...) so deep links work both
+  // ways: confirmation page → /live-search?tab=bookings, AND a manual
+  // tab switch reflects in the address bar so refresh / share keeps
+  // the user on the same surface.
+  useEffect(() => {
+    const next = new URLSearchParams(location.search)
+    if (next.get('tab') === tab) return
+    if (tab === 'trains') next.delete('tab') // keep the default URL clean
+    else next.set('tab', tab)
+    const qs = next.toString()
+    navigate(qs ? `?${qs}` : location.pathname, { replace: true })
+    // navigate() identity is stable; we only react to local tab/search changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab])
+
+  // External navigation (e.g. Confirmation → ?tab=bookings) should
+  // update the local state so the right tab body renders.
+  useEffect(() => {
+    const next = readInitialTab(location.search)
+    if (next !== tab) setTab(next)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search])
+
+  const ActiveTab = useMemo(() => {
+    const map = {
+      trains:   TrainsTab,
+      flights:  FlightsTab,
+      hotels:   HotelsTab,
+      web:      WebTab,
+      ask:      AskTab,
+      bookings: () => <BookingsTab onSwitchTab={setTab} />,
+    }
+    return map[tab] || TrainsTab
+  }, [tab])
 
   return (
     <main className="min-h-screen pb-20 pt-24 sm:pt-28">

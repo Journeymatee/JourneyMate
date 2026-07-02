@@ -33,6 +33,18 @@ const SYSTEM_PROMPT = [
   '  use the provided realtime context (weather, curated street food, route stats, user bookings).',
   '- Productivity: brainstorming, planning, decision frameworks, pros & cons, checklists.',
   '',
+  'TRIP PLAN EDITING (IMPORTANT)',
+  '- Sometimes the user will ask to modify an existing trip plan: "make it 10% cheaper", "swap the beach day for a trek", "move this to day 2", etc.',
+  '- When a CURRENT_PLAN_STATE is provided, treat it as the source of truth and apply the user\'s requested edits to it.',
+  '- The updated plan MUST include transport/transfers between legs when relevant, and keep budgets consistent after changes.',
+  '- Do not invent precise prices or real-time schedules. Use rough ranges + what to verify.',
+  '',
+  'STRUCTURED OUTPUT FOR PLANS',
+  '- When you are producing OR updating a trip plan, you MUST include a JSON object between tags:',
+  '  <plan_json>{"version":1, ...}</plan_json>',
+  '- After the </plan_json> tag, write a concise human-friendly explanation of what changed and what to verify.',
+  '- The plan JSON must be valid JSON (double quotes, no trailing commas).',
+  '',
   'OUTPUT RULES',
   '- Be helpful first. Answer the question fully. Then optionally suggest a useful next step.',
   '- Match length to the question: short questions get short answers, deep questions get depth.',
@@ -454,6 +466,21 @@ function buildUserMessage({ prompt, user, nlp, realtimeContext }) {
     '',
     'Respond in concise practical format. For itinerary/comparison, include headings + bullets and add what data user should verify.',
   ].join('\n')
+}
+
+function extractPlanJson(text) {
+  const raw = String(text || '')
+  const m = raw.match(/<plan_json>\s*([\s\S]*?)\s*<\/plan_json>/i)
+  if (!m) return { plan: null, cleaned: raw.trim() }
+  const jsonText = String(m[1] || '').trim()
+  let plan = null
+  try {
+    plan = JSON.parse(jsonText)
+  } catch {
+    plan = null
+  }
+  const cleaned = raw.replace(m[0], '').trim()
+  return { plan, cleaned }
 }
 
 // Conversational reply banks. Each bank holds 3-5 variants so the assistant
@@ -1091,79 +1118,7 @@ async function buildRealtimeContext({ prompt, nlp, user }) {
   }
 }
 
-// Classify why the upstream LLM call failed so the fallback message can be
-// honest about the real cause (insufficient quota vs invalid key vs timeout
-// vs network problem) instead of pretending no key is configured.
-function classifyAiError(err, response, data) {
-  if (err && err.name === 'AbortError') return 'timeout'
-  if (response) {
-    const code = data?.error?.code || data?.error?.type || ''
-    if (code === 'insufficient_quota' || code === 'billing_hard_limit_reached') return 'quota'
-    // Gemini's OpenAI-compatible endpoint reports quota in the message body
-    // with HTTP 429 + "Quota exceeded for metric: ..." rather than a code.
-    const msg = String(data?.error?.message || '')
-    if (response.status === 429 && /quota exceeded/i.test(msg)) return 'quota'
-    if (response.status === 401 || response.status === 403) return 'auth'
-    if (response.status === 429) return 'rate_limited'
-    if (response.status >= 500) return 'upstream_down'
-    return 'upstream_error'
-  }
-  return 'network'
-}
-
-// When the primary model is overloaded (Gemini free tier frequently returns
-// 503/429), automatically try a sibling model. Listed in order of preference.
-// We deliberately keep the list small so latency budget stays sane.
-const MODEL_FALLBACKS = {
-  // Gemini family
-  'gemini-2.5-pro':           ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'],
-  'gemini-2.5-flash':         ['gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-flash-latest'],
-  'gemini-2.5-flash-lite':    ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'],
-  'gemini-2.0-flash':         ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-flash-latest'],
-  'gemini-2.0-flash-lite':    ['gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-flash-latest'],
-  'gemini-flash-latest':      ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'],
-  'gemini-pro-latest':        ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'],
-}
-
-// Reasons that are worth retrying with a different model. Auth / quota /
-// network failures should NOT be retried — they are not transient.
-const RETRYABLE_REASONS = new Set(['upstream_down', 'rate_limited', 'upstream_error'])
-
-function getFallbackModels(primary) {
-  return MODEL_FALLBACKS[primary] || []
-}
-
-const REASON_NOTICES = {
-  quota:
-    '⚠️  **Live AI is temporarily unavailable** — the configured AI provider has reported '
-    + '`insufficient_quota`. Ask the admin to top up the API plan or switch the server to '
-    + 'a free provider (Groq / Together / OpenRouter / Ollama). I\'m falling back to my '
-    + 'built-in answer for now:',
-  auth:
-    '⚠️  **Live AI is unavailable** — the configured `AI_API_KEY` was rejected (invalid or '
-    + 'revoked). Ask the admin to refresh the key. Falling back to my built-in answer:',
-  rate_limited:
-    '⚠️  **Live AI is rate-limited** right now. Falling back to my built-in answer — try '
-    + 'again in a moment for a richer reply:',
-  timeout:
-    '⏱️  **Live AI took too long** to respond (request aborted). Falling back to my '
-    + 'built-in answer:',
-  upstream_down:
-    '⚠️  **Live AI provider is currently down**. Falling back to my built-in answer:',
-  upstream_error:
-    '⚠️  **Live AI request failed** unexpectedly. Falling back to my built-in answer:',
-  network:
-    '⚠️  **Could not reach the AI provider** (network error). Falling back to my built-in '
-    + 'answer:',
-}
-
-function buildFallbackReply(reason, baseReply) {
-  const notice = REASON_NOTICES[reason]
-  if (!notice) return baseReply
-  return `${notice}\n\n---\n\n${baseReply}`
-}
-
-async function chat({ message, history, user }) {
+async function chat({ message, history, planState, user }) {
   const prompt = String(message || '').trim()
   if (!prompt) throw ApiError.badRequest('Message is required')
 
@@ -1199,7 +1154,15 @@ async function chat({ message, history, user }) {
     ...mergedHistory,
     {
       role: 'user',
-      content: buildUserMessage({ prompt, user, nlp, realtimeContext: realtimeText }),
+      content: [
+        buildUserMessage({ prompt, user, nlp, realtimeContext: realtimeText }),
+        '',
+        planState && typeof planState === 'object'
+          ? `CURRENT_PLAN_STATE (JSON):\n${JSON.stringify(planState)}`
+          : 'CURRENT_PLAN_STATE: none',
+        '',
+        'If you are producing or updating a trip plan, include <plan_json>...</plan_json> as instructed.',
+      ].join('\n'),
     },
   ]
 
@@ -1248,17 +1211,24 @@ async function chat({ message, history, user }) {
       lastReason = attempt.reason
       lastErrorMsg = attempt.errorMsg
 
-      // eslint-disable-next-line no-console
-      console.warn('[ai.chat] model=%s failed (reason=%s): %s',
-        candidate, attempt.reason, attempt.errorMsg || 'unknown')
+    const rawReply = String(data?.choices?.[0]?.message?.content || '').trim()
+    if (!rawReply) throw ApiError.unavailable('AI did not return a response')
 
-      // Stop early on non-retryable failures (auth, quota, network, timeout).
-      if (!RETRYABLE_REASONS.has(attempt.reason)) break
+    const { plan, cleaned } = extractPlanJson(rawReply)
+    const reply = cleaned || rawReply
+
+    const result = {
+      reply,
+      model: env.AI_MODEL,
+      usage: data?.usage || null,
+      nlp,
+      followUps,
+      realtime,
+      plan: plan || null,
     }
-
-    // All candidates failed — surface the last reason in the fallback notice.
-    const baseReply = localFallbackReply({ prompt, nlp, realtime, user })
-    const finalReply = buildFallbackReply(lastReason, baseReply)
+    await persistConversation(user?.id, prompt, rawReply)
+    return result
+  } catch (err) {
     const fallbackResult = {
       reply: finalReply,
       model: 'rnlp-fallback',
@@ -1266,8 +1236,7 @@ async function chat({ message, history, user }) {
       nlp,
       followUps,
       realtime,
-      fallbackReason: lastReason,
-      lastErrorMsg,
+      plan: null,
     }
     await persistConversation(user?.id, prompt, fallbackResult.reply)
     return fallbackResult
@@ -1343,8 +1312,8 @@ function splitForStreaming(text) {
   return chunks.length ? chunks : [String(text || '')]
 }
 
-async function *chatStream({ message, history, user }) {
-  const result = await chat({ message, history, user })
+async function *chatStream({ message, history, planState, user }) {
+  const result = await chat({ message, history, planState, user })
   const pieces = splitForStreaming(result.reply)
   yield {
     type: 'meta',
@@ -1356,12 +1325,7 @@ async function *chatStream({ message, history, user }) {
   for (const piece of pieces) {
     yield { type: 'token', content: piece + ' ' }
   }
-  yield {
-    type: 'done',
-    followUps: result.followUps,
-    usage: result.usage,
-    fallbackReason: result.fallbackReason || null,
-  }
+  yield { type: 'done', followUps: result.followUps, usage: result.usage, plan: result.plan || null }
 }
 
 async function persistConversation(userId, userPrompt, assistantReply) {

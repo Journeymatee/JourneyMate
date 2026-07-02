@@ -8,7 +8,6 @@ import {
   Workflow,
   MapPin,
   BookOpen,
-  Info,
   ChevronRight,
   Crown,
   Mail,
@@ -19,10 +18,8 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ThemeToggle from './ThemeToggle'
 
-// Order shown to logged-out users: How it Works → Popular Routes → Blog → About.
-// Logged-in users see "Saved" inserted just before "About" so the user-only link
-// sits next to the personal "About" link, keeping the public-first → personal
-// reading flow on the right side of the bar.
+// Order shown to logged-out users: How it Works → Popular Routes → Blog.
+// Logged-in users see "Saved" after Blog so wishlists stay near trip discovery.
 const PUBLIC_NAV_LINKS = [
   { to: '/how-it-works', label: 'How it Works' },
   { to: '/popular-routes', label: 'Popular Routes' },
@@ -30,7 +27,6 @@ const PUBLIC_NAV_LINKS = [
   { to: '/blog', label: 'Blog' },
 ]
 const SAVED_LINK = { to: '/saved', label: 'Saved' }
-const ABOUT_LINK = { to: '/about', label: 'About' }
 const ADMIN_LINK = { to: '/admin', label: 'Admin', adminOnly: true }
 
 // Drawer sections (mobile only) — icon, description and a tinted gradient
@@ -84,10 +80,6 @@ const DISCOVER_LINKS = [
   { to: '/blog',           label: 'Blog',           desc: 'Stories, tips & guides',           Icon: BookOpen,  tint: TINT.amber },
 ]
 
-const ABOUT_DRAWER_ITEM = {
-  to: '/about', label: 'About', desc: 'The team behind JourneyMate', Icon: Info, tint: TINT.indigo,
-}
-
 const SAVED_DRAWER_ITEM = {
   to: '/saved', label: 'Saved trips', desc: 'Your private wishlist', Icon: Sparkles, tint: TINT.teal,
 }
@@ -104,13 +96,10 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   // Final link order:
-  //   How it Works → Popular Routes → Blog → (Saved)? → About → (Admin)?
-  // i.e. About is intentionally *after* the user-only "Saved" link so the bar
-  // reads "public pages → personal pages → about/credits" left-to-right.
+  //   How it Works → Popular Routes → Blog → (Saved)? → (Admin)?
   const navLinks = useMemo(() => {
     const links = [...PUBLIC_NAV_LINKS]
     if (user) links.push(SAVED_LINK)
-    links.push(ABOUT_LINK)
     if (user?.isAdmin) links.push(ADMIN_LINK)
     return links
   }, [user?.id, user?.isAdmin])
@@ -430,7 +419,6 @@ function MobileDrawer({ open, onClose, user, logout, firstName, initial }) {
               <DrawerItem key={item.to || item.label} item={item} onNavigate={onClose} />
             ))}
             {user && <DrawerItem item={SAVED_DRAWER_ITEM} onNavigate={onClose} />}
-            <DrawerItem item={ABOUT_DRAWER_ITEM} onNavigate={onClose} />
           </DrawerSection>
 
           <DrawerSection title="More">

@@ -203,6 +203,9 @@ Create resources in this order:
 - Start command: `npm start`
 - Health path: `/api/health`
 - Env vars: `DATABASE_URL`, `AUTH_SECRET`, `CORS_ORIGIN`, `AI_API_KEY`, `AI_MODEL`, `VITE/Google vars as needed`
+- For `DATABASE_URL`, paste the full connection string supplied by Render/Postgres and avoid surrounding the value with quotes.
+- Render internal Postgres URLs only work when the connecting service is in the same Render account and the same region. Otherwise use the external database URL.
+- If `DATABASE_URL` is set, it takes precedence over `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD`.
 
 ### Frontend (Render Static Site)
 

@@ -173,6 +173,12 @@ const ROADMAP = [
     badgeBorder: 'border-emerald-500/30',
     items: [
       {
+        icon: Plane,
+        eta: 'Live in beta · /booking',
+        title: 'Live inventory & one-tap booking',
+        desc: 'Pick a train, flight or hotel, choose your seat or room, enter passenger details, and pay via Razorpay (test mode) — confirmation arrives in your inbox in seconds. Real IRCTC / GDS / Booking.com providers slot in behind the same UI as soon as we sign each partnership.',
+      },
+      {
         icon: Wand2,
         eta: 'This sprint',
         title: 'Custom itinerary editor',
@@ -200,12 +206,6 @@ const ROADMAP = [
     badgeBg: 'bg-sky-500/15',
     badgeBorder: 'border-sky-500/30',
     items: [
-      {
-        icon: Plane,
-        eta: 'Q3 2026',
-        title: 'Live inventory & one-tap booking',
-        desc: 'Move from indicative pricing to live IRCTC, flight and hotel inventory, with seat/room selection and instant confirmation inside the app.',
-      },
       {
         icon: Smartphone,
         eta: 'Q4 2026',

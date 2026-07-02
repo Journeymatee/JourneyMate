@@ -126,6 +126,8 @@ import ContactUs from './pages/ContactUs'
 import AboutOwner from './pages/AboutOwner'
 import AdminAgent from './pages/AdminAgent'
 import LiveBookingAgent from './pages/LiveBookingAgent'
+import BookingFlow from './pages/BookingFlow'
+import MyBookings from './pages/MyBookings'
 import SavedTrips from './pages/SavedTrips'
 import SharedTrip from './pages/SharedTrip'
 import { AssistantWidget } from './features/ai'
@@ -507,6 +509,8 @@ function AppShell() {
         <Route path="/about" element={<AboutOwner />} />
         <Route path="/admin" element={<AdminAgent />} />
         <Route path="/live-search" element={<LiveBookingAgent />} />
+        <Route path="/booking" element={<BookingFlow />} />
+        <Route path="/my-bookings" element={<MyBookings />} />
         <Route path="/saved" element={<SavedTrips />} />
         <Route path="/shared/:token" element={<SharedTrip />} />
         {/* If a logged-in user lands on /login (e.g. clicked an old link),

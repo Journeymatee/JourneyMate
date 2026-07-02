@@ -17,8 +17,12 @@ const chatValidation = [
   body('message')
     .isString()
     .trim()
-    .isLength({ min: 1, max: 6000 })
-    .withMessage('message must be 1-6000 characters'),
+    .isLength({ min: 2, max: 2000 })
+    .withMessage('message must be 2-2000 characters'),
+  body('planState')
+    .optional({ nullable: true })
+    .isObject()
+    .withMessage('planState must be an object'),
   body('history')
     .optional()
     .isArray({ max: 30 })
@@ -47,7 +51,28 @@ router.post(
   '/chat',
   requireAuth,
   authLimiter,
-  ...chatValidation,
+  body('message')
+    .isString()
+    .trim()
+    .isLength({ min: 2, max: 2000 })
+    .withMessage('message must be 2-2000 characters'),
+  body('planState')
+    .optional({ nullable: true })
+    .isObject()
+    .withMessage('planState must be an object'),
+  body('history')
+    .optional()
+    .isArray({ max: 20 })
+    .withMessage('history must be an array with max 20 items'),
+  body('history.*.role')
+    .optional()
+    .isIn(['user', 'assistant'])
+    .withMessage('history role must be user or assistant'),
+  body('history.*.content')
+    .optional()
+    .isString()
+    .isLength({ min: 1, max: 2000 })
+    .withMessage('history content must be 1-2000 chars'),
   validate,
   controller.chat
 )

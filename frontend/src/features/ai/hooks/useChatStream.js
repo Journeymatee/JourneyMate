@@ -15,6 +15,7 @@ export function useChatStream({ onSpeak } = {}) {
   const [activeModel, setActiveModel] = useState('AI')
   const [inputLang, setInputLang] = useState('en-IN')
   const abortRef = useRef(null)
+  const planRef = useRef(null)
 
   const onSpeakRef = useRef(onSpeak)
   useEffect(() => {
@@ -36,6 +37,7 @@ export function useChatStream({ onSpeak } = {}) {
     const seed = [buildResetGreeting()]
     setMessages(seed)
     persist(seed)
+    planRef.current = null
   }, [persist, stop])
 
   const send = useCallback(
@@ -77,9 +79,10 @@ export function useChatStream({ onSpeak } = {}) {
 
       let streamedText = ''
       let liveHint = ''
+      let nextPlan = null
 
       try {
-        const final = await streamChatWithAi(userText, history, {
+        const final = await streamChatWithAi(userText, history, planRef.current, {
           signal: controller.signal,
           onMeta: (payload) => {
             setActiveModel(payload?.model || 'AI')
@@ -94,6 +97,7 @@ export function useChatStream({ onSpeak } = {}) {
             )
           },
           onDone: (payload) => {
+            nextPlan = payload?.plan || null
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === botMessageId
@@ -103,6 +107,7 @@ export function useChatStream({ onSpeak } = {}) {
                         ? payload.followUps.slice(0, 3)
                         : [],
                       liveHint,
+                      plan: payload?.plan || null,
                     }
                   : m
               )
@@ -118,6 +123,7 @@ export function useChatStream({ onSpeak } = {}) {
                   text: m.text.trim() || 'I could not generate a response right now.',
                   liveHint: m.liveHint || getRealtimeHint(final?.realtime),
                   streaming: false,
+                  plan: m.plan || final?.plan || null,
                 }
               : m
           )
@@ -125,6 +131,7 @@ export function useChatStream({ onSpeak } = {}) {
           return next
         })
 
+        planRef.current = nextPlan || final?.plan || planRef.current
         setActiveModel(final?.model || 'AI')
         if (streamedText) onSpeakRef.current?.(streamedText)
       } catch (err) {
