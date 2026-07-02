@@ -199,7 +199,7 @@ Create resources in this order:
 ### Backend (Render Web Service)
 
 - Root directory: `backend`
-- Build command: `npm install`
+- Build command: `npm install && npm run check:syntax`
 - Start command: `npm start`
 - Health path: `/api/health`
 - Env vars: `DATABASE_URL`, `AUTH_SECRET`, `CORS_ORIGIN`, `AI_API_KEY`, `AI_MODEL`, `VITE/Google vars as needed`
