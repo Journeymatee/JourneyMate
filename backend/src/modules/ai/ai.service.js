@@ -1118,6 +1118,72 @@ async function buildRealtimeContext({ prompt, nlp, user }) {
   }
 }
 
+function classifyAiError(err, response, data) {
+  if (err && err.name === 'AbortError') return 'timeout'
+  if (response) {
+    const code = data?.error?.code || data?.error?.type || ''
+    if (code === 'insufficient_quota' || code === 'billing_hard_limit_reached') return 'quota'
+    // Gemini's OpenAI-compatible endpoint reports quota in the message body
+    // with HTTP 429 + "Quota exceeded for metric: ..." rather than a code.
+    const msg = String(data?.error?.message || '')
+    if (response.status === 429 && /quota exceeded/i.test(msg)) return 'quota'
+    if (response.status === 401 || response.status === 403) return 'auth'
+    if (response.status === 429) return 'rate_limited'
+    if (response.status >= 500) return 'upstream_down'
+    return 'upstream_error'
+  }
+  return 'network'
+}
+
+// When the primary model is overloaded (Gemini free tier frequently returns
+// 503/429), automatically try a sibling model. Listed in order of preference.
+const MODEL_FALLBACKS = {
+  'gemini-2.5-pro': ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'],
+  'gemini-2.5-flash': ['gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-flash-latest'],
+  'gemini-2.5-flash-lite': ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'],
+  'gemini-2.0-flash': ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-flash-latest'],
+  'gemini-2.0-flash-lite': ['gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-flash-latest'],
+  'gemini-flash-latest': ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'],
+  'gemini-pro-latest': ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'],
+}
+
+// Auth / quota / network failures should NOT be retried — they are not transient.
+const RETRYABLE_REASONS = new Set(['upstream_down', 'rate_limited', 'upstream_error'])
+
+function getFallbackModels(primary) {
+  return MODEL_FALLBACKS[primary] || []
+}
+
+const REASON_NOTICES = {
+  quota:
+    '⚠️  **Live AI is temporarily unavailable** — the configured AI provider has reported '
+    + '`insufficient_quota`. Ask the admin to top up the API plan or switch the server to '
+    + 'a free provider (Groq / Together / OpenRouter / Ollama). I\'m falling back to my '
+    + 'built-in answer for now:',
+  auth:
+    '⚠️  **Live AI is unavailable** — the configured `AI_API_KEY` was rejected (invalid or '
+    + 'revoked). Ask the admin to refresh the key. Falling back to my built-in answer:',
+  rate_limited:
+    '⚠️  **Live AI is rate-limited** right now. Falling back to my built-in answer — try '
+    + 'again in a moment for a richer reply:',
+  timeout:
+    '⏱️  **Live AI took too long** to respond (request aborted). Falling back to my '
+    + 'built-in answer:',
+  upstream_down:
+    '⚠️  **Live AI provider is currently down**. Falling back to my built-in answer:',
+  upstream_error:
+    '⚠️  **Live AI request failed** unexpectedly. Falling back to my built-in answer:',
+  network:
+    '⚠️  **Could not reach the AI provider** (network error). Falling back to my built-in '
+    + 'answer:',
+}
+
+function buildFallbackReply(reason, baseReply) {
+  const notice = REASON_NOTICES[reason]
+  if (!notice) return baseReply
+  return `${notice}\n\n---\n\n${baseReply}`
+}
+
 async function chat({ message, history, planState, user }) {
   const prompt = String(message || '').trim()
   if (!prompt) throw ApiError.badRequest('Message is required')
@@ -1137,6 +1203,7 @@ async function chat({ message, history, planState, user }) {
       followUps,
       realtime,
       fallbackReason: 'no_key',
+      plan: null,
     }
     await persistConversation(user?.id, prompt, fallback.reply)
     return fallback
@@ -1166,15 +1233,9 @@ async function chat({ message, history, planState, user }) {
     },
   ]
 
-  // Tune sampling per intent: factual/code questions stay tight; creative
-  // / inspiration / small-talk gets a touch more variety. Token budget grows
-  // for intents that typically need detailed answers (code, math, how-to).
   const { temperature, maxTokens } = pickGenerationParams(nlp.intent, prompt)
 
-  // Try the configured primary model first; if it returns a transient failure
-  // (503 overloaded, 429 rate limit, empty body), automatically try sibling
-  // models. This is essential for Gemini's free tier where individual models
-  // hit "high demand" 503s for minutes at a time.
+  // Try primary model first; on transient failure, try sibling models.
   const candidates = [env.AI_MODEL, ...getFallbackModels(env.AI_MODEL)]
   let lastReason = 'upstream_error'
   let lastErrorMsg = ''
@@ -1196,13 +1257,15 @@ async function chat({ message, history, planState, user }) {
           console.info('[ai.chat] used fallback model %s (primary %s was %s)',
             candidate, env.AI_MODEL, lastReason)
         }
+        const { plan, cleaned } = extractPlanJson(attempt.reply)
         const result = {
-          reply: attempt.reply,
+          reply: cleaned || attempt.reply,
           model: candidate,
           usage: attempt.usage,
           nlp,
           followUps,
           realtime,
+          plan: plan || null,
         }
         await persistConversation(user?.id, prompt, attempt.reply)
         return result
@@ -1211,24 +1274,15 @@ async function chat({ message, history, planState, user }) {
       lastReason = attempt.reason
       lastErrorMsg = attempt.errorMsg
 
-    const rawReply = String(data?.choices?.[0]?.message?.content || '').trim()
-    if (!rawReply) throw ApiError.unavailable('AI did not return a response')
+      // eslint-disable-next-line no-console
+      console.warn('[ai.chat] model=%s failed (reason=%s): %s',
+        candidate, attempt.reason, attempt.errorMsg || 'unknown')
 
-    const { plan, cleaned } = extractPlanJson(rawReply)
-    const reply = cleaned || rawReply
-
-    const result = {
-      reply,
-      model: env.AI_MODEL,
-      usage: data?.usage || null,
-      nlp,
-      followUps,
-      realtime,
-      plan: plan || null,
+      if (!RETRYABLE_REASONS.has(attempt.reason)) break
     }
-    await persistConversation(user?.id, prompt, rawReply)
-    return result
-  } catch (err) {
+
+    const baseReply = localFallbackReply({ prompt, nlp, realtime, user })
+    const finalReply = buildFallbackReply(lastReason, baseReply)
     const fallbackResult = {
       reply: finalReply,
       model: 'rnlp-fallback',
@@ -1237,6 +1291,8 @@ async function chat({ message, history, planState, user }) {
       followUps,
       realtime,
       plan: null,
+      fallbackReason: lastReason,
+      lastErrorMsg,
     }
     await persistConversation(user?.id, prompt, fallbackResult.reply)
     return fallbackResult
